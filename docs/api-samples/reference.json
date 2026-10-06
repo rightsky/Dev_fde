@@ -1,0 +1,423 @@
+{
+ "steps": [
+  {
+   "n": 1,
+   "label": "데이터셋 조합 추출",
+   "owner": "수집운영"
+  },
+  {
+   "n": 2,
+   "label": "조합 조정·확정",
+   "owner": "수집운영"
+  },
+  {
+   "n": 3,
+   "label": "DCAT/PROV-O 카탈로그",
+   "owner": "메타데이터 표준화"
+  },
+  {
+   "n": 4,
+   "label": "다중분류체계 배정",
+   "owner": "메타데이터 표준화"
+  },
+  {
+   "n": 5,
+   "label": "매핑 + LPG·리니지",
+   "owner": "데이터 검수"
+  },
+  {
+   "n": 6,
+   "label": "검증: 게이트 0 + SHACL",
+   "owner": "데이터 검수"
+  },
+  {
+   "n": 7,
+   "label": "직렬화·발행 포맷 변환",
+   "owner": "데이터 검수"
+  },
+  {
+   "n": 8,
+   "label": "가이드라인 준수 진단",
+   "owner": "관리자"
+  }
+ ],
+ "fix_routes": {
+  "identity": {
+   "step": 2,
+   "label": "조합 확정 카드",
+   "focus": "combo"
+  },
+  "mint": {
+   "step": 6,
+   "label": "ID 발급 (민팅 대장)",
+   "focus": "mint"
+  },
+  "title": {
+   "step": 3,
+   "label": "title 필드",
+   "focus": "title"
+  },
+  "publisher": {
+   "step": 3,
+   "label": "publisher 필드",
+   "focus": "publisher"
+  },
+  "mediaType": {
+   "step": 3,
+   "label": "mediaType 드롭다운",
+   "focus": "media_type"
+  },
+  "emptyLit": {
+   "step": 3,
+   "label": "해당 필드",
+   "focus": null
+  },
+  "stream3": {
+   "step": 3,
+   "label": "스트림 속성 카드",
+   "focus": "temporal_resolution"
+  },
+  "license": {
+   "step": 4,
+   "label": "F4 유통·이용조건",
+   "focus": "F4"
+  },
+  "class4": {
+   "step": 4,
+   "label": "분류 매트릭스",
+   "focus": null
+  },
+  "lineage5": {
+   "step": 5,
+   "label": "관계 목록",
+   "focus": null
+  },
+  "meta3": {
+   "step": 3,
+   "label": "프러퍼티 폼",
+   "focus": null
+  }
+ },
+ "media_types": [
+  {
+   "value": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+   "ext": "xlsx",
+   "form": "정형(엑셀)"
+  },
+  {
+   "value": "application/vnd.ms-excel",
+   "ext": "xls",
+   "form": "정형(엑셀)"
+  },
+  {
+   "value": "text/csv",
+   "ext": "csv",
+   "form": "정형(CSV)"
+  },
+  {
+   "value": "text/tab-separated-values",
+   "ext": "tsv",
+   "form": "정형(TSV)"
+  },
+  {
+   "value": "application/json",
+   "ext": "json",
+   "form": "반정형(JSON)"
+  },
+  {
+   "value": "application/vnd.apache.parquet",
+   "ext": "parquet",
+   "form": "정형(Parquet)"
+  },
+  {
+   "value": "application/xml",
+   "ext": "xml",
+   "form": "반정형(XML)"
+  },
+  {
+   "value": "application/x-hwp",
+   "ext": "hwp",
+   "form": "비정형(HWP)"
+  },
+  {
+   "value": "application/pdf",
+   "ext": "pdf",
+   "form": "비정형(PDF)"
+  }
+ ],
+ "late_policies": [
+  "별도 적재 (late 파티션)",
+  "폐기",
+  "보정 재계산"
+ ],
+ "accrual_periodicities": [
+  {
+   "value": "PT5M",
+   "label": "5분"
+  },
+  {
+   "value": "PT1H",
+   "label": "1시간"
+  },
+  {
+   "value": "P1D",
+   "label": "일"
+  },
+  {
+   "value": "P1W",
+   "label": "주"
+  },
+  {
+   "value": "P1M",
+   "label": "월"
+  },
+  {
+   "value": "P3M",
+   "label": "분기"
+  },
+  {
+   "value": "P1Y",
+   "label": "연"
+  },
+  {
+   "value": "irregular",
+   "label": "비정기"
+  }
+ ],
+ "extra_classes": [
+  {
+   "iri": "prov:Entity",
+   "desc": "활동의 입·출력이 되는 일반 개체 — 리니지 중간 산출물에 적합",
+   "form": "공통"
+  },
+  {
+   "iri": "dcat:CatalogRecord",
+   "desc": "카탈로그 내 등재 레코드 자체의 이력 기술",
+   "form": "공통"
+  },
+  {
+   "iri": "prov:Collection",
+   "desc": "개체 묶음 (조합 단위 기술)",
+   "form": "공통"
+  },
+  {
+   "iri": "csvw:Table",
+   "desc": "표 형태 데이터의 컬럼·스키마 구조 기술 (CSV on the Web)",
+   "form": "정형"
+  },
+  {
+   "iri": "qb:DataSet",
+   "desc": "통계 큐브(차원·측정값) 구조 기술 (RDF Data Cube)",
+   "form": "정형"
+  },
+  {
+   "iri": "foaf:Document",
+   "desc": "보고서·문서 원본(PDF·HWP)의 문서 단위 기술",
+   "form": "비정형"
+  }
+ ],
+ "relation_types": [
+  {
+   "type": "JOINED_ON",
+   "label": "JOINED_ON",
+   "desc": "연계키를 조인 축으로 한 결합. 순서가 SSOT 우선순위다",
+   "directed": true,
+   "needs_key": true
+  },
+  {
+   "type": "GROUPED_WITH",
+   "label": "GROUPED_WITH",
+   "desc": "연관성 높은 데이터셋 묶음 (방향 없음)",
+   "directed": false,
+   "needs_key": false
+  },
+  {
+   "type": "DERIVED_FROM",
+   "label": "WAS_DERIVED_FROM",
+   "desc": "원천에서 파생된 데이터셋 (prov:wasDerivedFrom)",
+   "directed": true,
+   "needs_key": false
+  }
+ ],
+ "roles": [
+  {
+   "value": "admin",
+   "label": "관리자",
+   "desc": "확정·승인·ID 발급·발행·사용자 관리"
+  },
+  {
+   "value": "worker",
+   "label": "담당자",
+   "desc": "8단계 작업 수행"
+  },
+  {
+   "value": "viewer",
+   "label": "열람자",
+   "desc": "조회 전용"
+  }
+ ],
+ "meta_fields": [
+  {
+   "name": "title",
+   "property": "dcterms:title",
+   "label": "제목",
+   "level": "필수",
+   "type": "text",
+   "scope": "all"
+  },
+  {
+   "name": "description",
+   "property": "dcterms:description",
+   "label": "설명",
+   "level": "권장",
+   "type": "textarea",
+   "scope": "all"
+  },
+  {
+   "name": "publisher_org_id",
+   "property": "dcterms:publisher",
+   "label": "제공기관",
+   "level": "필수",
+   "type": "org",
+   "scope": "all",
+   "approval": true
+  },
+  {
+   "name": "media_type",
+   "property": "dcat:mediaType",
+   "label": "미디어타입 (IANA)",
+   "level": "필수",
+   "type": "media_type",
+   "scope": "dataset",
+   "approval": true
+  },
+  {
+   "name": "access_url",
+   "property": "dcat:accessURL",
+   "label": "접근 URL",
+   "level": "권장",
+   "type": "url",
+   "scope": "dataset"
+  },
+  {
+   "name": "temporal_resolution",
+   "property": "dcat:temporalResolution",
+   "label": "시간 해상도 (ISO 8601 duration)",
+   "level": "필수",
+   "type": "duration",
+   "scope": "stream",
+   "approval": true
+  },
+  {
+   "name": "event_time_column",
+   "property": "fde:eventTimeColumn",
+   "label": "event-time 컬럼",
+   "level": "필수",
+   "type": "text",
+   "scope": "stream",
+   "approval": true
+  },
+  {
+   "name": "endpoint_url",
+   "property": "dcat:endpointURL",
+   "label": "엔드포인트 URL",
+   "level": "권장",
+   "type": "url",
+   "scope": "stream"
+  },
+  {
+   "name": "timezone",
+   "property": "fde:timezone",
+   "label": "타임존",
+   "level": "권장",
+   "type": "text",
+   "scope": "stream"
+  },
+  {
+   "name": "watermark",
+   "property": "fde:watermarkDelay",
+   "label": "워터마크 지연 허용",
+   "level": "권장",
+   "type": "duration",
+   "scope": "stream"
+  },
+  {
+   "name": "late_policy",
+   "property": "fde:lateDataPolicy",
+   "label": "지각(late) 데이터 정책",
+   "level": "선택",
+   "type": "late_policy",
+   "scope": "stream"
+  },
+  {
+   "name": "keywords",
+   "property": "dcat:keyword",
+   "label": "키워드",
+   "level": "권장",
+   "type": "tags",
+   "scope": "all"
+  }
+ ],
+ "formats": [
+  {
+   "key": "ttl",
+   "label": "Turtle (RDF 정본)",
+   "tag": "TTL",
+   "suffix": ".ttl",
+   "media_type": "text/turtle",
+   "use": "카탈로그 트리플스토어 정본 저장 · SHACL 검증 대상"
+  },
+  {
+   "key": "jsonld",
+   "label": "JSON-LD (RDF 직렬화)",
+   "tag": "JSON-LD",
+   "suffix": ".jsonld",
+   "media_type": "application/ld+json",
+   "use": "시스템 간 API 계층 · 카탈로그 API 전송"
+  },
+  {
+   "key": "txt",
+   "label": "자연어 문장화",
+   "tag": "문장화",
+   "suffix": "_문장화.txt",
+   "media_type": "text/plain",
+   "use": "sLLM RAG 입력 · 벡터DB 적재용 코퍼스"
+  },
+  {
+   "key": "schema",
+   "label": "순수 JSON + 스키마",
+   "tag": "스키마",
+   "suffix": "_schema.json",
+   "media_type": "application/json",
+   "use": "제약 디코딩용 스키마 · 스키마 레지스트리"
+  }
+ ],
+ "base_iri": "https://catalog.molit.go.kr",
+ "def_ns": "https://catalog.molit.go.kr/def/",
+ "shapes_version": "rs-3.0",
+ "max_upload_mb": 50,
+ "upload_exts": [
+  "csv",
+  "hwp",
+  "hwpx",
+  "json",
+  "parquet",
+  "pdf",
+  "tsv",
+  "txt",
+  "xls",
+  "xlsx",
+  "xml"
+ ],
+ "key_labels": {
+  "K1": "행정구역",
+  "K2": "주소",
+  "K3": "좌표",
+  "K4": "건축물ID",
+  "K5": "도로링크",
+  "K6": "차량ID",
+  "K7": "시각",
+  "K8": "사업ID",
+  "K9": "문서ID"
+ }
+}

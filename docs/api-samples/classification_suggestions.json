@@ -1,0 +1,90 @@
+{
+ "suggestions": [
+  {
+   "axis": "F1",
+   "code": "F1-02",
+   "score": 97,
+   "reason": "이름·설명 키워드 2회 · 컬럼명 키워드 1회"
+  },
+  {
+   "axis": "F2",
+   "code": "F2-01",
+   "score": 97,
+   "reason": "파일 형식 .xlsx → 정형"
+  },
+  {
+   "axis": "F2",
+   "code": "F2-05",
+   "score": 88,
+   "reason": "K3 좌표 컬럼 경도 보유"
+  },
+  {
+   "axis": "F2",
+   "code": "F2-04",
+   "score": 82,
+   "reason": "시각 컬럼 기준일자 + 수치 컬럼 4개 · 일정 관측 간격"
+  },
+  {
+   "axis": "F3",
+   "code": "F3-01",
+   "score": 90,
+   "reason": "도로링크 컬럼 LINK_ID"
+  },
+  {
+   "axis": "F3",
+   "code": "F3-11",
+   "score": 84,
+   "reason": "기준일자 관측 간격 중앙값 86400초 → 일"
+  },
+  {
+   "axis": "F3",
+   "code": "F3-03",
+   "score": 80,
+   "reason": "시군구코드 — 시군구(5자리 코드)"
+  },
+  {
+   "axis": "F3",
+   "code": "F3-07",
+   "score": 78,
+   "reason": "좌표 컬럼 경도"
+  },
+  {
+   "axis": "K",
+   "code": "K3",
+   "score": 95,
+   "reason": "컬럼명 일치 · 한반도 경위도 범위",
+   "table": "도로목록",
+   "column": "경도"
+  },
+  {
+   "axis": "K",
+   "code": "K1",
+   "score": 90,
+   "reason": "컬럼명 일치 · 행정구역 코드 자릿수(2·5·8·10) 일치",
+   "table": "도로목록",
+   "column": "시군구코드"
+  },
+  {
+   "axis": "K",
+   "code": "K7",
+   "score": 85,
+   "reason": "시각 형식 값 · 컬럼명 일치",
+   "table": "도로목록",
+   "column": "기준일자"
+  },
+  {
+   "axis": "K",
+   "code": "K2",
+   "score": 55,
+   "reason": "컬럼명 일치",
+   "table": "도로목록",
+   "column": "도로명"
+  }
+ ],
+ "method": "규칙 기반 (LLM 미사용) — 이름·컬럼명 키워드, 컬럼 타입, 관측 간격, 연계키 후보로 계산",
+ "thresholds": {
+  "strong": 80,
+  "review": 40,
+  "low": 15
+ }
+}

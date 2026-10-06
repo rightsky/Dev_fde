@@ -1,0 +1,523 @@
+{
+ "run": {
+  "id": 2,
+  "process_id": 1,
+  "ruleset_version": "fde-rules-0.1",
+  "score": 20.5,
+  "max_score": 33.0,
+  "pct": 62,
+  "summary": {
+   "areas": [
+    {
+     "id": "A1",
+     "name": "메타데이터 필수 항목",
+     "guideline_items": 22,
+     "implemented": 8,
+     "items": 8,
+     "score": 7.5,
+     "pct": 94,
+     "auto": 8,
+     "manual": 0
+    },
+    {
+     "id": "A2",
+     "name": "메타데이터 권장·선택 항목",
+     "guideline_items": 7,
+     "implemented": 7,
+     "items": 7,
+     "score": 1.5,
+     "pct": 21,
+     "auto": 7,
+     "manual": 0
+    },
+    {
+     "id": "A3",
+     "name": "15개 원칙",
+     "guideline_items": 15,
+     "implemented": 4,
+     "items": 4,
+     "score": 1.5,
+     "pct": 38,
+     "auto": 3,
+     "manual": 1
+    },
+    {
+     "id": "A4",
+     "name": "체크리스트 공통 필수",
+     "guideline_items": 15,
+     "implemented": 6,
+     "items": 6,
+     "score": 5.0,
+     "pct": 83,
+     "auto": 5,
+     "manual": 1
+    },
+    {
+     "id": "A5",
+     "name": "체크리스트 공통 권장",
+     "guideline_items": 18,
+     "implemented": 6,
+     "items": 6,
+     "score": 4.0,
+     "pct": 67,
+     "auto": 5,
+     "manual": 1
+    },
+    {
+     "id": "A6",
+     "name": "체크리스트 유형별 (수치·개인정보)",
+     "guideline_items": 3,
+     "implemented": 2,
+     "items": 2,
+     "score": 1.0,
+     "pct": 50,
+     "auto": 1,
+     "manual": 1
+    }
+   ],
+   "methods": [
+    {
+     "id": "AUTO-GRAPH",
+     "name": "카탈로그 그래프 SPARQL/SHACL 질의 자동 판정",
+     "items": 25,
+     "met": 15,
+     "partial": 4,
+     "unmet": 6,
+     "pending": 0
+    },
+    {
+     "id": "AUTO-PROFILE",
+     "name": "프로파일 통계 자동 판정",
+     "items": 4,
+     "met": 1,
+     "partial": 3,
+     "unmet": 0,
+     "pending": 0
+    },
+    {
+     "id": "HUMAN-ATTEST",
+     "name": "증빙 첨부 + 담당자 확인 (확인도 prov:Activity 로 기록)",
+     "items": 4,
+     "met": 1,
+     "partial": 0,
+     "unmet": 0,
+     "pending": 3
+    }
+   ],
+   "roadmap": [
+    {
+     "rank": 1,
+     "item_id": "O-03",
+     "action": "담당 부서 또는 담당자를 입력한다",
+     "name": "담당 연락처 (dcat:contactPoint)",
+     "gain": 1.0,
+     "difficulty": "낮음",
+     "basis": "제품 규칙",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "contact_name"
+     }
+    },
+    {
+     "rank": 2,
+     "item_id": "O-04",
+     "action": "버전을 입력한다",
+     "name": "버전 (dcat:version)",
+     "gain": 1.0,
+     "difficulty": "낮음",
+     "basis": "제품 규칙",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "version"
+     }
+    },
+    {
+     "rank": 3,
+     "item_id": "O-05",
+     "action": "STEP 3 클래스 선택에서 dcat:CatalogRecord 를 추가한다",
+     "name": "등재 이력 (dcat:CatalogRecord)",
+     "gain": 1.0,
+     "difficulty": "낮음",
+     "basis": "표12 등재 이력 관리",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "extra_classes"
+     }
+    },
+    {
+     "rank": 4,
+     "item_id": "O-06",
+     "action": "프로파일 통계에서 분포 편향(지역·기간·유형별 집계)을 산출해 기술한다",
+     "name": "편향성 명세 (rai:dataBiases)",
+     "gain": 1.0,
+     "difficulty": "낮음",
+     "basis": "표10 권장항목 rai:dataBiases · 원칙 8",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "rai_data_biases"
+     }
+    },
+    {
+     "rank": 5,
+     "item_id": "O-07",
+     "action": "수집 장비·기간·대표성의 한계를 기술한다",
+     "name": "알려진 한계 (rai:knownLimitations)",
+     "gain": 1.0,
+     "difficulty": "낮음",
+     "basis": "표10 권장항목 rai:knownLimitations · 원칙 8",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "rai_known_limitations"
+     }
+    },
+    {
+     "rank": 6,
+     "item_id": "P-08",
+     "action": "편향 명세와 알려진 한계를 모두 작성한다",
+     "name": "원칙 8 품질·한계 명시",
+     "gain": 1.0,
+     "difficulty": "낮음",
+     "basis": "15개 원칙 중 원칙 8(품질·한계 명시)",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "rai_data_biases"
+     }
+    }
+   ],
+   "dataset_count": 3,
+   "mode": "publish",
+   "guideline": "공공데이터의 인공지능 친화적 관리 가이드라인 v1.1 (행정안전부·NIA)",
+   "guideline_total": 80,
+   "implemented_total": 33,
+   "scored_total": 33,
+   "note": "가이드라인 80항목 전체가 아니라, 목업에 근거가 드러난 항목과 저장된 메타데이터·프로파일로 자동 판정할 수 있는 항목만 구현한 초기 규칙 세트다. basis 가 '제품 규칙'인 항목은 가이드라인 원문과 대조해 확정해야 한다. 항목은 이 파일에 추가하면 진단에 반영된다.",
+   "validation_run_id": 5,
+   "validation_stale": null,
+   "counts": {
+    "met": 17,
+    "partial": 7,
+    "unmet": 6,
+    "pending": 3,
+    "na": 0
+   },
+   "potential_score": 28.5
+  },
+  "items": [
+   {
+    "id": "M-01",
+    "area": "A1",
+    "name": "제목 (dcterms:title)",
+    "method": "AUTO-GRAPH",
+    "basis": "제품 규칙",
+    "remedy": "STEP 3 프러퍼티 폼에서 제목을 입력한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "그래프 질의 충족"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "그래프 질의 충족"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "met",
+      "detail": "그래프 질의 충족"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 3 · 부분 0 · 미흡 0"
+    ],
+    "route": {
+     "key": "title",
+     "step": 3,
+     "label": "title 필드",
+     "focus": "title"
+    },
+    "attestation": null,
+    "status": "met",
+    "score": 1.0
+   },
+   {
+    "id": "M-02",
+    "area": "A1",
+    "name": "설명 (dcterms:description)",
+    "method": "AUTO-GRAPH",
+    "basis": "제품 규칙",
+    "remedy": "데이터셋의 내용·수집 방법·범위를 10자 이상으로 기술한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "그래프 질의 충족"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "그래프 질의 충족"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "그래프에 해당 트리플 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 2 · 부분 0 · 미흡 1"
+    ],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "description"
+    },
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "M-03",
+    "area": "A1",
+    "name": "제공기관 (dcterms:publisher)",
+    "method": "AUTO-GRAPH",
+    "basis": "제품 규칙",
+    "remedy": "STEP 3 에서 제공기관을 선택하고 승인한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "그래프 질의 충족"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "그래프 질의 충족"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "met",
+      "detail": "그래프 질의 충족"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 3 · 부분 0 · 미흡 0"
+    ],
+    "route": {
+     "key": "publisher",
+     "step": 3,
+     "label": "publisher 필드",
+     "focus": "publisher"
+    },
+    "attestation": null,
+    "status": "met",
+    "score": 1.0
+   },
+   {
+    "id": "M-04",
+    "area": "A1",
+    "name": "영구 식별자 발급 (민팅 대장 등록)",
+    "method": "AUTO-GRAPH",
+    "basis": "제품 규칙 · 게이트 0 ④",
+    "remedy": "관리자가 민팅 대장에서 발행 ID 를 발급한다 (초안 ID 로는 발행할 수 없다)",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "DST-000001 발급됨"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "DST-000002 발급됨"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "met",
+      "detail": "SVC-000001 발급됨"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 3 · 부분 0 · 미흡 0"
+    ],
+    "route": {
+     "key": "mint",
+     "step": 6,
+     "label": "ID 발급 (민팅 대장)",
+     "focus": "mint"
+    },
+    "attestation": null,
+    "status": "met",
+    "score": 1.0
+   },
+   {
+    "id": "M-05",
+    "area": "A1",
+    "name": "이용허락 (dcterms:license)",
+    "method": "AUTO-GRAPH",
+    "basis": "표9 필수항목 dcterms:license",
+    "remedy": "STEP 4 의 F4 유통·이용조건에서 공공누리 유형 또는 제공 조건을 지정한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "그래프 질의 충족"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "그래프 질의 충족"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "met",
+      "detail": "그래프 질의 충족"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 3 · 부분 0 · 미흡 0"
+    ],
+    "route": {
+     "key": "license",
+     "step": 4,
+     "label": "F4 유통·이용조건",
+     "focus": "F4"
+    },
+    "attestation": null,
+    "status": "met",
+    "score": 1.0
+   },
+   {
+    "id": "M-06",
+    "area": "A1",
+    "name": "배포 형식 (dcat:mediaType) / 스트림 시간 규격",
+    "method": "AUTO-GRAPH",
+    "basis": "표11 mediaType",
+    "remedy": "파일형은 IANA 미디어타입을, 스트림은 temporalResolution 과 event-time 컬럼을 승인한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "그래프 질의 충족"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "그래프 질의 충족"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "met",
+      "detail": "그래프 질의 충족"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 3 · 부분 0 · 미흡 0"
+    ],
+    "route": {
+     "key": "mediaType",
+     "step": 3,
+     "label": "mediaType 드롭다운",
+     "focus": "media_type"
+    },
+    "attestation": null,
+    "status": "met",
+    "score": 1.0
+   }
+  ],
+  "started_at": "2026-10-06T09:29:18.248425Z",
+  "ended_at": "2026-10-06T09:29:18.365192Z",
+  "activity": "ACT-K-0454"
+ },
+ "stale": null,
+ "ruleset": {
+  "version": "fde-rules-0.1",
+  "guideline": "공공데이터의 인공지능 친화적 관리 가이드라인 v1.1 (행정안전부·NIA)",
+  "note": "가이드라인 80항목 전체가 아니라, 목업에 근거가 드러난 항목과 저장된 메타데이터·프로파일로 자동 판정할 수 있는 항목만 구현한 초기 규칙 세트다. basis 가 '제품 규칙'인 항목은 가이드라인 원문과 대조해 확정해야 한다. 항목은 이 파일에 추가하면 진단에 반영된다.",
+  "guideline_total": 80,
+  "implemented_total": 33,
+  "methods": [
+   {
+    "id": "AUTO-GRAPH",
+    "name": "카탈로그 그래프 SPARQL/SHACL 질의 자동 판정"
+   },
+   {
+    "id": "AUTO-PROFILE",
+    "name": "프로파일 통계 자동 판정"
+   },
+   {
+    "id": "HUMAN-ATTEST",
+    "name": "증빙 첨부 + 담당자 확인 (확인도 prov:Activity 로 기록)"
+   }
+  ],
+  "areas": [
+   {
+    "id": "A1",
+    "name": "메타데이터 필수 항목",
+    "guideline_items": 22
+   },
+   {
+    "id": "A2",
+    "name": "메타데이터 권장·선택 항목",
+    "guideline_items": 7
+   },
+   {
+    "id": "A3",
+    "name": "15개 원칙",
+    "guideline_items": 15
+   },
+   {
+    "id": "A4",
+    "name": "체크리스트 공통 필수",
+    "guideline_items": 15
+   },
+   {
+    "id": "A5",
+    "name": "체크리스트 공통 권장",
+    "guideline_items": 18
+   },
+   {
+    "id": "A6",
+    "name": "체크리스트 유형별 (수치·개인정보)",
+    "guideline_items": 3
+   }
+  ]
+ }
+}

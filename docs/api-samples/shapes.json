@@ -1,0 +1,189 @@
+{
+ "version": "rs-3.0",
+ "mode": "publish",
+ "turtle": "# FDE Data Studio — SHACL 셰이프 그래프 (공통 프로파일)\n# https://catalog.molit.go.kr/def/ / https://catalog.molit.go.kr/shapes/ 는 기동 시 설정값(FDE_BASE_IRI)으로 치환된다.\n# 모든 property shape 에 IRI 이름을 붙인다 — 검증 결과의 sh:sourceShape 로 수정 경로(fde:fixRoute)를 되찾기 위함.\n@prefix sh:      <http://www.w3.org/ns/shacl#> .\n@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .\n@prefix owl:     <http://www.w3.org/2002/07/owl#> .\n@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .\n@prefix dcat:    <http://www.w3.org/ns/dcat#> .\n@prefix dcterms: <http://purl.org…(생략)",
+ "rules": [
+  {
+   "iri": "https://catalog.molit.go.kr/shapes/ActivityShape-agent",
+   "name": "ActivityShape",
+   "local": "ActivityShape-agent",
+   "message": "Activity 수행 주체(prov:wasAssociatedWith) 결측",
+   "path": "prov:wasAssociatedWith",
+   "severity": "Violation",
+   "route": null,
+   "profile": "common",
+   "evaluator": "SHACL Core"
+  },
+  {
+   "iri": "https://catalog.molit.go.kr/shapes/DatasetProvenanceShape-generatedBy",
+   "name": "ActivityShape",
+   "local": "DatasetProvenanceShape-generatedBy",
+   "message": "생성 Activity(prov:wasGeneratedBy) 결측",
+   "path": "prov:wasGeneratedBy",
+   "severity": "Violation",
+   "route": {
+    "key": "identity",
+    "step": 2,
+    "label": "조합 확정 카드",
+    "focus": "combo"
+   },
+   "profile": "common",
+   "evaluator": "SHACL Core"
+  },
+  {
+   "iri": "https://catalog.molit.go.kr/shapes/ActivityShape-started",
+   "name": "ActivityShape",
+   "local": "ActivityShape-started",
+   "message": "Activity 시작 시각(prov:startedAtTime) 결측 또는 형식 오류",
+   "path": "prov:startedAtTime",
+   "severity": "Violation",
+   "route": null,
+   "profile": "common",
+   "evaluator": "SHACL Core"
+  },
+  {
+   "iri": "https://catalog.molit.go.kr/shapes/DatasetIdentityShape-title",
+   "name": "DatasetIdentityShape",
+   "local": "DatasetIdentityShape-title",
+   "message": "정체성 — 제목(dcterms:title) 결측",
+   "path": "dcterms:title",
+   "severity": "Violation",
+   "route": {
+    "key": "title",
+    "step": 3,
+    "label": "title 필드",
+    "focus": "title"
+   },
+   "profile": "common",
+   "evaluator": "SHACL Core"
+  },
+  {
+   "iri": "https://catalog.molit.go.kr/shapes/DatasetIdentityShape-identifier",
+   "name": "DatasetIdentityShape",
+   "local": "DatasetIdentityShape-identifier",
+   "message": "식별자(dcterms:identifier) 결측 또는 중복",
+   "path": "dcterms:identifier",
+   "severity": "Violation",
+   "route": {
+    "key": "mint",
+    "step": 6,
+    "label": "ID 발급 (민팅 대장)",
+    "focus": "mint"
+   },
+   "profile": "common",
+   "evaluator": "SHACL Core"
+  },
+  {
+   "iri": "https://catalog.molit.go.kr/shapes/DistributionShape-mediaType",
+   "name": "DistributionShape",
+   "local": "DistributionShape-mediaType",
+   "message": "DistributionShape — dcat:mediaType 은 IANA 미디어타입 IRI 1개여야 한다",
+   "path": "dcat:mediaType",
+   "severity": "Violation",
+   "route": {
+    "key": "mediaType",
+    "step": 3,
+    "label": "mediaType 드롭다운",
+    "focus": "media_type"
+   },
+   "profile": "common",
+   "evaluator": "SHACL Core"
+  },
+  {
+   "iri": "https://catalog.molit.go.kr/shapes/DistributionShape-owner",
+   "name": "DistributionShape",
+   "local": "DistributionShape-owner",
+   "message": "DistributionShape — 소속 Dataset 없는 Distribution",
+   "path": null,
+   "severity": "Violation",
+   "route": {
+    "key": "mediaType",
+    "step": 3,
+    "label": "mediaType 드롭다운",
+    "focus": "media_type"
+   },
+   "profile": "common",
+   "evaluator": "SHACL Core"
+  },
+  {
+   "iri": "https://catalog.molit.go.kr/shapes/JoinKeyBindingShape-concept",
+   "name": "JoinKeyShape",
+   "local": "JoinKeyBindingShape-concept",
+   "message": "연계키 개념(fde:keyConcept) 결측",
+   "path": "fde:keyConcept",
+   "severity": "Violation",
+   "route": {
+    "key": "class4",
+    "step": 4,
+    "label": "분류 매트릭스",
+    "focus": null
+   },
+   "profile": "common",
+   "evaluator": "SHACL Core"
+  },
+  {
+   "iri": "https://catalog.molit.go.kr/shapes/RelationshipShape-target",
+   "name": "JoinRuleShape",
+   "local": "RelationshipShape-target",
+   "message": "관계의 상대 데이터셋(dcterms:relation) 결측",
+   "path": "dcterms:relation",
+   "severity": "Violation",
+   "route": {
+    "key": "lineage5",
+    "step": 5,
+    "label": "관계 목록",
+    "focus": null
+   },
+   "profile": "common",
+   "evaluator": "SHACL Core"
+  },
+  {
+   "iri": "https://catalog.molit.go.kr/shapes/RelationshipShape-role",
+   "name": "JoinRuleShape",
+   "local": "RelationshipShape-role",
+   "message": "관계 역할(dcat:hadRole) 결측",
+   "path": "dcat:hadRole",
+   "severity": "Violation",
+   "route": {
+    "key": "lineage5",
+    "step": 5,
+    "label": "관계 목록",
+    "focus": null
+   },
+   "profile": "common",
+   "evaluator": "SHACL Core"
+  },
+  {
+   "iri": "https://catalog.molit.go.kr/shapes/FileDatasetDistributionShape",
+   "name": "MediaTypePlacementShape",
+   "local": "FileDatasetDistributionShape",
+   "message": "MediaTypePlacementShape — Distribution 결측 (mediaType 미입력 또는 미승인)",
+   "path": null,
+   "severity": "Violation",
+   "route": {
+    "key": "mediaType",
+    "step": 3,
+    "label": "mediaType 드롭다운",
+    "focus": "media_type"
+   },
+   "profile": "common",
+   "evaluator": "SHACL Core"
+  },
+  {
+   "iri": "https://catalog.molit.go.kr/shapes/MediaTypePlacementShape-noDirect",
+   "name": "MediaTypePlacementShape",
+   "local": "MediaTypePlacementShape-noDirect",
+   "message": "MediaTypePlacementShape — dcat:mediaType 은 Distribution 전용",
+   "path": "dcat:mediaType",
+   "severity": "Violation",
+   "route": {
+    "key": "mediaType",
+    "step": 3,
+    "label": "mediaType 드롭다운",
+    "focus": "media_type"
+   },
+   "profile": "common",
+   "evaluator": "SHACL Core"
+  }
+ ]
+}

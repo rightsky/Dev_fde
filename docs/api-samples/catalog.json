@@ -1,0 +1,220 @@
+{
+ "total": 3,
+ "items": [
+  {
+   "resource_id": "SVC-000001",
+   "iri": "https://catalog.molit.go.kr/id/service/SVC-000001",
+   "kind": "stream",
+   "title": "cctv.vehicle.det.v1",
+   "description": null,
+   "publisher": "경기도",
+   "process_id": 1,
+   "process_name": "도로 사고 원인 분석 조합",
+   "collection_title": "도로 사고 원인 분석 조합",
+   "version": 1,
+   "status": "published",
+   "checksum": "25a8e3fa3131cadace46657a291286f58ab59d84ec3873bb846126bd846edd2d",
+   "facets": {
+    "classification": {
+     "theme": [
+      "교통물류"
+     ],
+     "dataType": [
+      "실시간"
+     ],
+     "governance": [
+      "기관 내부 관리"
+     ]
+    },
+    "license": "기관 내부 한정",
+    "n2sf": "S",
+    "keys": [
+     {
+      "key": "K5",
+      "label": "도로링크",
+      "column": "link_id",
+      "table": "stream"
+     }
+    ],
+    "keywords": [],
+    "media_type": null,
+    "form": "실시간 스트림",
+    "triple_count": 82,
+    "readiness": "ai-ready",
+    "relations": [
+     {
+      "type": "GROUPED_WITH",
+      "target": "교통사고",
+      "direction": "out"
+     }
+    ],
+    "distribution_id": null
+   },
+   "published_by": "관리자",
+   "published_at": "2026-10-06T09:29:17.915461Z"
+  },
+  {
+   "resource_id": "DST-000002",
+   "iri": "https://catalog.molit.go.kr/id/dataset/DST-000002",
+   "kind": "dataset",
+   "title": "교통사고",
+   "description": "테스트용 데이터셋 설명입니다.",
+   "publisher": "경기도",
+   "process_id": 1,
+   "process_name": "도로 사고 원인 분석 조합",
+   "collection_title": "도로 사고 원인 분석 조합",
+   "version": 1,
+   "status": "published",
+   "checksum": "459780ef28bb9a3414e1f65772d2e95c6bfd88d2e79402d967ba8b245aca1346",
+   "facets": {
+    "classification": {
+     "theme": [
+      "교통물류"
+     ],
+     "dataType": [
+      "정형"
+     ],
+     "governance": [
+      "부처 공유"
+     ]
+    },
+    "license": "기관 간 협약",
+    "n2sf": "S",
+    "keys": [
+     {
+      "key": "K5",
+      "label": "도로링크",
+      "column": "도로링크ID",
+      "table": "교통사고"
+     },
+     {
+      "key": "K7",
+      "label": "시각",
+      "column": "발생일시",
+      "table": "교통사고"
+     }
+    ],
+    "keywords": [
+     "도로",
+     "사고"
+    ],
+    "media_type": "text/csv",
+    "form": "정형(CSV)",
+    "triple_count": 110,
+    "readiness": "ai-ready",
+    "relations": [
+     {
+      "type": "GROUPED_WITH",
+      "target": "cctv.vehicle.det.v1",
+      "direction": "in"
+     },
+     {
+      "type": "JOINED_ON",
+      "target": "도로목록",
+      "direction": "out",
+      "ssotPriority": 1,
+      "key": "K5",
+      "sourceColumn": "도로링크ID",
+      "targetColumn": "LINK_ID",
+      "matchRate": 0.878
+     }
+    ],
+    "distribution_id": "DIST-000002-csv"
+   },
+   "published_by": "관리자",
+   "published_at": "2026-10-06T09:29:17.910537Z"
+  },
+  {
+   "resource_id": "DST-000001",
+   "iri": "https://catalog.molit.go.kr/id/dataset/DST-000001",
+   "kind": "dataset",
+   "title": "도로목록",
+   "description": "테스트용 데이터셋 설명입니다.",
+   "publisher": "경기도",
+   "process_id": 1,
+   "process_name": "도로 사고 원인 분석 조합",
+   "collection_title": "도로 사고 원인 분석 조합",
+   "version": 1,
+   "status": "published",
+   "checksum": "94ef997fb0642e6d8666eaddcba02f51646375a5da64d93656b4e96a779f81be",
+   "facets": {
+    "classification": {
+     "theme": [
+      "도로"
+     ],
+     "dataType": [
+      "정형",
+      "공간"
+     ],
+     "granularity": [
+      "도로링크"
+     ],
+     "governance": [
+      "대국민 개방"
+     ]
+    },
+    "license": "공공누리 1유형",
+    "n2sf": "O",
+    "keys": [
+     {
+      "key": "K5",
+      "label": "도로링크",
+      "column": "LINK_ID",
+      "table": "도로목록"
+     },
+     {
+      "key": "K3",
+      "label": "좌표",
+      "column": "경도",
+      "table": "도로목록"
+     }
+    ],
+    "keywords": [
+     "도로",
+     "사고"
+    ],
+    "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "form": "정형(엑셀)",
+    "triple_count": 110,
+    "readiness": "ai-ready",
+    "relations": [
+     {
+      "type": "JOINED_ON",
+      "target": "교통사고",
+      "direction": "in",
+      "key": "K5"
+     }
+    ],
+    "distribution_id": "DIST-000001-xlsx"
+   },
+   "published_by": "관리자",
+   "published_at": "2026-10-06T09:29:17.904715Z"
+  }
+ ],
+ "facets": {
+  "theme": [
+   [
+    "교통물류",
+    2
+   ],
+   [
+    "도로",
+    1
+   ]
+  ],
+  "data_type": [
+   [
+    "정형",
+    2
+   ],
+   [
+    "실시간",
+    1
+   ],
+   [
+    "공간",
+    1
+   ]
+  ]
+ }
+}

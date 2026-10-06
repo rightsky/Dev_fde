@@ -1,0 +1,536 @@
+{
+ "process": {
+  "id": 1,
+  "name": "도로 사고 원인 분석 조합",
+  "status": "active",
+  "current_step": 1,
+  "combo_title": "도로 사고 원인 분석 조합",
+  "combo_description": "도로·사고·CCTV 결합",
+  "combo_source": "suggestion",
+  "combo_confirmed_at": "2026-10-06T09:29:04.764338Z",
+  "pub_mode": false,
+  "lineage_waiver_reason": null,
+  "lineage_waived_at": null,
+  "dataset_count": 3,
+  "selected_count": 3,
+  "created_at": "2026-10-06T09:29:04.641280Z",
+  "updated_at": "2026-10-06T09:29:04.765367Z",
+  "completed_at": null,
+  "trashed_at": null
+ },
+ "datasets": [
+  {
+   "id": 1,
+   "process_id": 1,
+   "asset": {
+    "id": 1,
+    "name": "도로목록",
+    "kind": "dataset",
+    "source": "upload",
+    "filename": "도로목록.xlsx",
+    "ext": "xlsx",
+    "size": 12807,
+    "size_label": "13 KB",
+    "sha256": "6787865696a554f8656ad64be48d573a3ab88724ec5d3244a0878055b2139edc",
+    "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "data_form": "정형",
+    "description": null,
+    "org": null,
+    "stream": {},
+    "profile_status": "ok",
+    "profile_summary": "스키마 7컬럼 · 200행 (실측)",
+    "table_count": 1,
+    "column_count": 7,
+    "row_count": 200,
+    "warnings": [],
+    "error": null,
+    "key_candidates": [
+     {
+      "code": "K3",
+      "label": "좌표",
+      "table": "도로목록",
+      "column": "경도",
+      "score": 0.95,
+      "reason": "컬럼명 일치 · 한반도 경위도 범위",
+      "distinct": 200,
+      "sampled": false
+     },
+     {
+      "code": "K3",
+      "label": "좌표",
+      "table": "도로목록",
+      "column": "위도",
+      "score": 0.95,
+      "reason": "컬럼명 일치 · 한반도 경위도 범위",
+      "distinct": 200,
+      "sampled": false
+     },
+     {
+      "code": "K1",
+      "label": "행정구역",
+      "table": "도로목록",
+      "column": "시군구코드",
+      "score": 0.9,
+      "reason": "컬럼명 일치 · 행정구역 코드 자릿수(2·5·8·10) 일치",
+      "distinct": 2,
+      "sampled": false
+     },
+     {
+      "code": "K7",
+      "label": "시각",
+      "table": "도로목록",
+      "column": "기준일자",
+      "score": 0.85,
+      "reason": "시각 형식 값 · 컬럼명 일치",
+      "distinct": 28,
+      "sampled": false
+     },
+     {
+      "code": "K2",
+      "label": "주소",
+      "table": "도로목록",
+      "column": "도로명",
+      "score": 0.55,
+      "reason": "컬럼명 일치",
+      "distinct": 200,
+      "sampled": false
+     },
+     {
+      "code": "K5",
+      "label": "도로링크",
+      "table": "도로목록",
+      "column": "LINK_ID",
+      "score": 0.55,
+      "reason": "컬럼명 일치",
+      "distinct": 200,
+      "sampled": false
+     }
+    ],
+    "keys": [
+     "K1",
+     "K2",
+     "K3",
+     "K5",
+     "K7"
+    ],
+    "created_at": "2026-10-06T09:29:04.530725Z"
+   },
+   "selected": true,
+   "in_combo": true,
+   "position": 0,
+   "title": "도로목록",
+   "kind": "dataset",
+   "meta": {
+    "title": "도로목록",
+    "language": "ko",
+    "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "temporal_start": "2026-08-01",
+    "temporal_end": "2026-08-28",
+    "_auto": [
+     "title",
+     "language",
+     "media_type",
+     "temporal_start",
+     "temporal_end"
+    ]
+   },
+   "approved_fields": [],
+   "approval_fields": [
+    "publisher_org_id",
+    "media_type"
+   ],
+   "extra_classes": [],
+   "meta_confirmed_at": null,
+   "classification": {},
+   "class_confirmed_at": null,
+   "resource_id": "DST-draft-000001",
+   "minted": false,
+   "minted_id": null,
+   "draft_id": "DST-draft-000001",
+   "authoring_activity": "ACT-K-0424",
+   "readiness": {
+    "required": [
+     "title",
+     "publisher",
+     "distribution"
+    ],
+    "missing": [
+     "publisher",
+     "distribution"
+    ],
+    "recommended_missing": [
+     "description",
+     "keywords",
+     "theme",
+     "dataType",
+     "joinKeys",
+     "n2sfGrade"
+    ],
+    "level": "draft"
+   },
+   "checksum": "7174215d9cae8588444d7cd8a822bc851c780388dc9fac9436100cffaa850adc",
+   "triple_count": 20,
+   "iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000001"
+  },
+  {
+   "id": 2,
+   "process_id": 1,
+   "asset": {
+    "id": 2,
+    "name": "교통사고",
+    "kind": "dataset",
+    "source": "upload",
+    "filename": "교통사고.csv",
+    "ext": "csv",
+    "size": 11440,
+    "size_label": "11 KB",
+    "sha256": "6f3b1e0700cf9f0429efa9ce00223630c97519e31de523c502e11ef73321cf62",
+    "media_type": "text/csv",
+    "data_form": "정형",
+    "description": null,
+    "org": null,
+    "stream": {},
+    "profile_status": "ok",
+    "profile_summary": "스키마 7컬럼 · 150행 (실측)",
+    "table_count": 1,
+    "column_count": 7,
+    "row_count": 150,
+    "warnings": [
+     "문자 인코딩 cp949 — UTF-8 이 아님",
+     "[교통사고] 시간 포맷 2종 혼재: YYYY-MM-DD HH:MM:SS, YYYYMMDD",
+     "[교통사고] 결측 표기 3종 혼재: (빈 셀), -, null",
+     "[교통사고] 개인정보 의심 컬럼: 차량번호"
+    ],
+    "error": null,
+    "key_candidates": [
+     {
+      "code": "K2",
+      "label": "주소",
+      "table": "교통사고",
+      "column": "사고주소",
+      "score": 0.9,
+      "reason": "컬럼명 일치 · 주소 문자열 패턴",
+      "distinct": 150,
+      "sampled": false
+     },
+     {
+      "code": "K6",
+      "label": "차량ID",
+      "table": "교통사고",
+      "column": "차량번호",
+      "score": 0.9,
+      "reason": "컬럼명 일치 · 차량번호 형식",
+      "distinct": 150,
+      "sampled": false
+     },
+     {
+      "code": "K7",
+      "label": "시각",
+      "table": "교통사고",
+      "column": "발생일시",
+      "score": 0.85,
+      "reason": "시각 형식 값 · 컬럼명 일치",
+      "distinct": 128,
+      "sampled": false
+     },
+     {
+      "code": "K5",
+      "label": "도로링크",
+      "table": "교통사고",
+      "column": "도로링크ID",
+      "score": 0.55,
+      "reason": "컬럼명 일치",
+      "distinct": 123,
+      "sampled": false
+     },
+     {
+      "code": "K9",
+      "label": "문서ID",
+      "table": "교통사고",
+      "column": "사고번호",
+      "score": 0.55,
+      "reason": "컬럼명 일치",
+      "distinct": 150,
+      "sampled": false
+     }
+    ],
+    "keys": [
+     "K2",
+     "K5",
+     "K6",
+     "K7",
+     "K9"
+    ],
+    "created_at": "2026-10-06T09:29:04.544633Z"
+   },
+   "selected": true,
+   "in_combo": true,
+   "position": 1,
+   "title": "교통사고",
+   "kind": "dataset",
+   "meta": {
+    "title": "교통사고",
+    "language": "ko",
+    "media_type": "text/csv",
+    "temporal_start": "2026-07-01",
+    "temporal_end": "2026-07-28",
+    "_auto": [
+     "title",
+     "language",
+     "media_type",
+     "temporal_start",
+     "temporal_end"
+    ]
+   },
+   "approved_fields": [],
+   "approval_fields": [
+    "publisher_org_id",
+    "media_type"
+   ],
+   "extra_classes": [],
+   "meta_confirmed_at": null,
+   "classification": {},
+   "class_confirmed_at": null,
+   "resource_id": "DST-draft-000002",
+   "minted": false,
+   "minted_id": null,
+   "draft_id": "DST-draft-000002",
+   "authoring_activity": "ACT-K-0425",
+   "readiness": {
+    "required": [
+     "title",
+     "publisher",
+     "distribution"
+    ],
+    "missing": [
+     "publisher",
+     "distribution"
+    ],
+    "recommended_missing": [
+     "description",
+     "keywords",
+     "theme",
+     "dataType",
+     "joinKeys",
+     "n2sfGrade"
+    ],
+    "level": "draft"
+   },
+   "checksum": "bdec44700e0f742ff13fdaa85486b0cae51b35b5901d4867b0186c2079273cbe",
+   "triple_count": 20,
+   "iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000002"
+  },
+  {
+   "id": 3,
+   "process_id": 1,
+   "asset": {
+    "id": 3,
+    "name": "cctv.vehicle.det.v1",
+    "kind": "stream",
+    "source": "stream",
+    "filename": null,
+    "ext": null,
+    "size": null,
+    "size_label": null,
+    "sha256": null,
+    "media_type": null,
+    "data_form": "실시간 스트림",
+    "description": null,
+    "org": null,
+    "stream": {
+     "temporal_resolution": "PT1S",
+     "event_time_column": "event_time",
+     "endpoint_url": "kafka://broker:9092/cctv.vehicle.det.v1",
+     "timezone": "Asia/Seoul",
+     "fields": [
+      {
+       "name": "event_time",
+       "type": "datetime"
+      },
+      {
+       "name": "link_id",
+       "type": "string"
+      },
+      {
+       "name": "vehicle_no",
+       "type": "string"
+      }
+     ]
+    },
+    "profile_status": "stream",
+    "profile_summary": "스트림 스키마 3필드 (등록값)",
+    "table_count": 1,
+    "column_count": 3,
+    "row_count": 0,
+    "warnings": [],
+    "error": null,
+    "key_candidates": [
+     {
+      "code": "K7",
+      "label": "시각",
+      "table": "stream",
+      "column": "event_time",
+      "score": 0.85,
+      "reason": "시각 형식 값 · 컬럼명 일치",
+      "distinct": 0,
+      "sampled": false
+     },
+     {
+      "code": "K5",
+      "label": "도로링크",
+      "table": "stream",
+      "column": "link_id",
+      "score": 0.55,
+      "reason": "컬럼명 일치",
+      "distinct": 0,
+      "sampled": false
+     },
+     {
+      "code": "K6",
+      "label": "차량ID",
+      "table": "stream",
+      "column": "vehicle_no",
+      "score": 0.55,
+      "reason": "컬럼명 일치",
+      "distinct": 0,
+      "sampled": false
+     }
+    ],
+    "keys": [
+     "K5",
+     "K6",
+     "K7"
+    ],
+    "created_at": "2026-10-06T09:29:04.562284Z"
+   },
+   "selected": true,
+   "in_combo": true,
+   "position": 2,
+   "title": "cctv.vehicle.det.v1",
+   "kind": "stream",
+   "meta": {
+    "title": "cctv.vehicle.det.v1",
+    "language": "ko",
+    "temporal_resolution": "PT1S",
+    "event_time_column": "event_time",
+    "endpoint_url": "kafka://broker:9092/cctv.vehicle.det.v1",
+    "timezone": "Asia/Seoul",
+    "_auto": [
+     "title",
+     "language",
+     "temporal_resolution",
+     "event_time_column",
+     "endpoint_url",
+     "timezone"
+    ]
+   },
+   "approved_fields": [],
+   "approval_fields": [
+    "publisher_org_id",
+    "temporal_resolution",
+    "event_time_column"
+   ],
+   "extra_classes": [],
+   "meta_confirmed_at": null,
+   "classification": {},
+   "class_confirmed_at": null,
+   "resource_id": "SVC-draft-000003",
+   "minted": false,
+   "minted_id": null,
+   "draft_id": "SVC-draft-000003",
+   "authoring_activity": "ACT-K-0426",
+   "readiness": {
+    "required": [
+     "title",
+     "publisher",
+     "temporalResolution",
+     "eventTimeColumn"
+    ],
+    "missing": [
+     "publisher",
+     "temporalResolution",
+     "eventTimeColumn"
+    ],
+    "recommended_missing": [
+     "description",
+     "keywords",
+     "theme",
+     "dataType",
+     "joinKeys",
+     "n2sfGrade"
+    ],
+    "level": "draft"
+   },
+   "checksum": "a1ebed5e8ac4239e1c2ad1368d1917605410fa7c3f9366c744a9e46379ddc0fc",
+   "triple_count": 19,
+   "iri": "https://catalog.molit.go.kr/id/service/SVC-draft-000003"
+  }
+ ],
+ "state": {
+  "gates": [
+   {
+    "step": 1,
+    "done": true,
+    "can_enter": true,
+    "reason": ""
+   },
+   {
+    "step": 2,
+    "done": true,
+    "can_enter": true,
+    "reason": "STEP 1에서 후보를 1건 이상 선택하세요"
+   },
+   {
+    "step": 3,
+    "done": false,
+    "can_enter": true,
+    "reason": "STEP 2 조합 확정을 먼저 완료하세요",
+    "progress": "0/3"
+   },
+   {
+    "step": 4,
+    "done": false,
+    "can_enter": true,
+    "reason": "STEP 2 조합 확정을 먼저 완료하세요",
+    "progress": "0/3"
+   },
+   {
+    "step": 5,
+    "done": false,
+    "can_enter": true,
+    "reason": "STEP 2 조합 확정을 먼저 완료하세요",
+    "progress": "관계 0건"
+   },
+   {
+    "step": 6,
+    "done": false,
+    "can_enter": true,
+    "reason": "STEP 2 조합 확정을 먼저 완료하세요",
+    "progress": ""
+   }
+  ],
+  "combo_ok": true,
+  "lineage_resolved": false,
+  "validation": {
+   "run_id": null,
+   "stale": null,
+   "done": false,
+   "mode": null,
+   "pass_count": 0,
+   "total": 0
+  },
+  "serialization": {
+   "run_id": null,
+   "stale": null,
+   "done": false,
+   "ok_count": 0
+  },
+  "diagnosis": {
+   "run_id": null,
+   "stale": null,
+   "done": false,
+   "score": null,
+   "max_score": null
+  }
+ }
+}

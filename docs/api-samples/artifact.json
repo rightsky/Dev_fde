@@ -1,0 +1,10 @@
+{
+ "id": 13,
+ "filename": "DST-000001_도로목록.ttl",
+ "fmt": "ttl",
+ "media_type": "text/turtle",
+ "content": "# FDE Data Studio 정본 — DST-000001\n# fde:setChecksum \"94ef997fb0642e6d8666eaddcba02f51646375a5da64d93656b4e96a779f81be\"\n# mode: publish · readiness: ai-ready\n@prefix dcat: <http://www.w3.org/ns/dcat#> .\n@prefix dcterms: <http://purl.org/dc/terms/> .\n@prefix fde: <https://catalog.molit.go.kr/def/> .\n@prefix foaf: <http://xmlns.com/foaf/0.1/> .\n@prefix prov: <http://www.w3.org/ns/prov#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n@prefix skos: <http://www.w3.org/2004/02/skos/core#> .\n@prefix spdx: <http://spdx.org/rdf/terms#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\n<ht…(생략)",
+ "sha256": "19afd470d1c2625a5e34ccfd271ff513858c32a1ec4094e958f56bd24bda19e3",
+ "set_checksum": "94ef997fb0642e6d8666eaddcba02f51646375a5da64d93656b4e96a779f81be",
+ "size": 6873
+}

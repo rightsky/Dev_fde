@@ -1,0 +1,263 @@
+[
+ {
+  "id": 3,
+  "name": "cctv.vehicle.det.v1",
+  "kind": "stream",
+  "source": "stream",
+  "filename": null,
+  "ext": null,
+  "size": null,
+  "size_label": null,
+  "sha256": null,
+  "media_type": null,
+  "data_form": "실시간 스트림",
+  "description": null,
+  "org": null,
+  "stream": {
+   "temporal_resolution": "PT1S",
+   "event_time_column": "event_time",
+   "endpoint_url": "kafka://broker:9092/cctv.vehicle.det.v1",
+   "timezone": "Asia/Seoul",
+   "fields": [
+    {
+     "name": "event_time",
+     "type": "datetime"
+    },
+    {
+     "name": "link_id",
+     "type": "string"
+    },
+    {
+     "name": "vehicle_no",
+     "type": "string"
+    }
+   ]
+  },
+  "profile_status": "stream",
+  "profile_summary": "스트림 스키마 3필드 (등록값)",
+  "table_count": 1,
+  "column_count": 3,
+  "row_count": 0,
+  "warnings": [],
+  "error": null,
+  "key_candidates": [
+   {
+    "code": "K7",
+    "label": "시각",
+    "table": "stream",
+    "column": "event_time",
+    "score": 0.85,
+    "reason": "시각 형식 값 · 컬럼명 일치",
+    "distinct": 0,
+    "sampled": false
+   },
+   {
+    "code": "K5",
+    "label": "도로링크",
+    "table": "stream",
+    "column": "link_id",
+    "score": 0.55,
+    "reason": "컬럼명 일치",
+    "distinct": 0,
+    "sampled": false
+   },
+   {
+    "code": "K6",
+    "label": "차량ID",
+    "table": "stream",
+    "column": "vehicle_no",
+    "score": 0.55,
+    "reason": "컬럼명 일치",
+    "distinct": 0,
+    "sampled": false
+   }
+  ],
+  "keys": [
+   "K5",
+   "K6",
+   "K7"
+  ],
+  "created_at": "2026-10-06T09:29:04.562284Z"
+ },
+ {
+  "id": 2,
+  "name": "교통사고",
+  "kind": "dataset",
+  "source": "upload",
+  "filename": "교통사고.csv",
+  "ext": "csv",
+  "size": 11440,
+  "size_label": "11 KB",
+  "sha256": "6f3b1e0700cf9f0429efa9ce00223630c97519e31de523c502e11ef73321cf62",
+  "media_type": "text/csv",
+  "data_form": "정형",
+  "description": null,
+  "org": null,
+  "stream": {},
+  "profile_status": "ok",
+  "profile_summary": "스키마 7컬럼 · 150행 (실측)",
+  "table_count": 1,
+  "column_count": 7,
+  "row_count": 150,
+  "warnings": [
+   "문자 인코딩 cp949 — UTF-8 이 아님",
+   "[교통사고] 시간 포맷 2종 혼재: YYYY-MM-DD HH:MM:SS, YYYYMMDD",
+   "[교통사고] 결측 표기 3종 혼재: (빈 셀), -, null",
+   "[교통사고] 개인정보 의심 컬럼: 차량번호"
+  ],
+  "error": null,
+  "key_candidates": [
+   {
+    "code": "K2",
+    "label": "주소",
+    "table": "교통사고",
+    "column": "사고주소",
+    "score": 0.9,
+    "reason": "컬럼명 일치 · 주소 문자열 패턴",
+    "distinct": 150,
+    "sampled": false
+   },
+   {
+    "code": "K6",
+    "label": "차량ID",
+    "table": "교통사고",
+    "column": "차량번호",
+    "score": 0.9,
+    "reason": "컬럼명 일치 · 차량번호 형식",
+    "distinct": 150,
+    "sampled": false
+   },
+   {
+    "code": "K7",
+    "label": "시각",
+    "table": "교통사고",
+    "column": "발생일시",
+    "score": 0.85,
+    "reason": "시각 형식 값 · 컬럼명 일치",
+    "distinct": 128,
+    "sampled": false
+   },
+   {
+    "code": "K5",
+    "label": "도로링크",
+    "table": "교통사고",
+    "column": "도로링크ID",
+    "score": 0.55,
+    "reason": "컬럼명 일치",
+    "distinct": 123,
+    "sampled": false
+   },
+   {
+    "code": "K9",
+    "label": "문서ID",
+    "table": "교통사고",
+    "column": "사고번호",
+    "score": 0.55,
+    "reason": "컬럼명 일치",
+    "distinct": 150,
+    "sampled": false
+   }
+  ],
+  "keys": [
+   "K2",
+   "K5",
+   "K6",
+   "K7",
+   "K9"
+  ],
+  "created_at": "2026-10-06T09:29:04.544633Z"
+ },
+ {
+  "id": 1,
+  "name": "도로목록",
+  "kind": "dataset",
+  "source": "upload",
+  "filename": "도로목록.xlsx",
+  "ext": "xlsx",
+  "size": 12807,
+  "size_label": "13 KB",
+  "sha256": "6787865696a554f8656ad64be48d573a3ab88724ec5d3244a0878055b2139edc",
+  "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "data_form": "정형",
+  "description": null,
+  "org": null,
+  "stream": {},
+  "profile_status": "ok",
+  "profile_summary": "스키마 7컬럼 · 200행 (실측)",
+  "table_count": 1,
+  "column_count": 7,
+  "row_count": 200,
+  "warnings": [],
+  "error": null,
+  "key_candidates": [
+   {
+    "code": "K3",
+    "label": "좌표",
+    "table": "도로목록",
+    "column": "경도",
+    "score": 0.95,
+    "reason": "컬럼명 일치 · 한반도 경위도 범위",
+    "distinct": 200,
+    "sampled": false
+   },
+   {
+    "code": "K3",
+    "label": "좌표",
+    "table": "도로목록",
+    "column": "위도",
+    "score": 0.95,
+    "reason": "컬럼명 일치 · 한반도 경위도 범위",
+    "distinct": 200,
+    "sampled": false
+   },
+   {
+    "code": "K1",
+    "label": "행정구역",
+    "table": "도로목록",
+    "column": "시군구코드",
+    "score": 0.9,
+    "reason": "컬럼명 일치 · 행정구역 코드 자릿수(2·5·8·10) 일치",
+    "distinct": 2,
+    "sampled": false
+   },
+   {
+    "code": "K7",
+    "label": "시각",
+    "table": "도로목록",
+    "column": "기준일자",
+    "score": 0.85,
+    "reason": "시각 형식 값 · 컬럼명 일치",
+    "distinct": 28,
+    "sampled": false
+   },
+   {
+    "code": "K2",
+    "label": "주소",
+    "table": "도로목록",
+    "column": "도로명",
+    "score": 0.55,
+    "reason": "컬럼명 일치",
+    "distinct": 200,
+    "sampled": false
+   },
+   {
+    "code": "K5",
+    "label": "도로링크",
+    "table": "도로목록",
+    "column": "LINK_ID",
+    "score": 0.55,
+    "reason": "컬럼명 일치",
+    "distinct": 200,
+    "sampled": false
+   }
+  ],
+  "keys": [
+   "K1",
+   "K2",
+   "K3",
+   "K5",
+   "K7"
+  ],
+  "created_at": "2026-10-06T09:29:04.530725Z"
+ }
+]

@@ -1,0 +1,10 @@
+{
+ "id": 1,
+ "username": "admin",
+ "name": "관리자",
+ "role": "admin",
+ "org_label": null,
+ "email": null,
+ "active": true,
+ "created_at": "2026-10-06T09:29:04.056653Z"
+}

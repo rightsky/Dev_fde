@@ -1,0 +1,254 @@
+{
+ "run": {
+  "id": 2,
+  "process_id": 1,
+  "validation_run_id": 5,
+  "mode": "publish",
+  "formats": [
+   "ttl",
+   "jsonld",
+   "txt",
+   "schema"
+  ],
+  "ok_count": 3,
+  "fail_count": 0,
+  "self_verify": [
+   {
+    "dataset_id": 1,
+    "name": "도로목록",
+    "resource_id": "DST-000001",
+    "checksum": "94ef997fb0642e6d8666eaddcba02f51646375a5da64d93656b4e96a779f81be",
+    "readiness": "ai-ready",
+    "triple_count": 110,
+    "passed": true,
+    "checks": [
+     {
+      "name": "① TTL 재파싱",
+      "ok": true,
+      "detail": "110트리플"
+     },
+     {
+      "name": "② prefix 완결",
+      "ok": true,
+      "detail": "전부 선언됨"
+     },
+     {
+      "name": "③ UTF-8 정상",
+      "ok": true,
+      "detail": "왕복 정상"
+     },
+     {
+      "name": "④ TTL↔JSON-LD 그래프 동형",
+      "ok": true,
+      "detail": "TTL 110 · JSON-LD 110 · 정본 110트리플"
+     },
+     {
+      "name": "⑤ 검증 대상 = 산출 대상",
+      "ok": true,
+      "detail": "체크섬 94ef997fb0642e6d 일치"
+     },
+     {
+      "name": "⑥ JSON 인스턴스 스키마 적합",
+      "ok": true,
+      "detail": "필수 5필드"
+     }
+    ]
+   },
+   {
+    "dataset_id": 2,
+    "name": "교통사고",
+    "resource_id": "DST-000002",
+    "checksum": "459780ef28bb9a3414e1f65772d2e95c6bfd88d2e79402d967ba8b245aca1346",
+    "readiness": "ai-ready",
+    "triple_count": 110,
+    "passed": true,
+    "checks": [
+     {
+      "name": "① TTL 재파싱",
+      "ok": true,
+      "detail": "110트리플"
+     },
+     {
+      "name": "② prefix 완결",
+      "ok": true,
+      "detail": "전부 선언됨"
+     },
+     {
+      "name": "③ UTF-8 정상",
+      "ok": true,
+      "detail": "왕복 정상"
+     },
+     {
+      "name": "④ TTL↔JSON-LD 그래프 동형",
+      "ok": true,
+      "detail": "TTL 110 · JSON-LD 110 · 정본 110트리플"
+     },
+     {
+      "name": "⑤ 검증 대상 = 산출 대상",
+      "ok": true,
+      "detail": "체크섬 459780ef28bb9a34 일치"
+     },
+     {
+      "name": "⑥ JSON 인스턴스 스키마 적합",
+      "ok": true,
+      "detail": "필수 5필드"
+     }
+    ]
+   },
+   {
+    "dataset_id": 3,
+    "name": "cctv.vehicle.det.v1",
+    "resource_id": "SVC-000001",
+    "checksum": "25a8e3fa3131cadace46657a291286f58ab59d84ec3873bb846126bd846edd2d",
+    "readiness": "ai-ready",
+    "triple_count": 82,
+    "passed": true,
+    "checks": [
+     {
+      "name": "① TTL 재파싱",
+      "ok": true,
+      "detail": "82트리플"
+     },
+     {
+      "name": "② prefix 완결",
+      "ok": true,
+      "detail": "전부 선언됨"
+     },
+     {
+      "name": "③ UTF-8 정상",
+      "ok": true,
+      "detail": "왕복 정상"
+     },
+     {
+      "name": "④ TTL↔JSON-LD 그래프 동형",
+      "ok": true,
+      "detail": "TTL 82 · JSON-LD 82 · 정본 82트리플"
+     },
+     {
+      "name": "⑤ 검증 대상 = 산출 대상",
+      "ok": true,
+      "detail": "체크섬 25a8e3fa3131cada 일치"
+     },
+     {
+      "name": "⑥ JSON 인스턴스 스키마 적합",
+      "ok": true,
+      "detail": "필수 6필드"
+     }
+    ]
+   }
+  ],
+  "started_at": "2026-10-06T09:29:17.700853Z",
+  "ended_at": "2026-10-06T09:29:17.850955Z",
+  "activity": "ACT-K-0450",
+  "artifacts": [
+   {
+    "id": 13,
+    "dataset_id": 1,
+    "dataset_name": "도로목록",
+    "fmt": "ttl",
+    "filename": "DST-000001_도로목록.ttl",
+    "media_type": "text/turtle",
+    "size": 6873,
+    "size_label": "7 KB",
+    "sha256": "19afd470d1c2625a5e34ccfd271ff513858c32a1ec4094e958f56bd24bda19e3",
+    "set_checksum": "94ef997fb0642e6d8666eaddcba02f51646375a5da64d93656b4e96a779f81be"
+   },
+   {
+    "id": 14,
+    "dataset_id": 1,
+    "dataset_name": "도로목록",
+    "fmt": "jsonld",
+    "filename": "DST-000001_도로목록.jsonld",
+    "media_type": "application/ld+json",
+    "size": 10857,
+    "size_label": "11 KB",
+    "sha256": "d827656885c9ed6cefcb9c2fad9980dfdfb06d2836074c273badbf6143e21c2a",
+    "set_checksum": "94ef997fb0642e6d8666eaddcba02f51646375a5da64d93656b4e96a779f81be"
+   },
+   {
+    "id": 15,
+    "dataset_id": 1,
+    "dataset_name": "도로목록",
+    "fmt": "txt",
+    "filename": "DST-000001_도로목록_문장화.txt",
+    "media_type": "text/plain",
+    "size": 593,
+    "size_label": "593 B",
+    "sha256": "ee5d9804f8e013f47d7aa2f94dbf1e6731b1490cef895009bc19f9bdbff3f83c",
+    "set_checksum": "94ef997fb0642e6d8666eaddcba02f51646375a5da64d93656b4e96a779f81be"
+   },
+   {
+    "id": 16,
+    "dataset_id": 1,
+    "dataset_name": "도로목록",
+    "fmt": "schema",
+    "filename": "DST-000001_도로목록_schema.json",
+    "media_type": "application/json",
+    "size": 6606,
+    "size_label": "6 KB",
+    "sha256": "99717559a19990faba8ec1b9bdfc3cf6e8a45d72ac0e0665f4e5c512c00bf84b",
+    "set_checksum": "94ef997fb0642e6d8666eaddcba02f51646375a5da64d93656b4e96a779f81be"
+   },
+   {
+    "id": 17,
+    "dataset_id": 2,
+    "dataset_name": "교통사고",
+    "fmt": "ttl",
+    "filename": "DST-000002_교통사고.ttl",
+    "media_type": "text/turtle",
+    "size": 6874,
+    "size_label": "7 KB",
+    "sha256": "148542367bab4736b5b178d369b8af2806819d1b10c71a596644ed8b4ec28898",
+    "set_checksum": "459780ef28bb9a3414e1f65772d2e95c6bfd88d2e79402d967ba8b245aca1346"
+   },
+   {
+    "id": 18,
+    "dataset_id": 2,
+    "dataset_name": "교통사고",
+    "fmt": "jsonld",
+    "filename": "DST-000002_교통사고.jsonld",
+    "media_type": "application/ld+json",
+    "size": 10823,
+    "size_label": "11 KB",
+    "sha256": "11a594ffce161720babbb1d1e4ae3980fa769afe8c8376606a5cae423a7594da",
+    "set_checksum": "459780ef28bb9a3414e1f65772d2e95c6bfd88d2e79402d967ba8b245aca1346"
+   }
+  ]
+ },
+ "stale": null,
+ "formats": [
+  {
+   "key": "ttl",
+   "label": "Turtle (RDF 정본)",
+   "tag": "TTL",
+   "suffix": ".ttl",
+   "media_type": "text/turtle",
+   "use": "카탈로그 트리플스토어 정본 저장 · SHACL 검증 대상"
+  },
+  {
+   "key": "jsonld",
+   "label": "JSON-LD (RDF 직렬화)",
+   "tag": "JSON-LD",
+   "suffix": ".jsonld",
+   "media_type": "application/ld+json",
+   "use": "시스템 간 API 계층 · 카탈로그 API 전송"
+  },
+  {
+   "key": "txt",
+   "label": "자연어 문장화",
+   "tag": "문장화",
+   "suffix": "_문장화.txt",
+   "media_type": "text/plain",
+   "use": "sLLM RAG 입력 · 벡터DB 적재용 코퍼스"
+  },
+  {
+   "key": "schema",
+   "label": "순수 JSON + 스키마",
+   "tag": "스키마",
+   "suffix": "_schema.json",
+   "media_type": "application/json",
+   "use": "제약 디코딩용 스키마 · 스키마 레지스트리"
+  }
+ ],
+ "publish_blocked": []
+}

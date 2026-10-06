@@ -1,0 +1,44 @@
+# FDE Data Studio — 발행 프로파일 전용 셰이프 (mode = publish 실행에만 공통 프로파일과 합쳐 로드)
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcat:    <http://www.w3.org/ns/dcat#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix fde:     <__DEF_NS__> .
+@prefix fdesh:   <__SHAPES_NS__> .
+
+# 게이트 0 ④ — 임시 ID 잔존 금지 (fallback 발급 금지)
+fdesh:MintedIdShape a sh:NodeShape ;
+  rdfs:label "MintedIdShape" ;
+  sh:targetClass dcat:Dataset , dcat:Distribution , prov:Collection ;
+  sh:nodeKind sh:IRI ;
+  sh:not [ sh:pattern "(-신규|-draft-|-미민팅-)" ] ;
+  sh:severity sh:Violation ; fde:fixRoute "mint" ;
+  sh:message "게이트 0 ④ — 민팅 미등록 ID 잔존 (fallback 발급 금지)"@ko .
+
+# 발행물은 이용조건이 반드시 있어야 한다
+fdesh:PublishLicenseShape a sh:NodeShape ;
+  rdfs:label "LicenseShape" ;
+  sh:targetClass dcat:Dataset ;
+  sh:or ( [ sh:path dcterms:license ; sh:minCount 1 ]
+          [ sh:path dcterms:accessRights ; sh:minCount 1 ] ) ;
+  sh:severity sh:Violation ; fde:fixRoute "license" ;
+  sh:message "발행 요건 — 이용조건(dcterms:license / dcterms:accessRights) 필수"@ko .
+
+# N2SF 등급과 개방 조건의 정합
+fdesh:N2SFZoneShape a sh:NodeShape ;
+  rdfs:label "N2SFZoneShape" ;
+  sh:targetClass dcat:Dataset ;
+  sh:severity sh:Violation ; fde:fixRoute "class4" ; fde:fixFocus "N2SF" ;
+  sh:sparql [
+    sh:message "N2SFZoneShape — C 등급은 통제구역 전용 (공공누리 이용허락·대국민 개방과 함께 지정할 수 없다)"@ko ;
+    sh:prefixes fdesh: ;
+    sh:select """
+      SELECT $this WHERE {
+        $this fde:n2sfGrade ?g .
+        ?g skos:notation "N2SF-C" .
+        { $this dcterms:license ?lic } UNION { $this fde:governanceMode ?m . ?m skos:notation "F6-03" }
+      }""" ] .

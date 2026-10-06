@@ -1,0 +1,45 @@
+# FDE Data Studio — 실행: `cp .env.example .env` 로 값을 채운 뒤 `docker compose up -d --build`
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fde
+      POSTGRES_USER: fde
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?.env 에 POSTGRES_PASSWORD 를 지정하세요}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fde -d fde"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FDE_DATABASE_URL: postgresql+psycopg://fde:${POSTGRES_PASSWORD}@db:5432/fde
+      FDE_SECRET_KEY: ${FDE_SECRET_KEY:?.env 에 FDE_SECRET_KEY 를 지정하세요}
+      FDE_ADMIN_USERNAME: ${FDE_ADMIN_USERNAME:-admin}
+      FDE_ADMIN_PASSWORD: ${FDE_ADMIN_PASSWORD:?.env 에 FDE_ADMIN_PASSWORD 를 지정하세요}
+      FDE_BASE_IRI: ${FDE_BASE_IRI:-https://catalog.molit.go.kr}
+      FDE_MAX_UPLOAD_MB: ${FDE_MAX_UPLOAD_MB:-50}
+      FDE_SEED_DEMO_ORGS: ${FDE_SEED_DEMO_ORGS:-true}
+    volumes:
+      - storage:/data/storage
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FDE_PORT:-8080}:80"
+
+volumes:
+  db-data:
+  storage:

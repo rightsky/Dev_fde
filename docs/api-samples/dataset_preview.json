@@ -1,0 +1,181 @@
+{
+ "resource_id": "DST-000002",
+ "iri": "https://catalog.molit.go.kr/id/dataset/DST-000002",
+ "checksum": "459780ef28bb9a3414e1f65772d2e95c6bfd88d2e79402d967ba8b245aca1346",
+ "triple_count": 110,
+ "readiness": {
+  "required": [
+   "title",
+   "publisher",
+   "distribution"
+  ],
+  "missing": [],
+  "recommended_missing": [],
+  "level": "ai-ready"
+ },
+ "turtle": "# FDE Data Studio 정본 — DST-000002\n# fde:setChecksum \"459780ef28bb9a3414e1f65772d2e95c6bfd88d2e79402d967ba8b245aca1346\"\n# mode: publish · readiness: ai-ready\n@prefix dcat: <http://www.w3.org/ns/dcat#> .\n@prefix dcterms: <http://purl.org/dc/terms/> .\n@prefix fde: <https://catalog.molit.go.kr/def/> .\n@prefix foaf: <http://xmlns.com/foaf/0.1/> .\n@prefix prov: <http://www.w3.org/ns/prov#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n@prefix skos: <http://www.w3.org/2004/02/skos/core#> .\n@prefix spdx: <http://spdx.org/rdf/terms#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\n<ht…(생략)",
+ "jsonld": "{\n  \"@context\": {\n    \"dcat\": \"http://www.w3.org/ns/dcat#\",\n    \"dcterms\": \"http://purl.org/dc/terms/\",\n    \"fde\": \"https://catalog.molit.go.kr/def/\",\n    \"foaf\": \"http://xmlns.com/foaf/0.1/\",\n    \"prov\": \"http://www.w3.org/ns/prov#\",\n    \"rdf\": \"http://www.w3.org/1999/02/22-rdf-syntax-ns#\",\n    \"rdfs\": \"http://www.w3.org/2000/01/rdf-schema#\",\n    \"skos\": \"http://www.w3.org/2004/02/skos/core#\",\n    \"spdx\": \"http://spdx.org/rdf/terms#\"\n  },\n  \"@graph\": [\n    {\n      \"@id\": \"https://catalog.molit.go.kr/id/distribution/DIST-000002-csv\",\n      \"@type\": \"dcat:Distribution\",\n      \"dcat:byteSize\": {…(생략)",
+ "text": "「교통사고」는 경기도 소관의 정형(CSV)이다. 테스트용 데이터셋 설명입니다. 주제영역은 교통물류이며 데이터유형은 정형이다. 수록 기간은 2026-07-01 ~ 2026-07-28이다. 연계키는 K5 도로링크(도로링크ID), K7 시각(발생일시)이다. 「cctv.vehicle.det.v1」과 연관 데이터셋으로 묶인다. 「도로목록」과 K5 기준으로 결합된다 (도로링크ID = LINK_ID). 이용 조건은 기관 간 협약이다. 보안등급(N²SF)은 S이다. 조합 「도로 사고 원인 분석 조합」의 구성원이다.\n이 서술은 ai-ready 등급 정본에서 생성되었다 (식별자: DST-000002, 세트 체크섬: 459780ef28bb9a34).\n",
+ "record": {
+  "@id": "https://catalog.molit.go.kr/id/dataset/DST-000002",
+  "identifier": "DST-000002",
+  "type": [
+   "dcat:Dataset"
+  ],
+  "title": "교통사고",
+  "description": "테스트용 데이터셋 설명입니다.",
+  "keywords": [
+   "도로",
+   "사고"
+  ],
+  "language": "ko",
+  "temporal": {
+   "start": "2026-07-01",
+   "end": "2026-07-28"
+  },
+  "publisher": {
+   "@id": "https://catalog.molit.go.kr/id/org/ORG-6410000",
+   "label": "경기도"
+  },
+  "distribution": {
+   "@id": "https://catalog.molit.go.kr/id/distribution/DIST-000002-csv",
+   "mediaType": "text/csv",
+   "format": "정형(CSV)",
+   "byteSize": 11440,
+   "checksum": {
+    "algorithm": "sha256",
+    "value": "6f3b1e0700cf9f0429efa9ce00223630c97519e31de523c502e11ef73321cf62"
+   }
+  },
+  "theme": [
+   "교통물류"
+  ],
+  "dataType": [
+   "정형"
+  ],
+  "governance": [
+   "부처 공유"
+  ],
+  "accessRights": "기관 간 협약",
+  "n2sfGrade": "S",
+  "joinKeys": [
+   {
+    "key": "K5",
+    "label": "도로링크",
+    "column": "도로링크ID",
+    "table": "교통사고"
+   },
+   {
+    "key": "K7",
+    "label": "시각",
+    "column": "발생일시",
+    "table": "교통사고"
+   }
+  ],
+  "isPartOf": {
+   "@id": "https://catalog.molit.go.kr/id/collection/COL-000001",
+   "title": "도로 사고 원인 분석 조합"
+  },
+  "relations": [
+   {
+    "type": "GROUPED_WITH",
+    "target": "cctv.vehicle.det.v1",
+    "direction": "in"
+   },
+   {
+    "type": "JOINED_ON",
+    "target": "도로목록",
+    "direction": "out",
+    "ssotPriority": 1,
+    "key": "K5",
+    "sourceColumn": "도로링크ID",
+    "targetColumn": "LINK_ID",
+    "matchRate": 0.878
+   }
+  ],
+  "wasGeneratedBy": {
+   "@id": "https://catalog.molit.go.kr/id/activity/ACT-K-0425",
+   "label": "카탈로그 작성 — 교통사고"
+  },
+  "readiness": {
+   "level": "ai-ready",
+   "missing": []
+  }
+ },
+ "validation": {
+  "passed": true,
+  "violation_count": 0,
+  "warning_count": 0,
+  "info_count": 2,
+  "results": [
+   {
+    "source": "shacl",
+    "severity": "Info",
+    "shape": "ResponsibleAIShape",
+    "shape_iri": "https://catalog.molit.go.kr/shapes/ResponsibleAIShape-biases",
+    "message": "rai:dataBiases 미작성 — 편향성 명세 공백",
+    "focus": "DST-000002",
+    "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-000002",
+    "path": "rai:dataBiases",
+    "value": null,
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "rai_data_biases"
+    }
+   },
+   {
+    "source": "shacl",
+    "severity": "Info",
+    "shape": "ResponsibleAIShape",
+    "shape_iri": "https://catalog.molit.go.kr/shapes/ResponsibleAIShape-limitations",
+    "message": "rai:knownLimitations 미작성",
+    "focus": "DST-000002",
+    "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-000002",
+    "path": "rai:knownLimitations",
+    "value": null,
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "rai_known_limitations"
+    }
+   }
+  ],
+  "gate0": [
+   {
+    "key": "parse",
+    "name": "① 파서 통과",
+    "ok": true,
+    "detail": "Turtle 재파싱 110트리플"
+   },
+   {
+    "key": "prefix",
+    "name": "② prefix 완결",
+    "ok": true,
+    "detail": "사용한 prefix 전부 선언됨"
+   },
+   {
+    "key": "utf8",
+    "name": "③ 인코딩 UTF-8",
+    "ok": true,
+    "detail": "UTF-8 왕복 정상"
+   },
+   {
+    "key": "mint",
+    "name": "④ ID 잔존 검사",
+    "ok": true,
+    "route": null,
+    "detail": "임시 ID 없음"
+   },
+   {
+    "key": "identity",
+    "name": "⑤ 정체성 일치",
+    "ok": true,
+    "route": null,
+    "detail": "요청 「교통사고」 = 산출물 제목 일치"
+   }
+  ]
+ }
+}

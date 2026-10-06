@@ -1,0 +1,195 @@
+{
+ "counts": {
+  "assets": 3,
+  "streams": 1,
+  "processes_active": 0,
+  "processes_completed": 1,
+  "catalog_published": 3,
+  "minted": 3,
+  "activities": 35
+ },
+ "recent_processes": [
+  {
+   "id": 1,
+   "name": "도로 사고 원인 분석 조합",
+   "status": "completed",
+   "current_step": 1,
+   "combo_title": "도로 사고 원인 분석 조합",
+   "combo_description": "도로·사고·CCTV 결합",
+   "combo_source": "suggestion",
+   "combo_confirmed_at": "2026-10-06T09:29:04.764338Z",
+   "pub_mode": true,
+   "lineage_waiver_reason": null,
+   "lineage_waived_at": null,
+   "dataset_count": 3,
+   "selected_count": 3,
+   "created_at": "2026-10-06T09:29:04.641280Z",
+   "updated_at": "2026-10-06T09:29:18.425782Z",
+   "completed_at": "2026-10-06T09:29:18.424818Z",
+   "trashed_at": null,
+   "steps_done": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "validation": {
+    "run_id": 5,
+    "stale": null,
+    "done": true,
+    "mode": "publish",
+    "pass_count": 3,
+    "total": 3
+   }
+  }
+ ],
+ "recent_activities": [
+  {
+   "id": 35,
+   "code": "ACT-K-0455",
+   "type": "process_complete",
+   "text": "프로세스 종료 확정 — 도로 사고 원인 분석 조합 (STEP 8 완료)",
+   "agent_type": "person",
+   "actor": "관리자",
+   "process_id": 1,
+   "dataset_id": null,
+   "at": "2026-10-06T09:29:18.424849Z",
+   "iri": "https://catalog.molit.go.kr/id/activity/ACT-K-0455"
+  },
+  {
+   "id": 34,
+   "code": "ACT-K-0454",
+   "type": "diagnosis_run",
+   "text": "가이드라인 준수 진단 실행 — 도로 사고 원인 분석 조합 3건 · 20.5/33점",
+   "agent_type": "person",
+   "actor": "관리자",
+   "process_id": 1,
+   "dataset_id": null,
+   "at": "2026-10-06T09:29:18.366438Z",
+   "iri": "https://catalog.molit.go.kr/id/activity/ACT-K-0454"
+  },
+  {
+   "id": 33,
+   "code": "ACT-K-0453",
+   "type": "attestation",
+   "text": "담당자 확인 — C-04 데이터 카드 작성: 충족",
+   "agent_type": "person",
+   "actor": "관리자",
+   "process_id": 1,
+   "dataset_id": null,
+   "at": "2026-10-06T09:29:18.170545Z",
+   "iri": "https://catalog.molit.go.kr/id/activity/ACT-K-0453"
+  },
+  {
+   "id": 32,
+   "code": "ACT-K-0452",
+   "type": "diagnosis_run",
+   "text": "가이드라인 준수 진단 실행 — 도로 사고 원인 분석 조합 3건 · 19.5/33점",
+   "agent_type": "person",
+   "actor": "관리자",
+   "process_id": 1,
+   "dataset_id": null,
+   "at": "2026-10-06T09:29:18.131348Z",
+   "iri": "https://catalog.molit.go.kr/id/activity/ACT-K-0452"
+  },
+  {
+   "id": 31,
+   "code": "ACT-K-0451",
+   "type": "publish",
+   "text": "카탈로그 발행 — 도로 사고 원인 분석 조합 3건 (DST-000001, DST-000002, SVC-000001)",
+   "agent_type": "person",
+   "actor": "관리자",
+   "process_id": 1,
+   "dataset_id": null,
+   "at": "2026-10-06T09:29:17.897434Z",
+   "iri": "https://catalog.molit.go.kr/id/activity/ACT-K-0451"
+  },
+  {
+   "id": 30,
+   "code": "ACT-K-0450",
+   "type": "serialization_run",
+   "text": "직렬화·포맷 변환 실행 — 통과 3건 × 4포맷 · 파생 자가검증 3/3",
+   "agent_type": "person",
+   "actor": "관리자",
+   "process_id": 1,
+   "dataset_id": null,
+   "at": "2026-10-06T09:29:17.850968Z",
+   "iri": "https://catalog.molit.go.kr/id/activity/ACT-K-0450"
+  },
+  {
+   "id": 29,
+   "code": "ACT-K-0449",
+   "type": "validation_run",
+   "text": "재검증 — 직전 위반 MintedIdShape, 게이트 0 보강 · 통과 3/3 (발행 모드)",
+   "agent_type": "person",
+   "actor": "관리자",
+   "process_id": 1,
+   "dataset_id": null,
+   "at": "2026-10-06T09:29:17.626111Z",
+   "iri": "https://catalog.molit.go.kr/id/activity/ACT-K-0449"
+  },
+  {
+   "id": 28,
+   "code": "ACT-K-0448",
+   "type": "mint",
+   "text": "발행 ID 발급 3건 — DST-000001, DST-000002, SVC-000001",
+   "agent_type": "person",
+   "actor": "관리자",
+   "process_id": 1,
+   "dataset_id": null,
+   "at": "2026-10-06T09:29:14.938758Z",
+   "iri": "https://catalog.molit.go.kr/id/activity/ACT-K-0448"
+  },
+  {
+   "id": 27,
+   "code": "ACT-K-0447",
+   "type": "validation_run",
+   "text": "STEP 6 검증 실행 — 도로 사고 원인 분석 조합 · 통과 0/3 (발행 모드)",
+   "agent_type": "person",
+   "actor": "관리자",
+   "process_id": 1,
+   "dataset_id": null,
+   "at": "2026-10-06T09:29:14.899998Z",
+   "iri": "https://catalog.molit.go.kr/id/activity/ACT-K-0447"
+  },
+  {
+   "id": 26,
+   "code": "ACT-K-0446",
+   "type": "pub_mode",
+   "text": "발행 모드 전환 — 도로 사고 원인 분석 조합",
+   "agent_type": "person",
+   "actor": "관리자",
+   "process_id": 1,
+   "dataset_id": null,
+   "at": "2026-10-06T09:29:12.352075Z",
+   "iri": "https://catalog.molit.go.kr/id/activity/ACT-K-0446"
+  },
+  {
+   "id": 25,
+   "code": "ACT-K-0445",
+   "type": "serialization_run",
+   "text": "직렬화·포맷 변환 실행 — 통과 3건 × 4포맷 · 파생 자가검증 3/3",
+   "agent_type": "person",
+   "actor": "관리자",
+   "process_id": 1,
+   "dataset_id": null,
+   "at": "2026-10-06T09:29:12.222591Z",
+   "iri": "https://catalog.molit.go.kr/id/activity/ACT-K-0445"
+  },
+  {
+   "id": 24,
+   "code": "ACT-K-0444",
+   "type": "validation_run",
+   "text": "STEP 6 검증 실행 — 도로 사고 원인 분석 조합 · 통과 3/3",
+   "agent_type": "person",
+   "actor": "관리자",
+   "process_id": 1,
+   "dataset_id": null,
+   "at": "2026-10-06T09:29:11.779054Z",
+   "iri": "https://catalog.molit.go.kr/id/activity/ACT-K-0444"
+  }
+ ],
+ "now": "2026-10-06T09:29:19.746880Z"
+}

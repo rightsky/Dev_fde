@@ -1,0 +1,36 @@
+{
+ "warnings": [
+  {
+   "level": "warn",
+   "dataset_id": 2,
+   "name": "교통사고",
+   "code": "PROFILE",
+   "message": "문자 인코딩 cp949 — UTF-8 이 아님"
+  },
+  {
+   "level": "warn",
+   "dataset_id": 2,
+   "name": "교통사고",
+   "code": "PROFILE",
+   "message": "[교통사고] 시간 포맷 2종 혼재: YYYY-MM-DD HH:MM:SS, YYYYMMDD"
+  },
+  {
+   "level": "warn",
+   "dataset_id": 2,
+   "name": "교통사고",
+   "code": "PROFILE",
+   "message": "[교통사고] 결측 표기 3종 혼재: (빈 셀), -, null"
+  },
+  {
+   "level": "warn",
+   "dataset_id": 2,
+   "name": "교통사고",
+   "code": "PROFILE",
+   "message": "[교통사고] 개인정보 의심 컬럼: 차량번호"
+  }
+ ],
+ "draft": {
+  "title": "도로목록 외 2건 조합",
+  "description": "도로목록, 교통사고, cctv.vehicle.det.v1 3개 데이터셋의 조합. 공유 연계키: K1 행정구역, K2 주소, K3 좌표, K5 도로링크, K6 차량ID, K7 시각, K9 문서ID. 실시간 스트림 1건 포함. 파일형 데이터 합계 350행 (프로파일 실측)."
+ }
+}

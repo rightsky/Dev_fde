@@ -1,0 +1,41 @@
+{
+ "suggestions": [
+  {
+   "asset_ids": [
+    1,
+    2,
+    3
+   ],
+   "names": [
+    "도로목록",
+    "교통사고",
+    "cctv.vehicle.det.v1"
+   ],
+   "shared_keys": [
+    {
+     "code": "K5",
+     "label": "도로링크"
+    },
+    {
+     "code": "K7",
+     "label": "시각"
+    }
+   ],
+   "score": 0.58,
+   "confidence": 58,
+   "reasons": [
+    "도로목록 ↔ 교통사고: K5 도로링크 (LINK_ID = 도로링크ID) · 값 일치 108건 (88%)",
+    "도로목록 ↔ cctv.vehicle.det.v1: K7 시각 (기준일자 = event_time) · 값 표본 없음 — 컬럼 규칙 기준",
+    "교통사고 ↔ cctv.vehicle.det.v1: K7 시각 (발생일시 = event_time) · 값 표본 없음 — 컬럼 규칙 기준"
+   ],
+   "method": "규칙 기반 — 연계키 후보 공유 + 값 표본 일치율",
+   "dataset_ids": [
+    1,
+    2,
+    3
+   ]
+  }
+ ],
+ "selected": 3,
+ "method": "규칙 기반 (LLM 미사용) — 컬럼 프로파일의 연계키 후보와 값 표본 일치율로 계산"
+}

@@ -1,0 +1,372 @@
+{
+ "id": 2,
+ "process_id": 1,
+ "asset": {
+  "id": 2,
+  "name": "교통사고",
+  "kind": "dataset",
+  "source": "upload",
+  "filename": "교통사고.csv",
+  "ext": "csv",
+  "size": 11440,
+  "size_label": "11 KB",
+  "sha256": "6f3b1e0700cf9f0429efa9ce00223630c97519e31de523c502e11ef73321cf62",
+  "media_type": "text/csv",
+  "data_form": "정형",
+  "description": null,
+  "org": null,
+  "stream": {},
+  "profile_status": "ok",
+  "profile_summary": "스키마 7컬럼 · 150행 (실측)",
+  "table_count": 1,
+  "column_count": 7,
+  "row_count": 150,
+  "warnings": [
+   "문자 인코딩 cp949 — UTF-8 이 아님",
+   "[교통사고] 시간 포맷 2종 혼재: YYYY-MM-DD HH:MM:SS, YYYYMMDD",
+   "[교통사고] 결측 표기 3종 혼재: (빈 셀), -, null",
+   "[교통사고] 개인정보 의심 컬럼: 차량번호"
+  ],
+  "error": null,
+  "key_candidates": [
+   {
+    "code": "K2",
+    "label": "주소",
+    "table": "교통사고",
+    "column": "사고주소",
+    "score": 0.9,
+    "reason": "컬럼명 일치 · 주소 문자열 패턴",
+    "distinct": 150,
+    "sampled": false
+   },
+   {
+    "code": "K6",
+    "label": "차량ID",
+    "table": "교통사고",
+    "column": "차량번호",
+    "score": 0.9,
+    "reason": "컬럼명 일치 · 차량번호 형식",
+    "distinct": 150,
+    "sampled": false
+   },
+   {
+    "code": "K7",
+    "label": "시각",
+    "table": "교통사고",
+    "column": "발생일시",
+    "score": 0.85,
+    "reason": "시각 형식 값 · 컬럼명 일치",
+    "distinct": 128,
+    "sampled": false
+   },
+   {
+    "code": "K5",
+    "label": "도로링크",
+    "table": "교통사고",
+    "column": "도로링크ID",
+    "score": 0.55,
+    "reason": "컬럼명 일치",
+    "distinct": 123,
+    "sampled": false
+   },
+   {
+    "code": "K9",
+    "label": "문서ID",
+    "table": "교통사고",
+    "column": "사고번호",
+    "score": 0.55,
+    "reason": "컬럼명 일치",
+    "distinct": 150,
+    "sampled": false
+   }
+  ],
+  "keys": [
+   "K2",
+   "K5",
+   "K6",
+   "K7",
+   "K9"
+  ],
+  "created_at": "2026-10-06T09:29:04.544633Z",
+  "profile": {
+   "status": "ok",
+   "tables": [
+    {
+     "name": "교통사고",
+     "rows": 150,
+     "truncated": false,
+     "header_row": 1,
+     "preamble": [],
+     "columns": [
+      {
+       "name": "사고번호",
+       "type": "string",
+       "count": 150,
+       "missing": 0,
+       "null_rate": 0.0,
+       "distinct": 150,
+       "unique": true,
+       "samples": [
+        "A000001",
+        "A000002",
+        "A000003",
+        "A000004",
+        "A000005"
+       ],
+       "max_len": 7,
+       "missing_markers": []
+      },
+      {
+       "name": "발생일시",
+       "type": "datetime",
+       "count": 150,
+       "missing": 0,
+       "null_rate": 0.0,
+       "distinct": 128,
+       "unique": false,
+       "samples": [
+        "20260704",
+        "20260707",
+        "20260710",
+        "20260713",
+        "20260716"
+       ],
+       "max_len": 19,
+       "missing_markers": [],
+       "date_formats": [
+        {
+         "format": "YYYY-MM-DD HH:MM:SS",
+         "count": 100
+        },
+        {
+         "format": "YYYYMMDD",
+         "count": 50
+        }
+       ],
+       "iso8601": false,
+       "min": "2026-07-01 08:20:00",
+       "max": "20260728",
+       "interval": {
+        "seconds": 1440.0,
+        "label": "15분",
+        "duration": "PT15M"
+       }
+      },
+      {
+       "name": "도로링크ID",
+       "type": "string",
+       "count": 150,
+       "missing": 0,
+       "null_rate": 0.0,
+       "distinct": 123,
+       "unique": false,
+       "samples": [
+        "L00002",
+        "L00003",
+        "L00004",
+        "L00005",
+        "L00006"
+       ],
+       "max_len": 6,
+       "missing_markers": []
+      },
+      {
+       "name": "사고주소",
+       "type": "string",
+       "count": 150,
+       "missing": 0,
+       "null_rate": 0.0,
+       "distinct": 150,
+       "unique": true,
+       "samples": [
+        "서울특별시 종로구 세종대로 1",
+        "서울특별시 종로구 세종대로 2",
+        "서울특별시 종로구 세종대로 3",
+        "서울특별시 종로구 세종대로 4",
+        "서울특별시 종로구 세종대로 5"
+       ],
+       "max_len": 18,
+       "missing_markers": []
+      },
+      {
+       "name": "차량번호",
+       "type": "string",
+       "count": 150,
+       "missing": 0,
+       "null_rate": 0.0,
+       "distinct": 150,
+       "unique": true,
+       "samples": [
+        "13가1001",
+        "14가1002",
+        "15가1003",
+        "16가1004",
+        "17가1005"
+       ],
+       "max_len": 7,
+       "missing_markers": [],
+       "pii": {
+        "kind": "차량번호",
+        "basis": "값 패턴"
+       }
+      },
+      {
+       "name": "사망자수",
+       "type": "integer",
+       "count": 150,
+       "missing": 0,
+       "null_rate": 0.0,
+       "distinct": 3,
+       "unique": false,
+       "samples": [
+        "1",
+        "2",
+        "0"
+       ],
+       "max_len": 1,
+       "missing_markers": [],
+       "min": 0.0,
+       "max": 2.0
+      }
+     ],
+     "sample_rows": [
+      [
+       "A000001",
+       "2026-07-02 08:01:00",
+       "L00002",
+       "서울특별시 종로구 세종대로 1",
+       "13가1001",
+       "1"
+      ],
+      [
+       "A000002",
+       "2026-07-03 08:02:00",
+       "L00003",
+       "서울특별시 종로구 세종대로 2",
+       "14가1002",
+       "2"
+      ],
+      [
+       "A000003",
+       "20260704",
+       "L00004",
+       "서울특별시 종로구 세종대로 3",
+       "15가1003",
+       "0"
+      ],
+      [
+       "A000004",
+       "2026-07-05 08:04:00",
+       "L00005",
+       "서울특별시 종로구 세종대로 4",
+       "16가1004",
+       "1"
+      ],
+      [
+       "A000005",
+       "2026-07-06 08:05:00",
+       "L00006",
+       "서울특별시 종로구 세종대로 5",
+       "17가1005",
+       "2"
+      ],
+      [
+       "A000006",
+       "20260707",
+       "L00007",
+       "서울특별시 종로구 세종대로 6",
+       "18가1006",
+       "0"
+      ]
+     ]
+    }
+   ],
+   "warnings": [
+    "문자 인코딩 cp949 — UTF-8 이 아님",
+    "[교통사고] 시간 포맷 2종 혼재: YYYY-MM-DD HH:MM:SS, YYYYMMDD",
+    "[교통사고] 결측 표기 3종 혼재: (빈 셀), -, null",
+    "[교통사고] 개인정보 의심 컬럼: 차량번호"
+   ]
+  }
+ },
+ "selected": true,
+ "in_combo": true,
+ "position": 1,
+ "title": "교통사고",
+ "kind": "dataset",
+ "meta": {
+  "title": "교통사고",
+  "language": "ko",
+  "media_type": "text/csv",
+  "temporal_start": "2026-07-01",
+  "temporal_end": "2026-07-28",
+  "_auto": [
+   "title",
+   "language",
+   "temporal_start",
+   "temporal_end"
+  ],
+  "publisher_org_id": 5,
+  "description": "테스트용 데이터셋 설명입니다.",
+  "keywords": [
+   "도로",
+   "사고"
+  ]
+ },
+ "approved_fields": [
+  "publisher_org_id",
+  "media_type"
+ ],
+ "approval_fields": [
+  "publisher_org_id",
+  "media_type"
+ ],
+ "extra_classes": [],
+ "meta_confirmed_at": "2026-10-06T09:29:05.851040Z",
+ "classification": {
+  "F1": [
+   "F1-01"
+  ],
+  "F2": [
+   "F2-01"
+  ],
+  "F4": [
+   "F4-06"
+  ],
+  "F6": [
+   "F6-02"
+  ],
+  "K": [
+   {
+    "code": "K5",
+    "column": "도로링크ID",
+    "table": "교통사고"
+   },
+   {
+    "code": "K7",
+    "column": "발생일시",
+    "table": "교통사고"
+   }
+  ],
+  "N2SF": "N2SF-S"
+ },
+ "class_confirmed_at": "2026-10-06T09:29:06.338661Z",
+ "resource_id": "DST-000002",
+ "minted": true,
+ "minted_id": "DST-000002",
+ "draft_id": "DST-draft-000002",
+ "authoring_activity": "ACT-K-0425",
+ "readiness": {
+  "required": [
+   "title",
+   "publisher",
+   "distribution"
+  ],
+  "missing": [],
+  "recommended_missing": [],
+  "level": "ai-ready"
+ },
+ "checksum": "459780ef28bb9a3414e1f65772d2e95c6bfd88d2e79402d967ba8b245aca1346",
+ "triple_count": 110,
+ "iri": "https://catalog.molit.go.kr/id/dataset/DST-000002"
+}

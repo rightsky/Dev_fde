@@ -1,0 +1,489 @@
+{
+ "run": {
+  "id": 1,
+  "process_id": 1,
+  "mode": "draft",
+  "shapes_version": "rs-3.0",
+  "status": "done",
+  "pass_count": 0,
+  "fail_count": 3,
+  "warning_count": 22,
+  "started_at": "2026-10-06T09:29:04.827336Z",
+  "ended_at": "2026-10-06T09:29:05.535282Z",
+  "activity": "ACT-K-0430",
+  "datasets": [
+   {
+    "dataset_id": 1,
+    "name": "도로목록",
+    "resource_id": "DST-draft-000001",
+    "checksum": "7174215d9cae8588444d7cd8a822bc851c780388dc9fac9436100cffaa850adc",
+    "gate0": [
+     {
+      "key": "parse",
+      "name": "① 파서 통과",
+      "ok": true,
+      "detail": "Turtle 재파싱 20트리플"
+     },
+     {
+      "key": "prefix",
+      "name": "② prefix 완결",
+      "ok": true,
+      "detail": "사용한 prefix 전부 선언됨"
+     },
+     {
+      "key": "utf8",
+      "name": "③ 인코딩 UTF-8",
+      "ok": true,
+      "detail": "UTF-8 왕복 정상"
+     },
+     {
+      "key": "mint",
+      "name": "④ ID 잔존 검사",
+      "ok": true,
+      "skipped": true,
+      "detail": "초안 모드 — 발행 모드에서 검사"
+     },
+     {
+      "key": "identity",
+      "name": "⑤ 정체성 일치",
+      "ok": true,
+      "route": null,
+      "detail": "요청 「도로목록」 = 산출물 제목 일치"
+     }
+    ],
+    "conforms": false,
+    "passed": false,
+    "violation_count": 2,
+    "warning_count": 7,
+    "info_count": 3,
+    "results": [
+     {
+      "source": "shacl",
+      "severity": "Violation",
+      "shape": "MediaTypePlacementShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/FileDatasetDistributionShape",
+      "message": "MediaTypePlacementShape — Distribution 결측 (mediaType 미입력 또는 미승인)",
+      "focus": "DST-draft-000001",
+      "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000001",
+      "path": null,
+      "value": "https://catalog.molit.go.kr/id/dataset/DST-draft-000001",
+      "route": {
+       "key": "mediaType",
+       "step": 3,
+       "label": "mediaType 드롭다운",
+       "focus": "media_type"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Violation",
+      "shape": "PublisherShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/PublisherShape-publisher",
+      "message": "PublisherShape — 제공기관(dcterms:publisher) 결측 또는 미승인",
+      "focus": "DST-draft-000001",
+      "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000001",
+      "path": "dcterms:publisher",
+      "value": null,
+      "route": {
+       "key": "publisher",
+       "step": 3,
+       "label": "publisher 필드",
+       "focus": "publisher"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Warning",
+      "shape": "ClassificationShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/ClassificationShape-theme",
+      "message": "분류 미완 — F1 주제영역 미선택 (카탈로그 탐색 불가)",
+      "focus": "DST-draft-000001",
+      "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000001",
+      "path": "dcat:theme",
+      "value": null,
+      "route": {
+       "key": "class4",
+       "step": 4,
+       "label": "분류 매트릭스",
+       "focus": "F1"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Warning",
+      "shape": "ClassificationShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/ClassificationShape-type",
+      "message": "분류 미완 — F2 데이터유형 미선택 (카탈로그 탐색 불가)",
+      "focus": "DST-draft-000001",
+      "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000001",
+      "path": "dcterms:type",
+      "value": null,
+      "route": {
+       "key": "class4",
+       "step": 4,
+       "label": "분류 매트릭스",
+       "focus": "F2"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Warning",
+      "shape": "ClassificationShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/ClassificationShape-governance",
+      "message": "분류 미완 — F6 거버넌스 미선택",
+      "focus": "DST-draft-000001",
+      "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000001",
+      "path": "fde:governanceMode",
+      "value": null,
+      "route": {
+       "key": "class4",
+       "step": 4,
+       "label": "분류 매트릭스",
+       "focus": "F6"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Warning",
+      "shape": "ClassificationShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/ClassificationShape-joinKey",
+      "message": "분류 미완 — 연계키(K) 미배정",
+      "focus": "DST-draft-000001",
+      "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000001",
+      "path": "fde:joinKey",
+      "value": null,
+      "route": {
+       "key": "class4",
+       "step": 4,
+       "label": "분류 매트릭스",
+       "focus": "K"
+      }
+     }
+    ],
+    "triple_count": 20
+   },
+   {
+    "dataset_id": 2,
+    "name": "교통사고",
+    "resource_id": "DST-draft-000002",
+    "checksum": "bdec44700e0f742ff13fdaa85486b0cae51b35b5901d4867b0186c2079273cbe",
+    "gate0": [
+     {
+      "key": "parse",
+      "name": "① 파서 통과",
+      "ok": true,
+      "detail": "Turtle 재파싱 20트리플"
+     },
+     {
+      "key": "prefix",
+      "name": "② prefix 완결",
+      "ok": true,
+      "detail": "사용한 prefix 전부 선언됨"
+     },
+     {
+      "key": "utf8",
+      "name": "③ 인코딩 UTF-8",
+      "ok": true,
+      "detail": "UTF-8 왕복 정상"
+     },
+     {
+      "key": "mint",
+      "name": "④ ID 잔존 검사",
+      "ok": true,
+      "skipped": true,
+      "detail": "초안 모드 — 발행 모드에서 검사"
+     },
+     {
+      "key": "identity",
+      "name": "⑤ 정체성 일치",
+      "ok": true,
+      "route": null,
+      "detail": "요청 「교통사고」 = 산출물 제목 일치"
+     }
+    ],
+    "conforms": false,
+    "passed": false,
+    "violation_count": 2,
+    "warning_count": 7,
+    "info_count": 3,
+    "results": [
+     {
+      "source": "shacl",
+      "severity": "Violation",
+      "shape": "MediaTypePlacementShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/FileDatasetDistributionShape",
+      "message": "MediaTypePlacementShape — Distribution 결측 (mediaType 미입력 또는 미승인)",
+      "focus": "DST-draft-000002",
+      "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000002",
+      "path": null,
+      "value": "https://catalog.molit.go.kr/id/dataset/DST-draft-000002",
+      "route": {
+       "key": "mediaType",
+       "step": 3,
+       "label": "mediaType 드롭다운",
+       "focus": "media_type"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Violation",
+      "shape": "PublisherShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/PublisherShape-publisher",
+      "message": "PublisherShape — 제공기관(dcterms:publisher) 결측 또는 미승인",
+      "focus": "DST-draft-000002",
+      "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000002",
+      "path": "dcterms:publisher",
+      "value": null,
+      "route": {
+       "key": "publisher",
+       "step": 3,
+       "label": "publisher 필드",
+       "focus": "publisher"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Warning",
+      "shape": "ClassificationShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/ClassificationShape-theme",
+      "message": "분류 미완 — F1 주제영역 미선택 (카탈로그 탐색 불가)",
+      "focus": "DST-draft-000002",
+      "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000002",
+      "path": "dcat:theme",
+      "value": null,
+      "route": {
+       "key": "class4",
+       "step": 4,
+       "label": "분류 매트릭스",
+       "focus": "F1"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Warning",
+      "shape": "ClassificationShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/ClassificationShape-type",
+      "message": "분류 미완 — F2 데이터유형 미선택 (카탈로그 탐색 불가)",
+      "focus": "DST-draft-000002",
+      "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000002",
+      "path": "dcterms:type",
+      "value": null,
+      "route": {
+       "key": "class4",
+       "step": 4,
+       "label": "분류 매트릭스",
+       "focus": "F2"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Warning",
+      "shape": "ClassificationShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/ClassificationShape-governance",
+      "message": "분류 미완 — F6 거버넌스 미선택",
+      "focus": "DST-draft-000002",
+      "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000002",
+      "path": "fde:governanceMode",
+      "value": null,
+      "route": {
+       "key": "class4",
+       "step": 4,
+       "label": "분류 매트릭스",
+       "focus": "F6"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Warning",
+      "shape": "ClassificationShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/ClassificationShape-joinKey",
+      "message": "분류 미완 — 연계키(K) 미배정",
+      "focus": "DST-draft-000002",
+      "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000002",
+      "path": "fde:joinKey",
+      "value": null,
+      "route": {
+       "key": "class4",
+       "step": 4,
+       "label": "분류 매트릭스",
+       "focus": "K"
+      }
+     }
+    ],
+    "triple_count": 20
+   },
+   {
+    "dataset_id": 3,
+    "name": "cctv.vehicle.det.v1",
+    "resource_id": "SVC-draft-000003",
+    "checksum": "a1ebed5e8ac4239e1c2ad1368d1917605410fa7c3f9366c744a9e46379ddc0fc",
+    "gate0": [
+     {
+      "key": "parse",
+      "name": "① 파서 통과",
+      "ok": true,
+      "detail": "Turtle 재파싱 19트리플"
+     },
+     {
+      "key": "prefix",
+      "name": "② prefix 완결",
+      "ok": true,
+      "detail": "사용한 prefix 전부 선언됨"
+     },
+     {
+      "key": "utf8",
+      "name": "③ 인코딩 UTF-8",
+      "ok": true,
+      "detail": "UTF-8 왕복 정상"
+     },
+     {
+      "key": "mint",
+      "name": "④ ID 잔존 검사",
+      "ok": true,
+      "skipped": true,
+      "detail": "초안 모드 — 발행 모드에서 검사"
+     },
+     {
+      "key": "identity",
+      "name": "⑤ 정체성 일치",
+      "ok": true,
+      "route": null,
+      "detail": "요청 「cctv.vehicle.det.v1」 = 산출물 제목 일치"
+     }
+    ],
+    "conforms": false,
+    "passed": false,
+    "violation_count": 3,
+    "warning_count": 8,
+    "info_count": 3,
+    "results": [
+     {
+      "source": "shacl",
+      "severity": "Violation",
+      "shape": "PublisherShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/PublisherShape-publisher",
+      "message": "PublisherShape — 제공기관(dcterms:publisher) 결측 또는 미승인",
+      "focus": "SVC-draft-000003",
+      "focus_iri": "https://catalog.molit.go.kr/id/service/SVC-draft-000003",
+      "path": "dcterms:publisher",
+      "value": null,
+      "route": {
+       "key": "publisher",
+       "step": 3,
+       "label": "publisher 필드",
+       "focus": "publisher"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Violation",
+      "shape": "StreamServiceShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/StreamServiceShape-eventTime",
+      "message": "스트림 필수 — event-time 컬럼 결측",
+      "focus": "SVC-draft-000003",
+      "focus_iri": "https://catalog.molit.go.kr/id/service/SVC-draft-000003",
+      "path": "fde:eventTimeColumn",
+      "value": null,
+      "route": {
+       "key": "stream3",
+       "step": 3,
+       "label": "스트림 속성 카드",
+       "focus": "temporal_resolution"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Violation",
+      "shape": "StreamServiceShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/StreamServiceShape-resolution",
+      "message": "스트림 필수 — temporalResolution 결측 또는 ISO 8601 duration 아님",
+      "focus": "SVC-draft-000003",
+      "focus_iri": "https://catalog.molit.go.kr/id/service/SVC-draft-000003",
+      "path": "dcat:temporalResolution",
+      "value": null,
+      "route": {
+       "key": "stream3",
+       "step": 3,
+       "label": "스트림 속성 카드",
+       "focus": "temporal_resolution"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Warning",
+      "shape": "ClassificationShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/ClassificationShape-theme",
+      "message": "분류 미완 — F1 주제영역 미선택 (카탈로그 탐색 불가)",
+      "focus": "SVC-draft-000003",
+      "focus_iri": "https://catalog.molit.go.kr/id/service/SVC-draft-000003",
+      "path": "dcat:theme",
+      "value": null,
+      "route": {
+       "key": "class4",
+       "step": 4,
+       "label": "분류 매트릭스",
+       "focus": "F1"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Warning",
+      "shape": "ClassificationShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/ClassificationShape-type",
+      "message": "분류 미완 — F2 데이터유형 미선택 (카탈로그 탐색 불가)",
+      "focus": "SVC-draft-000003",
+      "focus_iri": "https://catalog.molit.go.kr/id/service/SVC-draft-000003",
+      "path": "dcterms:type",
+      "value": null,
+      "route": {
+       "key": "class4",
+       "step": 4,
+       "label": "분류 매트릭스",
+       "focus": "F2"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Warning",
+      "shape": "ClassificationShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/ClassificationShape-governance",
+      "message": "분류 미완 — F6 거버넌스 미선택",
+      "focus": "SVC-draft-000003",
+      "focus_iri": "https://catalog.molit.go.kr/id/service/SVC-draft-000003",
+      "path": "fde:governanceMode",
+      "value": null,
+      "route": {
+       "key": "class4",
+       "step": 4,
+       "label": "분류 매트릭스",
+       "focus": "F6"
+      }
+     }
+    ],
+    "triple_count": 19
+   }
+  ]
+ },
+ "stale": null,
+ "lineage_resolved": false,
+ "mint": [
+  {
+   "dataset_id": 1,
+   "name": "도로목록",
+   "minted_id": null,
+   "draft_id": "DST-draft-000001"
+  },
+  {
+   "dataset_id": 2,
+   "name": "교통사고",
+   "minted_id": null,
+   "draft_id": "DST-draft-000002"
+  },
+  {
+   "dataset_id": 3,
+   "name": "cctv.vehicle.det.v1",
+   "minted_id": null,
+   "draft_id": "SVC-draft-000003"
+  }
+ ]
+}

@@ -1,0 +1,47 @@
+[
+ {
+  "id": 5,
+  "code": "ORG-6410000",
+  "label": "경기도",
+  "kind": "organization",
+  "note": null,
+  "active": true,
+  "iri": "https://catalog.molit.go.kr/id/org/ORG-6410000"
+ },
+ {
+  "id": 3,
+  "code": "ORG-1320000",
+  "label": "경찰청",
+  "kind": "organization",
+  "note": null,
+  "active": true,
+  "iri": "https://catalog.molit.go.kr/id/org/ORG-1320000"
+ },
+ {
+  "id": 1,
+  "code": "ORG-1613000",
+  "label": "국토교통부",
+  "kind": "organization",
+  "note": null,
+  "active": true,
+  "iri": "https://catalog.molit.go.kr/id/org/ORG-1613000"
+ },
+ {
+  "id": 2,
+  "code": "ORG-1360000",
+  "label": "기상청",
+  "kind": "organization",
+  "note": null,
+  "active": true,
+  "iri": "https://catalog.molit.go.kr/id/org/ORG-1360000"
+ },
+ {
+  "id": 4,
+  "code": "ORG-B552016",
+  "label": "한국교통안전공단",
+  "kind": "organization",
+  "note": null,
+  "active": true,
+  "iri": "https://catalog.molit.go.kr/id/org/ORG-B552016"
+ }
+]

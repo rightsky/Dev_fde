@@ -1,0 +1,319 @@
+{
+ "run": {
+  "id": 5,
+  "process_id": 1,
+  "mode": "publish",
+  "shapes_version": "rs-3.0",
+  "status": "done",
+  "pass_count": 3,
+  "fail_count": 0,
+  "warning_count": 1,
+  "started_at": "2026-10-06T09:29:15.206158Z",
+  "ended_at": "2026-10-06T09:29:17.625194Z",
+  "activity": "ACT-K-0449",
+  "datasets": [
+   {
+    "dataset_id": 1,
+    "name": "도로목록",
+    "resource_id": "DST-000001",
+    "checksum": "94ef997fb0642e6d8666eaddcba02f51646375a5da64d93656b4e96a779f81be",
+    "gate0": [
+     {
+      "key": "parse",
+      "name": "① 파서 통과",
+      "ok": true,
+      "detail": "Turtle 재파싱 110트리플"
+     },
+     {
+      "key": "prefix",
+      "name": "② prefix 완결",
+      "ok": true,
+      "detail": "사용한 prefix 전부 선언됨"
+     },
+     {
+      "key": "utf8",
+      "name": "③ 인코딩 UTF-8",
+      "ok": true,
+      "detail": "UTF-8 왕복 정상"
+     },
+     {
+      "key": "mint",
+      "name": "④ ID 잔존 검사",
+      "ok": true,
+      "route": null,
+      "detail": "임시 ID 없음"
+     },
+     {
+      "key": "identity",
+      "name": "⑤ 정체성 일치",
+      "ok": true,
+      "route": null,
+      "detail": "요청 「도로목록」 = 산출물 제목 일치"
+     }
+    ],
+    "conforms": true,
+    "passed": true,
+    "violation_count": 0,
+    "warning_count": 0,
+    "info_count": 2,
+    "results": [
+     {
+      "source": "shacl",
+      "severity": "Info",
+      "shape": "ResponsibleAIShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/ResponsibleAIShape-biases",
+      "message": "rai:dataBiases 미작성 — 편향성 명세 공백",
+      "focus": "DST-000001",
+      "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-000001",
+      "path": "rai:dataBiases",
+      "value": null,
+      "route": {
+       "key": "meta3",
+       "step": 3,
+       "label": "프러퍼티 폼",
+       "focus": "rai_data_biases"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Info",
+      "shape": "ResponsibleAIShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/ResponsibleAIShape-limitations",
+      "message": "rai:knownLimitations 미작성",
+      "focus": "DST-000001",
+      "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-000001",
+      "path": "rai:knownLimitations",
+      "value": null,
+      "route": {
+       "key": "meta3",
+       "step": 3,
+       "label": "프러퍼티 폼",
+       "focus": "rai_known_limitations"
+      }
+     }
+    ],
+    "triple_count": 110
+   },
+   {
+    "dataset_id": 2,
+    "name": "교통사고",
+    "resource_id": "DST-000002",
+    "checksum": "459780ef28bb9a3414e1f65772d2e95c6bfd88d2e79402d967ba8b245aca1346",
+    "gate0": [
+     {
+      "key": "parse",
+      "name": "① 파서 통과",
+      "ok": true,
+      "detail": "Turtle 재파싱 110트리플"
+     },
+     {
+      "key": "prefix",
+      "name": "② prefix 완결",
+      "ok": true,
+      "detail": "사용한 prefix 전부 선언됨"
+     },
+     {
+      "key": "utf8",
+      "name": "③ 인코딩 UTF-8",
+      "ok": true,
+      "detail": "UTF-8 왕복 정상"
+     },
+     {
+      "key": "mint",
+      "name": "④ ID 잔존 검사",
+      "ok": true,
+      "route": null,
+      "detail": "임시 ID 없음"
+     },
+     {
+      "key": "identity",
+      "name": "⑤ 정체성 일치",
+      "ok": true,
+      "route": null,
+      "detail": "요청 「교통사고」 = 산출물 제목 일치"
+     }
+    ],
+    "conforms": true,
+    "passed": true,
+    "violation_count": 0,
+    "warning_count": 0,
+    "info_count": 2,
+    "results": [
+     {
+      "source": "shacl",
+      "severity": "Info",
+      "shape": "ResponsibleAIShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/ResponsibleAIShape-biases",
+      "message": "rai:dataBiases 미작성 — 편향성 명세 공백",
+      "focus": "DST-000002",
+      "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-000002",
+      "path": "rai:dataBiases",
+      "value": null,
+      "route": {
+       "key": "meta3",
+       "step": 3,
+       "label": "프러퍼티 폼",
+       "focus": "rai_data_biases"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Info",
+      "shape": "ResponsibleAIShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/ResponsibleAIShape-limitations",
+      "message": "rai:knownLimitations 미작성",
+      "focus": "DST-000002",
+      "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-000002",
+      "path": "rai:knownLimitations",
+      "value": null,
+      "route": {
+       "key": "meta3",
+       "step": 3,
+       "label": "프러퍼티 폼",
+       "focus": "rai_known_limitations"
+      }
+     }
+    ],
+    "triple_count": 110
+   },
+   {
+    "dataset_id": 3,
+    "name": "cctv.vehicle.det.v1",
+    "resource_id": "SVC-000001",
+    "checksum": "25a8e3fa3131cadace46657a291286f58ab59d84ec3873bb846126bd846edd2d",
+    "gate0": [
+     {
+      "key": "parse",
+      "name": "① 파서 통과",
+      "ok": true,
+      "detail": "Turtle 재파싱 82트리플"
+     },
+     {
+      "key": "prefix",
+      "name": "② prefix 완결",
+      "ok": true,
+      "detail": "사용한 prefix 전부 선언됨"
+     },
+     {
+      "key": "utf8",
+      "name": "③ 인코딩 UTF-8",
+      "ok": true,
+      "detail": "UTF-8 왕복 정상"
+     },
+     {
+      "key": "mint",
+      "name": "④ ID 잔존 검사",
+      "ok": true,
+      "route": null,
+      "detail": "임시 ID 없음"
+     },
+     {
+      "key": "identity",
+      "name": "⑤ 정체성 일치",
+      "ok": true,
+      "route": null,
+      "detail": "요청 「cctv.vehicle.det.v1」 = 산출물 제목 일치"
+     }
+    ],
+    "conforms": true,
+    "passed": true,
+    "violation_count": 0,
+    "warning_count": 1,
+    "info_count": 3,
+    "results": [
+     {
+      "source": "shacl",
+      "severity": "Warning",
+      "shape": "DatasetShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/DescriptionShape-description",
+      "message": "설명(dcterms:description) 결측 또는 10자 미만",
+      "focus": "SVC-000001",
+      "focus_iri": "https://catalog.molit.go.kr/id/service/SVC-000001",
+      "path": "dcterms:description",
+      "value": null,
+      "route": {
+       "key": "meta3",
+       "step": 3,
+       "label": "프러퍼티 폼",
+       "focus": "description"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Info",
+      "shape": "DatasetShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/DescriptionShape-keyword",
+      "message": "키워드(dcat:keyword) 미입력",
+      "focus": "SVC-000001",
+      "focus_iri": "https://catalog.molit.go.kr/id/service/SVC-000001",
+      "path": "dcat:keyword",
+      "value": null,
+      "route": {
+       "key": "meta3",
+       "step": 3,
+       "label": "프러퍼티 폼",
+       "focus": "keywords"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Info",
+      "shape": "ResponsibleAIShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/ResponsibleAIShape-biases",
+      "message": "rai:dataBiases 미작성 — 편향성 명세 공백",
+      "focus": "SVC-000001",
+      "focus_iri": "https://catalog.molit.go.kr/id/service/SVC-000001",
+      "path": "rai:dataBiases",
+      "value": null,
+      "route": {
+       "key": "meta3",
+       "step": 3,
+       "label": "프러퍼티 폼",
+       "focus": "rai_data_biases"
+      }
+     },
+     {
+      "source": "shacl",
+      "severity": "Info",
+      "shape": "ResponsibleAIShape",
+      "shape_iri": "https://catalog.molit.go.kr/shapes/ResponsibleAIShape-limitations",
+      "message": "rai:knownLimitations 미작성",
+      "focus": "SVC-000001",
+      "focus_iri": "https://catalog.molit.go.kr/id/service/SVC-000001",
+      "path": "rai:knownLimitations",
+      "value": null,
+      "route": {
+       "key": "meta3",
+       "step": 3,
+       "label": "프러퍼티 폼",
+       "focus": "rai_known_limitations"
+      }
+     }
+    ],
+    "triple_count": 82
+   }
+  ]
+ },
+ "stale": null,
+ "lineage_resolved": true,
+ "mint": [
+  {
+   "dataset_id": 1,
+   "name": "도로목록",
+   "minted_id": "DST-000001",
+   "draft_id": "DST-draft-000001"
+  },
+  {
+   "dataset_id": 2,
+   "name": "교통사고",
+   "minted_id": "DST-000002",
+   "draft_id": "DST-draft-000002"
+  },
+  {
+   "dataset_id": 3,
+   "name": "cctv.vehicle.det.v1",
+   "minted_id": "SVC-000001",
+   "draft_id": "SVC-draft-000003"
+  }
+ ]
+}

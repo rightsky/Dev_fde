@@ -1,0 +1,109 @@
+{
+  "version": "2026-08",
+  "axes": [
+    {
+      "code": "F1", "name": "주제영역", "nature": "필수", "multi": true, "version": "v2.1 (2026-06)",
+      "rdf_property": "dcat:theme",
+      "description": "데이터셋이 다루는 업무·주제 영역",
+      "codes": [
+        {"code": "F1-01", "label": "교통물류"}, {"code": "F1-02", "label": "도로"},
+        {"code": "F1-03", "label": "철도"}, {"code": "F1-04", "label": "항공"},
+        {"code": "F1-05", "label": "물류시설"}, {"code": "F1-06", "label": "도시계획"},
+        {"code": "F1-07", "label": "주택토지"}, {"code": "F1-08", "label": "건설안전"},
+        {"code": "F1-09", "label": "수자원"}, {"code": "F1-10", "label": "기타"}
+      ]
+    },
+    {
+      "code": "F2", "name": "데이터유형", "nature": "필수", "multi": true, "version": "v1.4 (2026-03)",
+      "rdf_property": "dcterms:type",
+      "description": "데이터의 구조·형태 유형",
+      "codes": [
+        {"code": "F2-01", "label": "정형"}, {"code": "F2-02", "label": "반정형"},
+        {"code": "F2-03", "label": "비정형"}, {"code": "F2-04", "label": "시계열"},
+        {"code": "F2-05", "label": "공간"}, {"code": "F2-06", "label": "실시간"},
+        {"code": "F2-07", "label": "이미지·영상"}
+      ]
+    },
+    {
+      "code": "F3", "name": "해상도", "nature": "권장", "multi": true, "version": "v1.2 (2026-08)",
+      "rdf_property": "fde:granularity",
+      "description": "공간·시간 해상도. 시간 해상도는 dcat:temporalResolution 과 동기화된다",
+      "codes": [
+        {"code": "F3-01", "label": "도로링크", "extra": {"group": "spatial"}},
+        {"code": "F3-02", "label": "행정동", "extra": {"group": "spatial"}},
+        {"code": "F3-03", "label": "시군구", "extra": {"group": "spatial"}},
+        {"code": "F3-04", "label": "시도", "extra": {"group": "spatial"}},
+        {"code": "F3-05", "label": "격자 100m", "extra": {"group": "spatial", "meters": 100}},
+        {"code": "F3-06", "label": "격자 1km", "extra": {"group": "spatial", "meters": 1000}},
+        {"code": "F3-07", "label": "좌표점", "extra": {"group": "spatial"}},
+        {"code": "F3-08", "label": "5분", "extra": {"group": "temporal", "duration": "PT5M"}},
+        {"code": "F3-09", "label": "15분", "extra": {"group": "temporal", "duration": "PT15M"}},
+        {"code": "F3-10", "label": "1시간", "extra": {"group": "temporal", "duration": "PT1H"}},
+        {"code": "F3-11", "label": "일", "extra": {"group": "temporal", "duration": "P1D"}},
+        {"code": "F3-12", "label": "주", "extra": {"group": "temporal", "duration": "P1W"}},
+        {"code": "F3-13", "label": "월", "extra": {"group": "temporal", "duration": "P1M"}},
+        {"code": "F3-14", "label": "분기", "extra": {"group": "temporal", "duration": "P3M"}},
+        {"code": "F3-15", "label": "연", "extra": {"group": "temporal", "duration": "P1Y"}},
+        {"code": "F3-16", "label": "실시간", "extra": {"group": "temporal"}},
+        {"code": "F3-17", "label": "비정기", "extra": {"group": "temporal"}},
+        {"code": "F3-18", "label": "기타", "extra": {"group": "other"}}
+      ]
+    },
+    {
+      "code": "F4", "name": "유통·이용조건", "nature": "필수", "multi": false, "version": "v1.0 (2025-11)",
+      "rdf_property": "dcterms:license | dcterms:accessRights",
+      "description": "이용허락 조건. 공공누리 유형은 dcterms:license, 그 외는 dcterms:accessRights 로 직렬화된다",
+      "codes": [
+        {"code": "F4-01", "label": "공공누리 1유형", "extra": {"property": "dcterms:license"}},
+        {"code": "F4-02", "label": "공공누리 2유형", "extra": {"property": "dcterms:license"}},
+        {"code": "F4-03", "label": "공공누리 3유형", "extra": {"property": "dcterms:license"}},
+        {"code": "F4-04", "label": "공공누리 4유형", "extra": {"property": "dcterms:license"}},
+        {"code": "F4-05", "label": "기관 내부 한정", "extra": {"property": "dcterms:accessRights"}},
+        {"code": "F4-06", "label": "기관 간 협약", "extra": {"property": "dcterms:accessRights"}},
+        {"code": "F4-07", "label": "유상 제공", "extra": {"property": "dcterms:accessRights"}},
+        {"code": "F4-08", "label": "비공개", "extra": {"property": "dcterms:accessRights"}}
+      ]
+    },
+    {
+      "code": "F5", "name": "AI활용목적", "nature": "보조", "multi": true, "version": "v1.1 (2026-01)",
+      "rdf_property": "fde:aiPurpose",
+      "description": "AI 활용 목적 보조 태그 (작업자 직접 선택)",
+      "codes": [
+        {"code": "F5-01", "label": "예측모델 학습"}, {"code": "F5-02", "label": "이상탐지"},
+        {"code": "F5-03", "label": "RAG 코퍼스"}, {"code": "F5-04", "label": "시뮬레이션"},
+        {"code": "F5-05", "label": "통계 산출"}, {"code": "F5-06", "label": "시각화"}
+      ]
+    },
+    {
+      "code": "F6", "name": "거버넌스", "nature": "필수", "multi": false, "version": "v1.0 (2025-11)",
+      "rdf_property": "fde:governanceMode",
+      "description": "관리 주체·책임 구분",
+      "codes": [
+        {"code": "F6-01", "label": "기관 내부 관리"}, {"code": "F6-02", "label": "부처 공유"},
+        {"code": "F6-03", "label": "대국민 개방"}, {"code": "F6-04", "label": "통제"}
+      ]
+    },
+    {
+      "code": "K", "name": "연계키", "nature": "필수", "multi": true, "version": "v2.0 (2026-05)",
+      "rdf_property": "fde:joinKey",
+      "description": "데이터셋 간 결합 축. 컬럼 매핑과 함께 배정한다",
+      "codes": [
+        {"code": "K1", "label": "행정구역"}, {"code": "K2", "label": "주소"},
+        {"code": "K3", "label": "좌표"}, {"code": "K4", "label": "건축물ID"},
+        {"code": "K5", "label": "도로링크"}, {"code": "K6", "label": "차량ID"},
+        {"code": "K7", "label": "시각"}, {"code": "K8", "label": "사업ID"},
+        {"code": "K9", "label": "문서ID"}
+      ]
+    },
+    {
+      "code": "N2SF", "name": "보안등급 (N²SF)", "nature": "필수", "multi": false, "version": "v1.0",
+      "rdf_property": "fde:n2sfGrade",
+      "description": "국가 망 보안체계 등급. 미지정은 S 로 간주한다",
+      "codes": [
+        {"code": "N2SF-C", "label": "C — Classified", "definition": "통제구역 전용"},
+        {"code": "N2SF-S", "label": "S — Sensitive", "definition": "필터링 투영 조건부"},
+        {"code": "N2SF-O", "label": "O — Open", "definition": "개방구역 push 가능"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+ "level": 1,
+ "nodes": [
+  {
+   "id": "collection",
+   "type": "Collection",
+   "label": "도로 사고 원인 분석 조합",
+   "sub": "COL-000001",
+   "detail": {
+    "설명": "도로·사고·CCTV 결합"
+   }
+  },
+  {
+   "id": "ds1",
+   "type": "Dataset",
+   "label": "도로목록",
+   "sub": "DST-000001",
+   "dataset_id": 1,
+   "detail": {
+    "식별자": "DST-000001",
+    "민팅": "발급됨",
+    "형태": "정형",
+    "연계키": "K5, K3",
+    "메타 확정": "예",
+    "분류 확정": "예"
+   }
+  },
+  {
+   "id": "ds2",
+   "type": "Dataset",
+   "label": "교통사고",
+   "sub": "DST-000002",
+   "dataset_id": 2,
+   "detail": {
+    "식별자": "DST-000002",
+    "민팅": "발급됨",
+    "형태": "정형",
+    "연계키": "K5, K7",
+    "메타 확정": "예",
+    "분류 확정": "예"
+   }
+  },
+  {
+   "id": "ds3",
+   "type": "Service",
+   "label": "cctv.vehicle.det.v1",
+   "sub": "SVC-000001",
+   "dataset_id": 3,
+   "detail": {
+    "식별자": "SVC-000001",
+    "민팅": "발급됨",
+    "형태": "실시간 스트림",
+    "연계키": "K5",
+    "메타 확정": "예",
+    "분류 확정": "예"
+   }
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "source": "collection",
+   "target": "ds1",
+   "type": "HAD_MEMBER",
+   "label": ""
+  },
+  {
+   "id": "e2",
+   "source": "collection",
+   "target": "ds2",
+   "type": "HAD_MEMBER",
+   "label": ""
+  },
+  {
+   "id": "e3",
+   "source": "collection",
+   "target": "ds3",
+   "type": "HAD_MEMBER",
+   "label": ""
+  },
+  {
+   "id": "e4",
+   "source": "ds3",
+   "target": "ds2",
+   "type": "GROUPED_WITH",
+   "label": "",
+   "status": "confirmed",
+   "relation_id": 2,
+   "priority": 0,
+   "detail": {
+    "상태": "확정"
+   }
+  },
+  {
+   "id": "e5",
+   "source": "ds2",
+   "target": "ds1",
+   "type": "JOINED_ON",
+   "label": "K5 도로링크ID = LINK_ID",
+   "status": "confirmed",
+   "relation_id": 1,
+   "priority": 1,
+   "detail": {
+    "상태": "확정",
+    "값 일치": "108건",
+    "출발 일치율": "87.8%",
+    "도착 일치율": "54.0%"
+   }
+  }
+ ],
+ "node_counts": {
+  "Collection": 1,
+  "Dataset": 2,
+  "Service": 1
+ },
+ "edge_counts": {
+  "HAD_MEMBER": 3,
+  "GROUPED_WITH": 1,
+  "JOINED_ON": 1
+ }
+}

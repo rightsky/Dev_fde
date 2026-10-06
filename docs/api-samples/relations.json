@@ -1,0 +1,228 @@
+{
+ "relations": [
+  {
+   "id": 2,
+   "type": "GROUPED_WITH",
+   "status": "confirmed",
+   "priority": 0,
+   "source_id": 3,
+   "source_name": "cctv.vehicle.det.v1",
+   "target_id": 2,
+   "target_name": "교통사고",
+   "key_code": null,
+   "key_label": null,
+   "source_table": null,
+   "source_column": null,
+   "target_table": null,
+   "target_column": null,
+   "note": null,
+   "stats": {},
+   "iri": "https://catalog.molit.go.kr/id/relation/REL-000002",
+   "created_at": "2026-10-06T09:29:06.452556Z",
+   "confirmed_at": "2026-10-06T09:29:06.453240Z"
+  },
+  {
+   "id": 1,
+   "type": "JOINED_ON",
+   "status": "confirmed",
+   "priority": 1,
+   "source_id": 2,
+   "source_name": "교통사고",
+   "target_id": 1,
+   "target_name": "도로목록",
+   "key_code": "K5",
+   "key_label": "도로링크",
+   "source_table": "교통사고",
+   "source_column": "도로링크ID",
+   "target_table": "도로목록",
+   "target_column": "LINK_ID",
+   "note": null,
+   "stats": {
+    "computed": true,
+    "source_distinct": 123,
+    "target_distinct": 200,
+    "matched": 108,
+    "source_match_rate": 0.878,
+    "target_match_rate": 0.54,
+    "unmatched_samples": [
+     "X00010",
+     "X00020",
+     "X00030",
+     "X00040",
+     "X00050"
+    ]
+   },
+   "iri": "https://catalog.molit.go.kr/id/relation/REL-000001",
+   "created_at": "2026-10-06T09:29:06.415195Z",
+   "confirmed_at": "2026-10-06T09:29:06.438171Z"
+  }
+ ],
+ "candidates": [
+  {
+   "source_id": 1,
+   "source_name": "도로목록",
+   "target_id": 2,
+   "target_name": "교통사고",
+   "key_code": "K7",
+   "key_label": "시각",
+   "source_table": "도로목록",
+   "source_column": "기준일자",
+   "target_table": "교통사고",
+   "target_column": "발생일시",
+   "score": 0.59,
+   "stats": {
+    "source_distinct": 28,
+    "target_distinct": 128,
+    "matched": 0,
+    "source_match_rate": 0.0,
+    "target_match_rate": 0.0,
+    "sampled": false
+   },
+   "already": false
+  },
+  {
+   "source_id": 1,
+   "source_name": "도로목록",
+   "target_id": 3,
+   "target_name": "cctv.vehicle.det.v1",
+   "key_code": "K7",
+   "key_label": "시각",
+   "source_table": "도로목록",
+   "source_column": "기준일자",
+   "target_table": "stream",
+   "target_column": "event_time",
+   "score": 0.51,
+   "stats": null,
+   "already": false
+  },
+  {
+   "source_id": 2,
+   "source_name": "교통사고",
+   "target_id": 3,
+   "target_name": "cctv.vehicle.det.v1",
+   "key_code": "K7",
+   "key_label": "시각",
+   "source_table": "교통사고",
+   "source_column": "발생일시",
+   "target_table": "stream",
+   "target_column": "event_time",
+   "score": 0.51,
+   "stats": null,
+   "already": false
+  },
+  {
+   "source_id": 1,
+   "source_name": "도로목록",
+   "target_id": 3,
+   "target_name": "cctv.vehicle.det.v1",
+   "key_code": "K5",
+   "key_label": "도로링크",
+   "source_table": "도로목록",
+   "source_column": "LINK_ID",
+   "target_table": "stream",
+   "target_column": "link_id",
+   "score": 0.33,
+   "stats": null,
+   "already": false
+  },
+  {
+   "source_id": 2,
+   "source_name": "교통사고",
+   "target_id": 3,
+   "target_name": "cctv.vehicle.det.v1",
+   "key_code": "K5",
+   "key_label": "도로링크",
+   "source_table": "교통사고",
+   "source_column": "도로링크ID",
+   "target_table": "stream",
+   "target_column": "link_id",
+   "score": 0.33,
+   "stats": null,
+   "already": false
+  },
+  {
+   "source_id": 2,
+   "source_name": "교통사고",
+   "target_id": 3,
+   "target_name": "cctv.vehicle.det.v1",
+   "key_code": "K6",
+   "key_label": "차량ID",
+   "source_table": "교통사고",
+   "source_column": "차량번호",
+   "target_table": "stream",
+   "target_column": "vehicle_no",
+   "score": 0.33,
+   "stats": null,
+   "already": false
+  },
+  {
+   "source_id": 1,
+   "source_name": "도로목록",
+   "target_id": 2,
+   "target_name": "교통사고",
+   "key_code": "K2",
+   "key_label": "주소",
+   "source_table": "도로목록",
+   "source_column": "도로명",
+   "target_table": "교통사고",
+   "target_column": "사고주소",
+   "score": 0.28,
+   "stats": {
+    "source_distinct": 200,
+    "target_distinct": 150,
+    "matched": 0,
+    "source_match_rate": 0.0,
+    "target_match_rate": 0.0,
+    "sampled": false
+   },
+   "already": false
+  },
+  {
+   "source_id": 1,
+   "source_name": "도로목록",
+   "target_id": 2,
+   "target_name": "교통사고",
+   "key_code": "K5",
+   "key_label": "도로링크",
+   "source_table": "도로목록",
+   "source_column": "LINK_ID",
+   "target_table": "교통사고",
+   "target_column": "도로링크ID",
+   "score": 0.71,
+   "stats": {
+    "source_distinct": 200,
+    "target_distinct": 123,
+    "matched": 108,
+    "source_match_rate": 0.54,
+    "target_match_rate": 0.878,
+    "sampled": false
+   },
+   "already": true
+  }
+ ],
+ "lineage_resolved": true,
+ "waiver": null,
+ "types": [
+  {
+   "type": "JOINED_ON",
+   "label": "JOINED_ON",
+   "desc": "연계키를 조인 축으로 한 결합. 순서가 SSOT 우선순위다",
+   "directed": true,
+   "needs_key": true
+  },
+  {
+   "type": "GROUPED_WITH",
+   "label": "GROUPED_WITH",
+   "desc": "연관성 높은 데이터셋 묶음 (방향 없음)",
+   "directed": false,
+   "needs_key": false
+  },
+  {
+   "type": "DERIVED_FROM",
+   "label": "WAS_DERIVED_FROM",
+   "desc": "원천에서 파생된 데이터셋 (prov:wasDerivedFrom)",
+   "directed": true,
+   "needs_key": false
+  }
+ ]
+}

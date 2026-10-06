@@ -1,0 +1,14 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.db
+backend/storage/
+# Node
+node_modules/
+frontend/dist/
+# 환경
+.env
+*.log
+.DS_Store

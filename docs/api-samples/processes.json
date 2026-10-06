@@ -1,0 +1,34 @@
+[
+ {
+  "id": 1,
+  "name": "도로 사고 원인 분석 조합",
+  "status": "completed",
+  "current_step": 1,
+  "combo_title": "도로 사고 원인 분석 조합",
+  "combo_description": "도로·사고·CCTV 결합",
+  "combo_source": "suggestion",
+  "combo_confirmed_at": "2026-10-06T09:29:04.764338Z",
+  "pub_mode": true,
+  "lineage_waiver_reason": null,
+  "lineage_waived_at": null,
+  "dataset_count": 3,
+  "selected_count": 3,
+  "created_at": "2026-10-06T09:29:04.641280Z",
+  "updated_at": "2026-10-06T09:29:18.425782Z",
+  "completed_at": "2026-10-06T09:29:18.424818Z",
+  "trashed_at": null,
+  "steps_done": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6
+  ],
+  "dataset_names": [
+   "도로목록",
+   "교통사고",
+   "cctv.vehicle.det.v1"
+  ]
+ }
+]

@@ -1,0 +1,49 @@
+{
+ "records": [
+  {
+   "id": 3,
+   "kind": "SVC",
+   "minted_id": "SVC-000001",
+   "iri": "https://catalog.molit.go.kr/id/service/SVC-000001",
+   "asset_id": 3,
+   "asset_name": "cctv.vehicle.det.v1",
+   "process_id": 1,
+   "minted_at": "2026-10-06T09:29:14.938624Z",
+   "note": "프로세스 「도로 사고 원인 분석 조합」에서 발급"
+  },
+  {
+   "id": 2,
+   "kind": "DST",
+   "minted_id": "DST-000002",
+   "iri": "https://catalog.molit.go.kr/id/dataset/DST-000002",
+   "asset_id": 2,
+   "asset_name": "교통사고",
+   "process_id": 1,
+   "minted_at": "2026-10-06T09:29:14.936541Z",
+   "note": "프로세스 「도로 사고 원인 분석 조합」에서 발급"
+  },
+  {
+   "id": 1,
+   "kind": "DST",
+   "minted_id": "DST-000001",
+   "iri": "https://catalog.molit.go.kr/id/dataset/DST-000001",
+   "asset_id": 1,
+   "asset_name": "도로목록",
+   "process_id": 1,
+   "minted_at": "2026-10-06T09:29:14.934463Z",
+   "note": "프로세스 「도로 사고 원인 분석 조합」에서 발급"
+  }
+ ],
+ "next": {
+  "DST": "DST-000003",
+  "SVC": "SVC-000002"
+ },
+ "policy": {
+  "draft_pattern": "{DST|SVC}-draft-{작업 번호 6자리}",
+  "published_pattern": "{DST|SVC}-{일련번호 6자리}",
+  "distribution_pattern": "DIST-{본체 번호}-{확장자}",
+  "activity_pattern": "ACT-K-{일련번호 4자리}",
+  "rule": "발행 ID 는 관리자가 민팅 대장에 등록한 것만 쓴다. 대장에 없으면 발행 모드 검증의 게이트 0 ④ 에서 실패한다 (fallback 발급 금지). 같은 원천은 재발행해도 같은 ID 를 유지한다.",
+  "iri_base": "https://catalog.molit.go.kr/id/"
+ }
+}

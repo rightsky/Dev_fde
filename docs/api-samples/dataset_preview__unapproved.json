@@ -1,0 +1,201 @@
+{
+ "resource_id": "DST-draft-000001",
+ "iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000001",
+ "checksum": "7174215d9cae8588444d7cd8a822bc851c780388dc9fac9436100cffaa850adc",
+ "triple_count": 20,
+ "readiness": {
+  "required": [
+   "title",
+   "publisher",
+   "distribution"
+  ],
+  "missing": [
+   "publisher",
+   "distribution"
+  ],
+  "recommended_missing": [
+   "description",
+   "keywords",
+   "theme",
+   "dataType",
+   "joinKeys",
+   "n2sfGrade"
+  ],
+  "level": "draft"
+ },
+ "turtle": "# FDE Data Studio 정본 — DST-draft-000001\n# fde:setChecksum \"7174215d9cae8588444d7cd8a822bc851c780388dc9fac9436100cffaa850adc\"\n# mode: draft · readiness: draft\n@prefix dcat: <http://www.w3.org/ns/dcat#> .\n@prefix dcterms: <http://purl.org/dc/terms/> .\n@prefix prov: <http://www.w3.org/ns/prov#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\n<https://catalog.molit.go.kr/id/activity/ACT-K-0424> a prov:Activity ;\n    rdfs:label \"카탈로그 작성 — 도로목록\"@ko ;\n    prov:startedAtTime \"2026-10-06T09:29:04+00:00\"^^xsd:dateTime ;\n    prov:wasAssociated…(생략)",
+ "jsonld": "{\n  \"@context\": {\n    \"dcat\": \"http://www.w3.org/ns/dcat#\",\n    \"dcterms\": \"http://purl.org/dc/terms/\",\n    \"prov\": \"http://www.w3.org/ns/prov#\",\n    \"rdf\": \"http://www.w3.org/1999/02/22-rdf-syntax-ns#\",\n    \"rdfs\": \"http://www.w3.org/2000/01/rdf-schema#\"\n  },\n  \"@graph\": [\n    {\n      \"@id\": \"https://catalog.molit.go.kr/id/dataset/DST-draft-000001\",\n      \"@type\": \"dcat:Dataset\",\n      \"dcterms:identifier\": \"DST-draft-000001\",\n      \"dcterms:isPartOf\": {\n        \"@id\": \"https://catalog.molit.go.kr/id/collection/COL-draft-000001\"\n      },\n      \"dcterms:language\": \"ko\",\n      \"dcterms:temporal…(생략)",
+ "text": "「도로목록」 데이터셋이다. 수록 기간은 2026-08-01 ~ 2026-08-28이다. 조합 「도로 사고 원인 분석 조합」의 구성원이다.\n※ 필수 필드 결측 상태의 초안 서술 — 학습 코퍼스 수집 전 보강 권장 (식별자: DST-draft-000001, 세트 체크섬: 7174215d9cae8588).\n",
+ "record": {
+  "@id": "https://catalog.molit.go.kr/id/dataset/DST-draft-000001",
+  "identifier": "DST-draft-000001",
+  "type": [
+   "dcat:Dataset"
+  ],
+  "title": "도로목록",
+  "language": "ko",
+  "temporal": {
+   "start": "2026-08-01",
+   "end": "2026-08-28"
+  },
+  "isPartOf": {
+   "@id": "https://catalog.molit.go.kr/id/collection/COL-draft-000001",
+   "title": "도로 사고 원인 분석 조합"
+  },
+  "wasGeneratedBy": {
+   "@id": "https://catalog.molit.go.kr/id/activity/ACT-K-0424",
+   "label": "카탈로그 작성 — 도로목록"
+  },
+  "readiness": {
+   "level": "draft",
+   "missing": [
+    "publisher",
+    "distribution"
+   ]
+  }
+ },
+ "validation": {
+  "passed": false,
+  "violation_count": 2,
+  "warning_count": 7,
+  "info_count": 3,
+  "results": [
+   {
+    "source": "shacl",
+    "severity": "Violation",
+    "shape": "MediaTypePlacementShape",
+    "shape_iri": "https://catalog.molit.go.kr/shapes/FileDatasetDistributionShape",
+    "message": "MediaTypePlacementShape — Distribution 결측 (mediaType 미입력 또는 미승인)",
+    "focus": "DST-draft-000001",
+    "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000001",
+    "path": null,
+    "value": "https://catalog.molit.go.kr/id/dataset/DST-draft-000001",
+    "route": {
+     "key": "mediaType",
+     "step": 3,
+     "label": "mediaType 드롭다운",
+     "focus": "media_type"
+    }
+   },
+   {
+    "source": "shacl",
+    "severity": "Violation",
+    "shape": "PublisherShape",
+    "shape_iri": "https://catalog.molit.go.kr/shapes/PublisherShape-publisher",
+    "message": "PublisherShape — 제공기관(dcterms:publisher) 결측 또는 미승인",
+    "focus": "DST-draft-000001",
+    "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000001",
+    "path": "dcterms:publisher",
+    "value": null,
+    "route": {
+     "key": "publisher",
+     "step": 3,
+     "label": "publisher 필드",
+     "focus": "publisher"
+    }
+   },
+   {
+    "source": "shacl",
+    "severity": "Warning",
+    "shape": "ClassificationShape",
+    "shape_iri": "https://catalog.molit.go.kr/shapes/ClassificationShape-theme",
+    "message": "분류 미완 — F1 주제영역 미선택 (카탈로그 탐색 불가)",
+    "focus": "DST-draft-000001",
+    "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000001",
+    "path": "dcat:theme",
+    "value": null,
+    "route": {
+     "key": "class4",
+     "step": 4,
+     "label": "분류 매트릭스",
+     "focus": "F1"
+    }
+   },
+   {
+    "source": "shacl",
+    "severity": "Warning",
+    "shape": "ClassificationShape",
+    "shape_iri": "https://catalog.molit.go.kr/shapes/ClassificationShape-type",
+    "message": "분류 미완 — F2 데이터유형 미선택 (카탈로그 탐색 불가)",
+    "focus": "DST-draft-000001",
+    "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000001",
+    "path": "dcterms:type",
+    "value": null,
+    "route": {
+     "key": "class4",
+     "step": 4,
+     "label": "분류 매트릭스",
+     "focus": "F2"
+    }
+   },
+   {
+    "source": "shacl",
+    "severity": "Warning",
+    "shape": "ClassificationShape",
+    "shape_iri": "https://catalog.molit.go.kr/shapes/ClassificationShape-governance",
+    "message": "분류 미완 — F6 거버넌스 미선택",
+    "focus": "DST-draft-000001",
+    "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000001",
+    "path": "fde:governanceMode",
+    "value": null,
+    "route": {
+     "key": "class4",
+     "step": 4,
+     "label": "분류 매트릭스",
+     "focus": "F6"
+    }
+   },
+   {
+    "source": "shacl",
+    "severity": "Warning",
+    "shape": "ClassificationShape",
+    "shape_iri": "https://catalog.molit.go.kr/shapes/ClassificationShape-joinKey",
+    "message": "분류 미완 — 연계키(K) 미배정",
+    "focus": "DST-draft-000001",
+    "focus_iri": "https://catalog.molit.go.kr/id/dataset/DST-draft-000001",
+    "path": "fde:joinKey",
+    "value": null,
+    "route": {
+     "key": "class4",
+     "step": 4,
+     "label": "분류 매트릭스",
+     "focus": "K"
+    }
+   }
+  ],
+  "gate0": [
+   {
+    "key": "parse",
+    "name": "① 파서 통과",
+    "ok": true,
+    "detail": "Turtle 재파싱 20트리플"
+   },
+   {
+    "key": "prefix",
+    "name": "② prefix 완결",
+    "ok": true,
+    "detail": "사용한 prefix 전부 선언됨"
+   },
+   {
+    "key": "utf8",
+    "name": "③ 인코딩 UTF-8",
+    "ok": true,
+    "detail": "UTF-8 왕복 정상"
+   },
+   {
+    "key": "mint",
+    "name": "④ ID 잔존 검사",
+    "ok": true,
+    "skipped": true,
+    "detail": "초안 모드 — 발행 모드에서 검사"
+   },
+   {
+    "key": "identity",
+    "name": "⑤ 정체성 일치",
+    "ok": true,
+    "route": null,
+    "detail": "요청 「도로목록」 = 산출물 제목 일치"
+   }
+  ]
+ }
+}

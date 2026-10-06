@@ -1,0 +1,511 @@
+[
+ {
+  "code": "F1",
+  "name": "주제영역",
+  "nature": "필수",
+  "multi": true,
+  "version": "v2.1 (2026-06)",
+  "rdf_property": "dcat:theme",
+  "description": "데이터셋이 다루는 업무·주제 영역",
+  "scheme_iri": "https://catalog.molit.go.kr/def/scheme/F1",
+  "codes": [
+   {
+    "id": 1,
+    "code": "F1-01",
+    "label": "교통물류",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F1-01"
+   },
+   {
+    "id": 2,
+    "code": "F1-02",
+    "label": "도로",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F1-02"
+   },
+   {
+    "id": 3,
+    "code": "F1-03",
+    "label": "철도",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F1-03"
+   },
+   {
+    "id": 4,
+    "code": "F1-04",
+    "label": "항공",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F1-04"
+   },
+   {
+    "id": 5,
+    "code": "F1-05",
+    "label": "물류시설",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F1-05"
+   },
+   {
+    "id": 6,
+    "code": "F1-06",
+    "label": "도시계획",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F1-06"
+   }
+  ]
+ },
+ {
+  "code": "F2",
+  "name": "데이터유형",
+  "nature": "필수",
+  "multi": true,
+  "version": "v1.4 (2026-03)",
+  "rdf_property": "dcterms:type",
+  "description": "데이터의 구조·형태 유형",
+  "scheme_iri": "https://catalog.molit.go.kr/def/scheme/F2",
+  "codes": [
+   {
+    "id": 11,
+    "code": "F2-01",
+    "label": "정형",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F2-01"
+   },
+   {
+    "id": 12,
+    "code": "F2-02",
+    "label": "반정형",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F2-02"
+   },
+   {
+    "id": 13,
+    "code": "F2-03",
+    "label": "비정형",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F2-03"
+   },
+   {
+    "id": 14,
+    "code": "F2-04",
+    "label": "시계열",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F2-04"
+   },
+   {
+    "id": 15,
+    "code": "F2-05",
+    "label": "공간",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F2-05"
+   },
+   {
+    "id": 16,
+    "code": "F2-06",
+    "label": "실시간",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F2-06"
+   }
+  ]
+ },
+ {
+  "code": "F3",
+  "name": "해상도",
+  "nature": "권장",
+  "multi": true,
+  "version": "v1.2 (2026-08)",
+  "rdf_property": "fde:granularity",
+  "description": "공간·시간 해상도. 시간 해상도는 dcat:temporalResolution 과 동기화된다",
+  "scheme_iri": "https://catalog.molit.go.kr/def/scheme/F3",
+  "codes": [
+   {
+    "id": 18,
+    "code": "F3-01",
+    "label": "도로링크",
+    "definition": null,
+    "active": true,
+    "extra": {
+     "group": "spatial"
+    },
+    "iri": "https://catalog.molit.go.kr/def/concept/F3-01"
+   },
+   {
+    "id": 19,
+    "code": "F3-02",
+    "label": "행정동",
+    "definition": null,
+    "active": true,
+    "extra": {
+     "group": "spatial"
+    },
+    "iri": "https://catalog.molit.go.kr/def/concept/F3-02"
+   },
+   {
+    "id": 20,
+    "code": "F3-03",
+    "label": "시군구",
+    "definition": null,
+    "active": true,
+    "extra": {
+     "group": "spatial"
+    },
+    "iri": "https://catalog.molit.go.kr/def/concept/F3-03"
+   },
+   {
+    "id": 21,
+    "code": "F3-04",
+    "label": "시도",
+    "definition": null,
+    "active": true,
+    "extra": {
+     "group": "spatial"
+    },
+    "iri": "https://catalog.molit.go.kr/def/concept/F3-04"
+   },
+   {
+    "id": 22,
+    "code": "F3-05",
+    "label": "격자 100m",
+    "definition": null,
+    "active": true,
+    "extra": {
+     "group": "spatial",
+     "meters": 100
+    },
+    "iri": "https://catalog.molit.go.kr/def/concept/F3-05"
+   },
+   {
+    "id": 23,
+    "code": "F3-06",
+    "label": "격자 1km",
+    "definition": null,
+    "active": true,
+    "extra": {
+     "group": "spatial",
+     "meters": 1000
+    },
+    "iri": "https://catalog.molit.go.kr/def/concept/F3-06"
+   }
+  ]
+ },
+ {
+  "code": "F4",
+  "name": "유통·이용조건",
+  "nature": "필수",
+  "multi": false,
+  "version": "v1.0 (2025-11)",
+  "rdf_property": "dcterms:license | dcterms:accessRights",
+  "description": "이용허락 조건. 공공누리 유형은 dcterms:license, 그 외는 dcterms:accessRights 로 직렬화된다",
+  "scheme_iri": "https://catalog.molit.go.kr/def/scheme/F4",
+  "codes": [
+   {
+    "id": 36,
+    "code": "F4-01",
+    "label": "공공누리 1유형",
+    "definition": null,
+    "active": true,
+    "extra": {
+     "property": "dcterms:license"
+    },
+    "iri": "https://catalog.molit.go.kr/def/concept/F4-01"
+   },
+   {
+    "id": 37,
+    "code": "F4-02",
+    "label": "공공누리 2유형",
+    "definition": null,
+    "active": true,
+    "extra": {
+     "property": "dcterms:license"
+    },
+    "iri": "https://catalog.molit.go.kr/def/concept/F4-02"
+   },
+   {
+    "id": 38,
+    "code": "F4-03",
+    "label": "공공누리 3유형",
+    "definition": null,
+    "active": true,
+    "extra": {
+     "property": "dcterms:license"
+    },
+    "iri": "https://catalog.molit.go.kr/def/concept/F4-03"
+   },
+   {
+    "id": 39,
+    "code": "F4-04",
+    "label": "공공누리 4유형",
+    "definition": null,
+    "active": true,
+    "extra": {
+     "property": "dcterms:license"
+    },
+    "iri": "https://catalog.molit.go.kr/def/concept/F4-04"
+   },
+   {
+    "id": 40,
+    "code": "F4-05",
+    "label": "기관 내부 한정",
+    "definition": null,
+    "active": true,
+    "extra": {
+     "property": "dcterms:accessRights"
+    },
+    "iri": "https://catalog.molit.go.kr/def/concept/F4-05"
+   },
+   {
+    "id": 41,
+    "code": "F4-06",
+    "label": "기관 간 협약",
+    "definition": null,
+    "active": true,
+    "extra": {
+     "property": "dcterms:accessRights"
+    },
+    "iri": "https://catalog.molit.go.kr/def/concept/F4-06"
+   }
+  ]
+ },
+ {
+  "code": "F5",
+  "name": "AI활용목적",
+  "nature": "보조",
+  "multi": true,
+  "version": "v1.1 (2026-01)",
+  "rdf_property": "fde:aiPurpose",
+  "description": "AI 활용 목적 보조 태그 (작업자 직접 선택)",
+  "scheme_iri": "https://catalog.molit.go.kr/def/scheme/F5",
+  "codes": [
+   {
+    "id": 44,
+    "code": "F5-01",
+    "label": "예측모델 학습",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F5-01"
+   },
+   {
+    "id": 45,
+    "code": "F5-02",
+    "label": "이상탐지",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F5-02"
+   },
+   {
+    "id": 46,
+    "code": "F5-03",
+    "label": "RAG 코퍼스",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F5-03"
+   },
+   {
+    "id": 47,
+    "code": "F5-04",
+    "label": "시뮬레이션",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F5-04"
+   },
+   {
+    "id": 48,
+    "code": "F5-05",
+    "label": "통계 산출",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F5-05"
+   },
+   {
+    "id": 49,
+    "code": "F5-06",
+    "label": "시각화",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F5-06"
+   }
+  ]
+ },
+ {
+  "code": "F6",
+  "name": "거버넌스",
+  "nature": "필수",
+  "multi": false,
+  "version": "v1.0 (2025-11)",
+  "rdf_property": "fde:governanceMode",
+  "description": "관리 주체·책임 구분",
+  "scheme_iri": "https://catalog.molit.go.kr/def/scheme/F6",
+  "codes": [
+   {
+    "id": 50,
+    "code": "F6-01",
+    "label": "기관 내부 관리",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F6-01"
+   },
+   {
+    "id": 51,
+    "code": "F6-02",
+    "label": "부처 공유",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F6-02"
+   },
+   {
+    "id": 52,
+    "code": "F6-03",
+    "label": "대국민 개방",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F6-03"
+   },
+   {
+    "id": 53,
+    "code": "F6-04",
+    "label": "통제",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/F6-04"
+   }
+  ]
+ },
+ {
+  "code": "K",
+  "name": "연계키",
+  "nature": "필수",
+  "multi": true,
+  "version": "v2.0 (2026-05)",
+  "rdf_property": "fde:joinKey",
+  "description": "데이터셋 간 결합 축. 컬럼 매핑과 함께 배정한다",
+  "scheme_iri": "https://catalog.molit.go.kr/def/scheme/K",
+  "codes": [
+   {
+    "id": 54,
+    "code": "K1",
+    "label": "행정구역",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/K1"
+   },
+   {
+    "id": 55,
+    "code": "K2",
+    "label": "주소",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/K2"
+   },
+   {
+    "id": 56,
+    "code": "K3",
+    "label": "좌표",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/K3"
+   },
+   {
+    "id": 57,
+    "code": "K4",
+    "label": "건축물ID",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/K4"
+   },
+   {
+    "id": 58,
+    "code": "K5",
+    "label": "도로링크",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/K5"
+   },
+   {
+    "id": 59,
+    "code": "K6",
+    "label": "차량ID",
+    "definition": null,
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/K6"
+   }
+  ]
+ },
+ {
+  "code": "N2SF",
+  "name": "보안등급 (N²SF)",
+  "nature": "필수",
+  "multi": false,
+  "version": "v1.0",
+  "rdf_property": "fde:n2sfGrade",
+  "description": "국가 망 보안체계 등급. 미지정은 S 로 간주한다",
+  "scheme_iri": "https://catalog.molit.go.kr/def/scheme/N2SF",
+  "codes": [
+   {
+    "id": 63,
+    "code": "N2SF-C",
+    "label": "C — Classified",
+    "definition": "통제구역 전용",
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/N2SF-C"
+   },
+   {
+    "id": 64,
+    "code": "N2SF-S",
+    "label": "S — Sensitive",
+    "definition": "필터링 투영 조건부",
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/N2SF-S"
+   },
+   {
+    "id": 65,
+    "code": "N2SF-O",
+    "label": "O — Open",
+    "definition": "개방구역 push 가능",
+    "active": true,
+    "extra": {},
+    "iri": "https://catalog.molit.go.kr/def/concept/N2SF-O"
+   }
+  ]
+ }
+]

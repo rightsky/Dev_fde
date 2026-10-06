@@ -1,0 +1,357 @@
+# FDE Data Studio — SHACL 셰이프 그래프 (공통 프로파일)
+# __DEF_NS__ / __SHAPES_NS__ 는 기동 시 설정값(FDE_BASE_IRI)으로 치환된다.
+# 모든 property shape 에 IRI 이름을 붙인다 — 검증 결과의 sh:sourceShape 로 수정 경로(fde:fixRoute)를 되찾기 위함.
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcat:    <http://www.w3.org/ns/dcat#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix foaf:    <http://xmlns.com/foaf/0.1/> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix rai:     <http://mlcommons.org/croissant/RAI/> .
+@prefix fde:     <__DEF_NS__> .
+@prefix fdesh:   <__SHAPES_NS__> .
+
+fdesh: a owl:Ontology ;
+  rdfs:label "FDE Data Studio shapes"@ko ;
+  owl:versionInfo "rs-3.0" ;
+  sh:declare [ sh:prefix "rdf" ;     sh:namespace "http://www.w3.org/1999/02/22-rdf-syntax-ns#"^^xsd:anyURI ] ,
+             [ sh:prefix "dcat" ;    sh:namespace "http://www.w3.org/ns/dcat#"^^xsd:anyURI ] ,
+             [ sh:prefix "dcterms" ; sh:namespace "http://purl.org/dc/terms/"^^xsd:anyURI ] ,
+             [ sh:prefix "prov" ;    sh:namespace "http://www.w3.org/ns/prov#"^^xsd:anyURI ] ,
+             [ sh:prefix "skos" ;    sh:namespace "http://www.w3.org/2004/02/skos/core#"^^xsd:anyURI ] ,
+             [ sh:prefix "fde" ;     sh:namespace "__DEF_NS__"^^xsd:anyURI ] .
+
+# ───────────────────────── 정체성 (게이트 0 ⑤ 의 존재 부분)
+fdesh:DatasetIdentityShape a sh:NodeShape ;
+  rdfs:label "DatasetIdentityShape" ;
+  sh:targetClass dcat:Dataset ;
+  sh:property fdesh:DatasetIdentityShape-title , fdesh:DatasetIdentityShape-identifier .
+
+fdesh:DatasetIdentityShape-title a sh:PropertyShape ;
+  rdfs:label "DatasetIdentityShape" ;
+  sh:path dcterms:title ; sh:minCount 1 ; sh:minLength 1 ; sh:uniqueLang true ;
+  sh:severity sh:Violation ; fde:fixRoute "title" ;
+  sh:message "정체성 — 제목(dcterms:title) 결측"@ko .
+
+fdesh:DatasetIdentityShape-identifier a sh:PropertyShape ;
+  rdfs:label "DatasetIdentityShape" ;
+  sh:path dcterms:identifier ; sh:minCount 1 ; sh:maxCount 1 ;
+  sh:severity sh:Violation ; fde:fixRoute "mint" ;
+  sh:message "식별자(dcterms:identifier) 결측 또는 중복"@ko .
+
+# ───────────────────────── 제공기관
+fdesh:PublisherShape a sh:NodeShape ;
+  rdfs:label "PublisherShape" ;
+  sh:targetClass dcat:Dataset ;
+  sh:property fdesh:PublisherShape-publisher .
+
+fdesh:PublisherShape-publisher a sh:PropertyShape ;
+  rdfs:label "PublisherShape" ;
+  sh:path dcterms:publisher ; sh:minCount 1 ; sh:nodeKind sh:IRI ; sh:class foaf:Agent ;
+  sh:severity sh:Violation ; fde:fixRoute "publisher" ;
+  sh:message "PublisherShape — 제공기관(dcterms:publisher) 결측 또는 미승인"@ko .
+
+fdesh:AgentShape a sh:NodeShape ;
+  rdfs:label "AgentShape" ;
+  sh:targetClass foaf:Agent ;
+  sh:property fdesh:AgentShape-label .
+
+fdesh:AgentShape-label a sh:PropertyShape ;
+  rdfs:label "AgentShape" ;
+  sh:path rdfs:label ; sh:minCount 1 ; sh:minLength 1 ;
+  sh:severity sh:Warning ; fde:fixRoute "publisher" ;
+  sh:message "기관 라벨(rdfs:label) 결측"@ko .
+
+# ───────────────────────── 배포본 · 미디어타입
+fdesh:MediaTypePlacementShape a sh:NodeShape ;
+  rdfs:label "MediaTypePlacementShape" ;
+  sh:targetClass dcat:Dataset ;
+  sh:property fdesh:MediaTypePlacementShape-noDirect .
+
+fdesh:MediaTypePlacementShape-noDirect a sh:PropertyShape ;
+  rdfs:label "MediaTypePlacementShape" ;
+  sh:path dcat:mediaType ; sh:maxCount 0 ;
+  sh:severity sh:Violation ; fde:fixRoute "mediaType" ;
+  sh:message "MediaTypePlacementShape — dcat:mediaType 은 Distribution 전용"@ko .
+
+fdesh:FileDatasetDistributionShape a sh:NodeShape ;
+  rdfs:label "MediaTypePlacementShape" ;
+  sh:targetClass dcat:Dataset ;
+  sh:or ( [ sh:class dcat:DataService ]
+          [ sh:path dcat:distribution ; sh:minCount 1 ] ) ;
+  sh:severity sh:Violation ; fde:fixRoute "mediaType" ;
+  sh:message "MediaTypePlacementShape — Distribution 결측 (mediaType 미입력 또는 미승인)"@ko .
+
+fdesh:DistributionShape a sh:NodeShape ;
+  rdfs:label "DistributionShape" ;
+  sh:targetClass dcat:Distribution ;
+  sh:property fdesh:DistributionShape-mediaType , fdesh:DistributionShape-owner .
+
+fdesh:DistributionShape-mediaType a sh:PropertyShape ;
+  rdfs:label "DistributionShape" ;
+  sh:path dcat:mediaType ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+  sh:pattern "^https://www\\.iana\\.org/assignments/media-types/[a-z]+/.+" ;
+  sh:severity sh:Violation ; fde:fixRoute "mediaType" ;
+  sh:message "DistributionShape — dcat:mediaType 은 IANA 미디어타입 IRI 1개여야 한다"@ko .
+
+fdesh:DistributionShape-owner a sh:PropertyShape ;
+  rdfs:label "DistributionShape" ;
+  sh:path [ sh:inversePath dcat:distribution ] ; sh:minCount 1 ;
+  sh:severity sh:Violation ; fde:fixRoute "mediaType" ;
+  sh:message "DistributionShape — 소속 Dataset 없는 Distribution"@ko .
+
+# ───────────────────────── 스트림
+fdesh:StreamServiceShape a sh:NodeShape ;
+  rdfs:label "StreamServiceShape" ;
+  sh:targetClass dcat:DataService ;
+  sh:property fdesh:StreamServiceShape-resolution , fdesh:StreamServiceShape-eventTime ,
+              fdesh:StreamServiceShape-endpoint , fdesh:StreamServiceShape-watermark .
+
+fdesh:StreamServiceShape-resolution a sh:PropertyShape ;
+  rdfs:label "StreamServiceShape" ;
+  sh:path dcat:temporalResolution ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:duration ;
+  sh:severity sh:Violation ; fde:fixRoute "stream3" ;
+  sh:message "스트림 필수 — temporalResolution 결측 또는 ISO 8601 duration 아님"@ko .
+
+fdesh:StreamServiceShape-eventTime a sh:PropertyShape ;
+  rdfs:label "StreamServiceShape" ;
+  sh:path fde:eventTimeColumn ; sh:minCount 1 ; sh:maxCount 1 ; sh:minLength 1 ;
+  sh:severity sh:Violation ; fde:fixRoute "stream3" ;
+  sh:message "스트림 필수 — event-time 컬럼 결측"@ko .
+
+fdesh:StreamServiceShape-endpoint a sh:PropertyShape ;
+  rdfs:label "StreamServiceShape" ;
+  sh:path dcat:endpointURL ; sh:minCount 1 ; sh:nodeKind sh:IRI ;
+  sh:severity sh:Warning ; fde:fixRoute "stream3" ;
+  sh:message "스트림 엔드포인트(dcat:endpointURL) 미선언"@ko .
+
+fdesh:StreamServiceShape-watermark a sh:PropertyShape ;
+  rdfs:label "StreamServiceShape" ;
+  sh:path fde:watermarkDelay ; sh:minCount 1 ;
+  sh:severity sh:Warning ; fde:fixRoute "stream3" ;
+  sh:message "워터마크 지연 허용 미선언 (PT2M 권장)"@ko .
+
+# ───────────────────────── 기술 권장 항목
+fdesh:DescriptionShape a sh:NodeShape ;
+  rdfs:label "DatasetShape" ;
+  sh:targetClass dcat:Dataset ;
+  sh:property fdesh:DescriptionShape-description , fdesh:DescriptionShape-keyword ,
+              fdesh:DescriptionShape-periodicity .
+
+fdesh:DescriptionShape-description a sh:PropertyShape ;
+  rdfs:label "DatasetShape" ;
+  sh:path dcterms:description ; sh:minCount 1 ; sh:minLength 10 ;
+  sh:severity sh:Warning ; fde:fixRoute "meta3" ; fde:fixFocus "description" ;
+  sh:message "설명(dcterms:description) 결측 또는 10자 미만"@ko .
+
+fdesh:DescriptionShape-keyword a sh:PropertyShape ;
+  rdfs:label "DatasetShape" ;
+  sh:path dcat:keyword ; sh:minCount 1 ;
+  sh:severity sh:Info ; fde:fixRoute "meta3" ; fde:fixFocus "keywords" ;
+  sh:message "키워드(dcat:keyword) 미입력"@ko .
+
+fdesh:DescriptionShape-periodicity a sh:PropertyShape ;
+  rdfs:label "DatasetShape" ;
+  sh:path dcterms:accrualPeriodicity ; sh:maxCount 1 ;
+  sh:or ( [ sh:datatype xsd:duration ] [ sh:in ( "irregular" ) ] ) ;
+  sh:severity sh:Warning ; fde:fixRoute "meta3" ; fde:fixFocus "accrual_periodicity" ;
+  sh:message "갱신 주기 비표준 표기 — ISO 8601 duration(예: PT5M) 권장"@ko .
+
+# ───────────────────────── 분류 (STEP 4)
+fdesh:ClassificationShape a sh:NodeShape ;
+  rdfs:label "ClassificationShape" ;
+  sh:targetClass dcat:Dataset ;
+  sh:property fdesh:ClassificationShape-theme , fdesh:ClassificationShape-type ,
+              fdesh:ClassificationShape-governance , fdesh:ClassificationShape-joinKey ,
+              fdesh:ClassificationShape-n2sf , fdesh:ClassificationShape-n2sfMax .
+
+fdesh:ClassificationShape-theme a sh:PropertyShape ;
+  rdfs:label "ClassificationShape" ;
+  sh:path dcat:theme ; sh:minCount 1 ; sh:class skos:Concept ;
+  sh:severity sh:Warning ; fde:fixRoute "class4" ; fde:fixFocus "F1" ;
+  sh:message "분류 미완 — F1 주제영역 미선택 (카탈로그 탐색 불가)"@ko .
+
+fdesh:ClassificationShape-type a sh:PropertyShape ;
+  rdfs:label "ClassificationShape" ;
+  sh:path dcterms:type ; sh:minCount 1 ; sh:class skos:Concept ;
+  sh:severity sh:Warning ; fde:fixRoute "class4" ; fde:fixFocus "F2" ;
+  sh:message "분류 미완 — F2 데이터유형 미선택 (카탈로그 탐색 불가)"@ko .
+
+fdesh:ClassificationShape-governance a sh:PropertyShape ;
+  rdfs:label "ClassificationShape" ;
+  sh:path fde:governanceMode ; sh:minCount 1 ; sh:maxCount 1 ;
+  sh:severity sh:Warning ; fde:fixRoute "class4" ; fde:fixFocus "F6" ;
+  sh:message "분류 미완 — F6 거버넌스 미선택"@ko .
+
+fdesh:ClassificationShape-joinKey a sh:PropertyShape ;
+  rdfs:label "ClassificationShape" ;
+  sh:path fde:joinKey ; sh:minCount 1 ;
+  sh:severity sh:Warning ; fde:fixRoute "class4" ; fde:fixFocus "K" ;
+  sh:message "분류 미완 — 연계키(K) 미배정"@ko .
+
+fdesh:ClassificationShape-n2sf a sh:PropertyShape ;
+  rdfs:label "N2SFZoneShape" ;
+  sh:path fde:n2sfGrade ; sh:minCount 1 ;
+  sh:severity sh:Warning ; fde:fixRoute "class4" ; fde:fixFocus "N2SF" ;
+  sh:message "N2SF 등급 미지정 — S 로 간주"@ko .
+
+fdesh:ClassificationShape-n2sfMax a sh:PropertyShape ;
+  rdfs:label "N2SFZoneShape" ;
+  sh:path fde:n2sfGrade ; sh:maxCount 1 ;
+  sh:severity sh:Violation ; fde:fixRoute "class4" ; fde:fixFocus "N2SF" ;
+  sh:message "N2SF 등급은 1개만 지정할 수 있다"@ko .
+
+fdesh:LicenseShape a sh:NodeShape ;
+  rdfs:label "LicenseShape" ;
+  sh:targetClass dcat:Dataset ;
+  sh:or ( [ sh:path dcterms:license ; sh:minCount 1 ]
+          [ sh:path dcterms:accessRights ; sh:minCount 1 ] ) ;
+  sh:severity sh:Warning ; fde:fixRoute "license" ;
+  sh:message "이용조건 미지정 — dcterms:license 또는 dcterms:accessRights (F4)"@ko .
+
+fdesh:JoinKeyBindingShape a sh:NodeShape ;
+  rdfs:label "JoinKeyShape" ;
+  sh:targetClass fde:JoinKeyBinding ;
+  sh:property fdesh:JoinKeyBindingShape-concept , fdesh:JoinKeyBindingShape-column .
+
+fdesh:JoinKeyBindingShape-concept a sh:PropertyShape ;
+  rdfs:label "JoinKeyShape" ;
+  sh:path fde:keyConcept ; sh:minCount 1 ; sh:maxCount 1 ; sh:class skos:Concept ;
+  sh:severity sh:Violation ; fde:fixRoute "class4" ; fde:fixFocus "K" ;
+  sh:message "연계키 개념(fde:keyConcept) 결측"@ko .
+
+fdesh:JoinKeyBindingShape-column a sh:PropertyShape ;
+  rdfs:label "JoinKeyShape" ;
+  sh:path fde:mappedColumn ; sh:minCount 1 ;
+  sh:severity sh:Warning ; fde:fixRoute "class4" ; fde:fixFocus "K" ;
+  sh:message "연계키에 매핑 컬럼 미지정"@ko .
+
+fdesh:CoordinateSystemShape a sh:NodeShape ;
+  rdfs:label "DatasetShape" ;
+  sh:targetClass dcat:Dataset ;
+  sh:severity sh:Warning ; fde:fixRoute "meta3" ; fde:fixFocus "conforms_to" ;
+  sh:sparql [
+    sh:message "dcterms:conformsTo (좌표계) 미선언 — 좌표 연계키(K3)가 있으면 EPSG 코드를 명시해야 한다"@ko ;
+    sh:prefixes fdesh: ;
+    sh:select """
+      SELECT $this WHERE {
+        $this fde:joinKey ?b .
+        ?b fde:keyConcept ?c .
+        ?c skos:notation "K3" .
+        FILTER NOT EXISTS { $this dcterms:conformsTo ?std }
+      }""" ] .
+
+# ───────────────────────── 관계 (STEP 5)
+fdesh:RelationshipShape a sh:NodeShape ;
+  rdfs:label "JoinRuleShape" ;
+  sh:targetClass dcat:Relationship ;
+  sh:property fdesh:RelationshipShape-target , fdesh:RelationshipShape-role .
+
+fdesh:RelationshipShape-target a sh:PropertyShape ;
+  rdfs:label "JoinRuleShape" ;
+  sh:path dcterms:relation ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+  sh:severity sh:Violation ; fde:fixRoute "lineage5" ;
+  sh:message "관계의 상대 데이터셋(dcterms:relation) 결측"@ko .
+
+fdesh:RelationshipShape-role a sh:PropertyShape ;
+  rdfs:label "JoinRuleShape" ;
+  sh:path dcat:hadRole ; sh:minCount 1 ; sh:maxCount 1 ;
+  sh:severity sh:Violation ; fde:fixRoute "lineage5" ;
+  sh:message "관계 역할(dcat:hadRole) 결측"@ko .
+
+fdesh:JoinRuleShape a sh:NodeShape ;
+  rdfs:label "JoinRuleShape" ;
+  sh:targetClass dcat:Relationship ;
+  sh:severity sh:Warning ; fde:fixRoute "lineage5" ;
+  sh:sparql [
+    sh:message "JOINED_ON 관계에 연계키 또는 매핑 컬럼이 지정되지 않았다"@ko ;
+    sh:prefixes fdesh: ;
+    sh:select """
+      SELECT $this WHERE {
+        $this dcat:hadRole ?role .
+        FILTER(STRENDS(STR(?role), "role/joinedOn"))
+        FILTER(!EXISTS { $this fde:keyConcept ?k } || !EXISTS { $this fde:sourceColumn ?sc } || !EXISTS { $this fde:targetColumn ?tc })
+      }""" ] .
+
+# ───────────────────────── 프로버넌스
+fdesh:DatasetProvenanceShape a sh:NodeShape ;
+  rdfs:label "ActivityShape" ;
+  sh:targetClass dcat:Dataset ;
+  sh:property fdesh:DatasetProvenanceShape-generatedBy .
+
+fdesh:DatasetProvenanceShape-generatedBy a sh:PropertyShape ;
+  rdfs:label "ActivityShape" ;
+  sh:path prov:wasGeneratedBy ; sh:minCount 1 ; sh:nodeKind sh:IRI ; sh:class prov:Activity ;
+  sh:severity sh:Violation ; fde:fixRoute "identity" ;
+  sh:message "생성 Activity(prov:wasGeneratedBy) 결측"@ko .
+
+fdesh:ActivityShape a sh:NodeShape ;
+  rdfs:label "ActivityShape" ;
+  sh:targetClass prov:Activity ;
+  sh:property fdesh:ActivityShape-agent , fdesh:ActivityShape-started .
+
+fdesh:ActivityShape-agent a sh:PropertyShape ;
+  rdfs:label "ActivityShape" ;
+  sh:path prov:wasAssociatedWith ; sh:minCount 1 ; sh:nodeKind sh:IRI ;
+  sh:severity sh:Violation ;
+  sh:message "Activity 수행 주체(prov:wasAssociatedWith) 결측"@ko .
+
+fdesh:ActivityShape-started a sh:PropertyShape ;
+  rdfs:label "ActivityShape" ;
+  sh:path prov:startedAtTime ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:dateTime ;
+  sh:severity sh:Violation ;
+  sh:message "Activity 시작 시각(prov:startedAtTime) 결측 또는 형식 오류"@ko .
+
+# ───────────────────────── 책임 있는 AI (가이드라인 권장)
+fdesh:ResponsibleAIShape a sh:NodeShape ;
+  rdfs:label "ResponsibleAIShape" ;
+  sh:targetClass dcat:Dataset ;
+  sh:property fdesh:ResponsibleAIShape-biases , fdesh:ResponsibleAIShape-limitations .
+
+fdesh:ResponsibleAIShape-biases a sh:PropertyShape ;
+  rdfs:label "ResponsibleAIShape" ;
+  sh:path rai:dataBiases ; sh:minCount 1 ;
+  sh:severity sh:Info ; fde:fixRoute "meta3" ; fde:fixFocus "rai_data_biases" ;
+  sh:message "rai:dataBiases 미작성 — 편향성 명세 공백"@ko .
+
+fdesh:ResponsibleAIShape-limitations a sh:PropertyShape ;
+  rdfs:label "ResponsibleAIShape" ;
+  sh:path rai:knownLimitations ; sh:minCount 1 ;
+  sh:severity sh:Info ; fde:fixRoute "meta3" ; fde:fixFocus "rai_known_limitations" ;
+  sh:message "rai:knownLimitations 미작성"@ko .
+
+# ───────────────────────── 구조 불변식 (SHACL-SPARQL)
+fdesh:NoEmptyLiteralShape a sh:NodeShape ;
+  rdfs:label "NoEmptyLiteralShape" ;
+  sh:targetSubjectsOf rdf:type ;
+  sh:severity sh:Violation ; fde:fixRoute "emptyLit" ;
+  sh:sparql [
+    sh:message "NoEmptyLiteralShape — 빈 리터럴 금지"@ko ;
+    sh:prefixes fdesh: ;
+    sh:select """
+      SELECT $this ?path ?value WHERE {
+        $this ?path ?value .
+        FILTER(isLiteral(?value) && STRLEN(STR(?value)) = 0)
+      }""" ] .
+
+fdesh:NoDanglingRefShape a sh:NodeShape ;
+  rdfs:label "NoDanglingRefShape" ;
+  sh:targetSubjectsOf rdf:type ;
+  sh:severity sh:Violation ;
+  sh:sparql [
+    sh:message "NoDanglingRefShape — 참조 IRI 의 타입 선언 누락"@ko ;
+    sh:prefixes fdesh: ;
+    sh:select """
+      SELECT $this ?path ?value WHERE {
+        $this ?path ?value .
+        FILTER(?path IN (dcterms:publisher, dcat:distribution, prov:wasGeneratedBy, prov:wasAssociatedWith,
+                         dcat:theme, dcterms:type, dcterms:license, dcterms:accessRights, dcterms:isPartOf,
+                         dcat:qualifiedRelation, dcterms:relation, prov:wasDerivedFrom, fde:joinKey,
+                         fde:keyConcept, fde:n2sfGrade, fde:governanceMode, fde:aiPurpose, fde:granularity))
+        FILTER(isIRI(?value))
+        FILTER NOT EXISTS { ?value rdf:type ?anyType }
+      }""" ] .

@@ -1,0 +1,70 @@
+{
+ "resource_id": "DST-000001",
+ "iri": "https://catalog.molit.go.kr/id/dataset/DST-000001",
+ "kind": "dataset",
+ "title": "도로목록",
+ "description": "테스트용 데이터셋 설명입니다.",
+ "publisher": "경기도",
+ "process_id": 1,
+ "process_name": "도로 사고 원인 분석 조합",
+ "collection_title": "도로 사고 원인 분석 조합",
+ "version": 1,
+ "status": "published",
+ "checksum": "94ef997fb0642e6d8666eaddcba02f51646375a5da64d93656b4e96a779f81be",
+ "facets": {
+  "classification": {
+   "theme": [
+    "도로"
+   ],
+   "dataType": [
+    "정형",
+    "공간"
+   ],
+   "granularity": [
+    "도로링크"
+   ],
+   "governance": [
+    "대국민 개방"
+   ]
+  },
+  "license": "공공누리 1유형",
+  "n2sf": "O",
+  "keys": [
+   {
+    "key": "K5",
+    "label": "도로링크",
+    "column": "LINK_ID",
+    "table": "도로목록"
+   },
+   {
+    "key": "K3",
+    "label": "좌표",
+    "column": "경도",
+    "table": "도로목록"
+   }
+  ],
+  "keywords": [
+   "도로",
+   "사고"
+  ],
+  "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "form": "정형(엑셀)",
+  "triple_count": 110,
+  "readiness": "ai-ready",
+  "relations": [
+   {
+    "type": "JOINED_ON",
+    "target": "교통사고",
+    "direction": "in",
+    "key": "K5"
+   }
+  ],
+  "distribution_id": "DIST-000001-xlsx"
+ },
+ "published_by": "관리자",
+ "published_at": "2026-10-06T09:29:17.904715Z",
+ "turtle": "# FDE Data Studio 정본 — DST-000001\n# fde:setChecksum \"94ef997fb0642e6d8666eaddcba02f51646375a5da64d93656b4e96a779f81be\"\n# mode: publish · readiness: ai-ready\n@prefix dcat: <http://www.w3.org/ns/dcat#> .\n@prefix dcterms: <http://purl.org/dc/terms/> .\n@prefix fde: <https://catalog.molit.go.kr/def/> .\n@prefix foaf: <http://xmlns.com/foaf/0.1/> .\n@prefix prov: <http://www.w3.org/ns/prov#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n@prefix skos: <http://www.w3.org/2004/02/skos/core#> .\n@prefix spdx: <http://spdx.org/rdf/terms#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\n<ht…(생략)",
+ "jsonld": "{\n  \"@context\": {\n    \"dcat\": \"http://www.w3.org/ns/dcat#\",\n    \"dcterms\": \"http://purl.org/dc/terms/\",\n    \"fde\": \"https://catalog.molit.go.kr/def/\",\n    \"foaf\": \"http://xmlns.com/foaf/0.1/\",\n    \"prov\": \"http://www.w3.org/ns/prov#\",\n    \"rdf\": \"http://www.w3.org/1999/02/22-rdf-syntax-ns#\",\n    \"rdfs\": \"http://www.w3.org/2000/01/rdf-schema#\",\n    \"skos\": \"http://www.w3.org/2004/02/skos/core#\",\n    \"spdx\": \"http://spdx.org/rdf/terms#\"\n  },\n  \"@graph\": [\n    {\n      \"@id\": \"https://catalog.molit.go.kr/id/distribution/DIST-000001-xlsx\",\n      \"@type\": \"dcat:Distribution\",\n      \"dcat:byteSize\": …(생략)",
+ "text_summary": "「도로목록」은 경기도 소관의 정형(엑셀)이다. 테스트용 데이터셋 설명입니다. 주제영역은 도로이며 데이터유형은 정형, 공간이다. 해상도는 도로링크 단위이다. 수록 기간은 2026-08-01 ~ 2026-08-28이다. 연계키는 K5 도로링크(LINK_ID), K3 좌표(경도)이다. 이용허락은 공공누리 1유형이다. 보안등급(N²SF)은 O이다. 조합 「도로 사고 원인 분석 조합」의 구성원이다.\n이 서술은 ai-ready 등급 정본에서 생성되었다 (식별자: DST-000001, 세트 체크섬: 94ef997fb0642e6d).\n",
+ "schema_json": "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"https://catalog.molit.go.kr/schema/DST-000001.json\",\n  \"$comment\": \"generated from canonical DST-000001 · readiness: ai-ready · setChecksum: 94ef997fb0642e6d8666eaddcba02f51646375a5da64d93656b4e96a779f81be\",\n  \"title\": \"도로목록\",\n  \"type\": \"object\",\n  \"properties\": {\n    \"@id\": {\n      \"type\": \"string\",\n      \"format\": \"iri\"\n    },\n    \"identifier\": {\n      \"type\": \"string\",\n      \"pattern\": \"^(DST|SVC)-.+$\"\n    },\n    \"type\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      },\n      \"minItems\": 0\n   …(생략)"
+}
