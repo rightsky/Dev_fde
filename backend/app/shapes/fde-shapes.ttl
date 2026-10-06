@@ -105,9 +105,13 @@ fdesh:DistributionShape-owner a sh:PropertyShape ;
   sh:message "DistributionShape — 소속 Dataset 없는 Distribution"@ko .
 
 # ───────────────────────── 스트림
+# 대상은 스트림(dcat:Dataset 이면서 dcat:DataService)만이다. 파일형 데이터셋의 배포본이 가리키는
+# API 접근 서비스(dcat:accessService)도 dcat:DataService 이므로 클래스만으로 고르지 않는다.
 fdesh:StreamServiceShape a sh:NodeShape ;
   rdfs:label "StreamServiceShape" ;
-  sh:targetClass dcat:DataService ;
+  sh:target [ a sh:SPARQLTarget ;
+              sh:prefixes fdesh: ;
+              sh:select """SELECT ?this WHERE { ?this a dcat:DataService , dcat:Dataset }""" ] ;
   sh:property fdesh:StreamServiceShape-resolution , fdesh:StreamServiceShape-eventTime ,
               fdesh:StreamServiceShape-endpoint , fdesh:StreamServiceShape-watermark .
 
@@ -348,7 +352,8 @@ fdesh:NoDanglingRefShape a sh:NodeShape ;
     sh:select """
       SELECT $this ?path ?value WHERE {
         $this ?path ?value .
-        FILTER(?path IN (dcterms:publisher, dcat:distribution, prov:wasGeneratedBy, prov:wasAssociatedWith,
+        FILTER(?path IN (dcterms:publisher, dcterms:creator, dcterms:rights, dcterms:provenance, dcterms:language, dcat:landingPage,
+                         dcat:accessService, dcat:distribution, prov:wasGeneratedBy, prov:wasAssociatedWith,
                          dcat:theme, dcterms:type, dcterms:license, dcterms:accessRights, dcterms:isPartOf,
                          dcat:qualifiedRelation, dcterms:relation, prov:wasDerivedFrom, fde:joinKey,
                          fde:keyConcept, fde:n2sfGrade, fde:governanceMode, fde:aiPurpose, fde:granularity))

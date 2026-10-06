@@ -196,11 +196,6 @@
    "form": "공통"
   },
   {
-   "iri": "prov:Collection",
-   "desc": "개체 묶음 (조합 단위 기술)",
-   "form": "공통"
-  },
-  {
    "iri": "csvw:Table",
    "desc": "표 형태 데이터의 컬럼·스키마 구조 기술 (CSV on the Web)",
    "form": "정형"
@@ -260,18 +255,20 @@
   {
    "name": "title",
    "property": "dcterms:title",
-   "label": "제목",
+   "label": "데이터명",
    "level": "필수",
    "type": "text",
-   "scope": "all"
+   "scope": "all",
+   "guide": "표 9 데이터명"
   },
   {
    "name": "description",
    "property": "dcterms:description",
-   "label": "설명",
-   "level": "권장",
+   "label": "데이터 설명",
+   "level": "필수",
    "type": "textarea",
-   "scope": "all"
+   "scope": "all",
+   "guide": "표 9 데이터 설명"
   },
   {
    "name": "publisher_org_id",
@@ -280,24 +277,18 @@
    "level": "필수",
    "type": "org",
    "scope": "all",
-   "approval": true
+   "approval": true,
+   "guide": "표 9 제공기관"
   },
   {
    "name": "media_type",
    "property": "dcat:mediaType",
-   "label": "미디어타입 (IANA)",
+   "label": "데이터셋 유형 (IANA 미디어타입)",
    "level": "필수",
    "type": "media_type",
    "scope": "dataset",
-   "approval": true
-  },
-  {
-   "name": "access_url",
-   "property": "dcat:accessURL",
-   "label": "접근 URL",
-   "level": "권장",
-   "type": "url",
-   "scope": "dataset"
+   "approval": true,
+   "guide": "표 9 데이터셋 유형"
   },
   {
    "name": "temporal_resolution",
@@ -318,12 +309,193 @@
    "approval": true
   },
   {
+   "name": "creator",
+   "property": "dcterms:creator",
+   "label": "소관기관 (운영부서명)",
+   "level": "필수",
+   "type": "text",
+   "scope": "all",
+   "guide": "표 9 소관기관"
+  },
+  {
+   "name": "references",
+   "property": "dcterms:references",
+   "label": "관련법령 (법적 근거·URL)",
+   "level": "필수",
+   "type": "tags",
+   "scope": "all",
+   "guide": "표 9 관련법령"
+  },
+  {
+   "name": "landing_page",
+   "property": "dcat:landingPage",
+   "label": "제공시스템 (안내 웹 페이지)",
+   "level": "필수",
+   "type": "url",
+   "scope": "all",
+   "guide": "표 9 제공시스템"
+  },
+  {
+   "name": "access_url",
+   "property": "dcat:accessURL",
+   "label": "접속 URL (배포본)",
+   "level": "필수",
+   "type": "url",
+   "scope": "dataset",
+   "guide": "표 9 접속 URL"
+  },
+  {
+   "name": "accrual_periodicity",
+   "property": "dcterms:accrualPeriodicity",
+   "label": "갱신주기",
+   "level": "필수",
+   "type": "periodicity",
+   "scope": "dataset",
+   "guide": "표 9 갱신주기"
+  },
+  {
+   "name": "keywords",
+   "property": "dcat:keyword",
+   "label": "키워드",
+   "level": "필수",
+   "type": "tags",
+   "scope": "all",
+   "guide": "표 9 키워드"
+  },
+  {
+   "name": "language",
+   "property": "dcterms:language",
+   "label": "언어 (ISO 639-1)",
+   "level": "필수",
+   "type": "text",
+   "scope": "all",
+   "guide": "표 9 언어"
+  },
+  {
+   "name": "contact_name",
+   "property": "dcat:contactPoint / vcard:fn",
+   "label": "담당 부서·담당자",
+   "level": "필수",
+   "type": "text",
+   "scope": "all",
+   "guide": "표 9 담당자연락처"
+  },
+  {
+   "name": "contact_email",
+   "property": "dcat:contactPoint / vcard:hasEmail",
+   "label": "담당 이메일",
+   "level": "필수",
+   "type": "text",
+   "scope": "all",
+   "guide": "표 9 담당자연락처"
+  },
+  {
+   "name": "contact_phone",
+   "property": "dcat:contactPoint / vcard:hasTelephone",
+   "label": "담당 전화번호",
+   "level": "선택",
+   "type": "text",
+   "scope": "all",
+   "guide": "표 9 담당자연락처"
+  },
+  {
+   "name": "version",
+   "property": "owl:versionInfo",
+   "label": "버전",
+   "level": "필수",
+   "type": "text",
+   "scope": "all",
+   "guide": "표 10 버전"
+  },
+  {
+   "name": "issued",
+   "property": "dcterms:issued",
+   "label": "등록일시 (최초 등록일)",
+   "level": "필수",
+   "type": "date",
+   "scope": "all",
+   "guide": "표 10 등록일시"
+  },
+  {
+   "name": "modified",
+   "property": "dcterms:modified",
+   "label": "수정일시 (마지막 수정일)",
+   "level": "필수",
+   "type": "date",
+   "scope": "all",
+   "guide": "표 10 수정일시"
+  },
+  {
+   "name": "version_notes",
+   "property": "adms:versionNotes",
+   "label": "버전 노트 (이전 버전 대비 변경 사항)",
+   "level": "필수",
+   "type": "textarea",
+   "scope": "all",
+   "guide": "표 10 버전 노트"
+  },
+  {
+   "name": "rights",
+   "property": "dcterms:rights",
+   "label": "저작권 (저작자 표시·영리 이용·변경 허용 여부)",
+   "level": "필수",
+   "type": "textarea",
+   "scope": "all",
+   "guide": "표 11 저작권"
+  },
+  {
+   "name": "temporal_start",
+   "property": "dcterms:temporal / dcat:startDate",
+   "label": "시간범위 시작",
+   "level": "권장",
+   "type": "date",
+   "scope": "dataset",
+   "guide": "표 9 시간범위"
+  },
+  {
+   "name": "temporal_end",
+   "property": "dcterms:temporal / dcat:endDate",
+   "label": "시간범위 종료",
+   "level": "권장",
+   "type": "date",
+   "scope": "dataset",
+   "guide": "표 9 시간범위"
+  },
+  {
+   "name": "spatial",
+   "property": "dcterms:spatial",
+   "label": "공간범위",
+   "level": "권장",
+   "type": "text",
+   "scope": "all",
+   "guide": "표 9 공간범위"
+  },
+  {
    "name": "endpoint_url",
    "property": "dcat:endpointURL",
-   "label": "엔드포인트 URL",
+   "label": "API 엔드포인트 URL",
    "level": "권장",
    "type": "url",
-   "scope": "stream"
+   "scope": "all",
+   "guide": "부록 3 데이터 제공"
+  },
+  {
+   "name": "provenance",
+   "property": "dcterms:provenance",
+   "label": "출처·가공 이력 (원천 시스템·수집 방식·정제·비식별 처리)",
+   "level": "권장",
+   "type": "textarea",
+   "scope": "all",
+   "guide": "부록 3 품질 및 이력"
+  },
+  {
+   "name": "rai_data_biases",
+   "property": "rai:dataBiases",
+   "label": "데이터 편향성 (확인된 편향 유형)",
+   "level": "권장",
+   "type": "textarea",
+   "scope": "all",
+   "guide": "표 12 데이터 편향성"
   },
   {
    "name": "timezone",
@@ -342,6 +514,42 @@
    "scope": "stream"
   },
   {
+   "name": "quality_annotation",
+   "property": "dqv:hasQualityAnnotation",
+   "label": "품질 검증 정보 (수행한 품질 검토·평가 내용)",
+   "level": "선택",
+   "type": "textarea",
+   "scope": "all",
+   "guide": "표 12 품질 검증 정보"
+  },
+  {
+   "name": "rai_known_limitations",
+   "property": "rai:knownLimitations",
+   "label": "데이터 한계 (제한사항·해석 시 유의 사항)",
+   "level": "선택",
+   "type": "textarea",
+   "scope": "all",
+   "guide": "표 12 데이터 한계"
+  },
+  {
+   "name": "rai_missing_data",
+   "property": "rai:dataCollectionMissingData",
+   "label": "결측치 정보 (비율·발생 사유·처리 방식)",
+   "level": "선택",
+   "type": "textarea",
+   "scope": "all",
+   "guide": "표 12 결측치 정보"
+  },
+  {
+   "name": "conforms_to",
+   "property": "dcterms:conformsTo",
+   "label": "준수 표준 (날짜 형식·코드 체계·좌표계 등)",
+   "level": "선택",
+   "type": "tags",
+   "scope": "all",
+   "guide": "부록 3 의미 및 표준"
+  },
+  {
    "name": "late_policy",
    "property": "fde:lateDataPolicy",
    "label": "지각(late) 데이터 정책",
@@ -350,11 +558,11 @@
    "scope": "stream"
   },
   {
-   "name": "keywords",
-   "property": "dcat:keyword",
-   "label": "키워드",
-   "level": "권장",
-   "type": "tags",
+   "name": "role_note",
+   "property": "rdfs:comment",
+   "label": "역할 설명 (문장화에 사용)",
+   "level": "선택",
+   "type": "text",
    "scope": "all"
   }
  ],

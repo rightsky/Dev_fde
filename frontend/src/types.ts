@@ -60,6 +60,8 @@ export interface MetaField {
   type: "text" | "textarea" | "org" | "media_type" | "url" | "duration" | "late_policy" | "tags" | "periodicity" | "date";
   scope: "all" | "dataset" | "stream";
   approval?: boolean;
+  /** 가이드라인 근거 위치 (예: "표 9 데이터명"). 가이드라인에 없는 제품 필드는 비어 있다 */
+  guide?: string;
 }
 
 export interface FormatDef {
@@ -558,18 +560,37 @@ export interface SerializationLatest {
 // ───────────── STEP 8 진단
 export type DiagStatus = "met" | "partial" | "unmet" | "pending" | "na";
 
+export type DiagMethod = "AUTO-GRAPH" | "AUTO-PROFILE" | "AUTO-DERIVED" | "HUMAN-ATTEST";
+
 export interface DiagItem {
   id: string;
   area: string;
+  /** 짧은 항목명 (메타데이터는 원문 항목명, 체크리스트는 화면용 요약) */
   name: string;
-  method: "AUTO-GRAPH" | "AUTO-PROFILE" | "HUMAN-ATTEST";
+  method: DiagMethod;
+  /** 근거 위치 (예: "표 9 데이터 관리 메타데이터", "부록 3 공통 · 형식 및 구조") */
   basis: string;
+  // 아래 6개는 규칙 세트 fde-rules-1.0 부터 온다 (그 전 실행 결과에는 없다)
+  /** 가이드라인 원문 문구 */
+  text?: string | null;
+  /** 필수 · 권장 · 선택 · 원칙 */
+  level?: string | null;
+  /** 메타데이터 속성 (가이드라인 표기, 예: dct:title) */
+  property?: string | null;
+  /** 이 스튜디오가 정한 판정 기준 */
+  criteria?: string | null;
+  /** 종합 항목이 참조하는 연결 항목 */
+  related?: { id: string; name: string; status: DiagStatus }[];
+  /** 담당자 확인으로 판정을 기록할 수 있는 항목인지 */
+  attestable?: boolean;
+  allow_na?: boolean;
   remedy: string | null;
   difficulty: number;
-  datasets: { id: number; name: string; status: DiagStatus; detail: string }[];
+  datasets: { id: number; name: string; status: DiagStatus; detail: string; focus?: string }[];
   evidence: string[];
   route: FixRoute | null;
-  attestation: { status: DiagStatus; note: string | null; evidence: string | null; by: string; at: string } | null;
+  /** outdated: 확인한 뒤에 조합 구성이 바뀌어 판정에 반영되지 않은 기록 */
+  attestation: { status: DiagStatus; note: string | null; evidence: string | null; by: string; at: string; outdated?: boolean } | null;
   status: DiagStatus;
   score: number | null;
 }
@@ -595,8 +616,19 @@ export interface DiagRun {
   pct: number;
   summary: {
     areas: DiagArea[];
-    methods: { id: string; name: string; items: number; met: number; partial: number; unmet: number; pending: number }[];
-    roadmap: { rank: number; item_id: string; action: string; name: string; gain: number; difficulty: "낮음" | "중간" | "높음"; basis: string; route: FixRoute | null }[];
+    methods: { id: string; name: string; items: number; total?: number; met: number; partial: number; unmet: number; pending: number }[];
+    roadmap: {
+      rank: number;
+      item_id: string;
+      action: string;
+      name: string;
+      gain: number;
+      difficulty: "낮음" | "중간" | "높음";
+      basis: string;
+      level?: string | null;
+      method?: DiagMethod;
+      route: FixRoute | null;
+    }[];
     dataset_count: number;
     mode: "draft" | "publish";
     guideline: string;
@@ -630,6 +662,8 @@ export interface DiagLatest {
     implemented_total: number;
     methods: { id: string; name: string }[];
     areas: { id: string; name: string; guideline_items: number }[];
+    /** 판정 방식별 항목 수 */
+    method_counts: Record<string, number>;
   };
 }
 

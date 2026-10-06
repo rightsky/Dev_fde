@@ -1,6 +1,7 @@
 // STEP 8 가이드라인 준수 진단.
 // 점수·판정·근거는 전부 서버의 진단 실행 결과(DiagRun)에서 온다. 화면은 계산하지 않고 보여 주기만 한다.
-// 규칙 세트는 가이드라인 전체가 아니라 일부만 구현하므로, 점수 옆에 그 사실을 항상 함께 적는다.
+// 규칙 세트는 가이드라인 v1.1 의 80항목 전체다. 항목 문구는 원문이고 판정 기준은 이 스튜디오가 정한 것이므로 둘을 구분해 보여 준다.
+// 규칙 세트가 가이드라인 항목 수보다 적은 경우(예전 실행 결과)에는 그 사실을 점수 옆에 함께 적는다.
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -14,7 +15,7 @@ import { StepHeader } from "./shared";
 // ───────────── 표기 규칙 (라벨·색조만 정한다. 값은 서버 응답 그대로)
 type BadgeTone = NonNullable<Parameters<typeof Badge>[0]["tone"]>;
 type Level = "ok" | "warn" | "err";
-type AttestStatus = "met" | "partial" | "unmet";
+type AttestStatus = "met" | "partial" | "unmet" | "na";
 type Summary = DiagRun["summary"];
 type RoadmapRow = Summary["roadmap"][number];
 
@@ -25,9 +26,10 @@ const STATUS: Record<DiagStatus, { label: string; tone: BadgeTone }> = {
   pending: { label: "확인 대기", tone: "info" },
   na: { label: "해당 없음", tone: "muted" },
 };
-const ATTEST_LABEL: Record<AttestStatus, string> = { met: "충족", partial: "부분 충족", unmet: "미흡" };
+const ATTEST_LABEL: Record<AttestStatus, string> = { met: "충족", partial: "부분 충족", unmet: "미흡", na: "해당 없음" };
 // 판정 방식 배지는 판정 결과 배지(초록·주황·빨강)와 섞이지 않게 다른 색조를 쓴다
-const METHOD_TONE: Record<string, BadgeTone> = { "AUTO-GRAPH": "muted", "AUTO-PROFILE": "purple", "HUMAN-ATTEST": "dark" };
+const METHOD_TONE: Record<string, BadgeTone> = { "AUTO-GRAPH": "muted", "AUTO-PROFILE": "purple", "AUTO-DERIVED": "info", "HUMAN-ATTEST": "dark" };
+const LEVEL_TONE: Record<string, BadgeTone> = { 필수: "dark", 권장: "info", 선택: "muted", 원칙: "purple" };
 const DIFFICULTY_TONE: Record<string, BadgeTone> = { 낮음: "ok", 중간: "warn", 높음: "err" };
 const DIFFICULTY_LABEL: Record<number, string> = { 1: "낮음", 2: "중간", 3: "높음" };
 const GAUGE_COLOR: Record<Level, string> = { ok: "var(--green)", warn: "var(--orange)", err: "var(--err)" };
@@ -35,12 +37,19 @@ const LEVEL_TEXT: Record<Level, string> = { ok: "t-ok", warn: "t-warn", err: "t-
 
 const pctLevel = (pct: number): Level => (pct >= 75 ? "ok" : pct >= 40 ? "warn" : "err");
 const fmtScore = (n: number | null | undefined) => (n == null ? "—" : Number.isInteger(n) ? String(n) : n.toFixed(1));
-const isAttestStatus = (s: DiagStatus | undefined): s is AttestStatus => s === "met" || s === "partial" || s === "unmet";
+const isAttestStatus = (s: DiagStatus | undefined): s is AttestStatus => s === "met" || s === "partial" || s === "unmet" || s === "na";
 
-/** 자동 증빙만으로 판정이 끝난 HUMAN-ATTEST 항목(예: 개인정보 의심 컬럼 미검출)은 담당자 확인 대상이 아니다. */
+/** 담당자 확인으로 판정을 기록할 수 있는 항목. 자동 증빙이 '해당 없음'이어도 담당자가 판정을 덮어쓸 수 있다. */
 function isAttestable(item: DiagItem): boolean {
+  if (item.attestable != null) return item.attestable;
+  // 규칙 세트 fde-rules-0.x 의 실행 결과에는 attestable 이 없다
   if (item.method !== "HUMAN-ATTEST") return false;
   return item.datasets.length === 0 || item.datasets.some((d) => d.status === "pending");
+}
+
+function LevelBadge({ level }: { level: string | null | undefined }) {
+  if (!level) return null;
+  return <Badge tone={LEVEL_TONE[level] || "muted"}>{level}</Badge>;
 }
 
 function StatusBadge({ status }: { status: DiagStatus }) {
@@ -99,7 +108,7 @@ function Diagnosis({ data }: { data: DiagLatest }) {
     try {
       const r = await api.runDiagnosis(pid);
       await refresh();
-      toast.ok(`진단을 실행했습니다 — ${fmtScore(r.run.score)} / ${fmtScore(r.run.max_score)}점 (구현된 규칙 기준)`);
+      toast.ok(`진단을 실행했습니다 — ${fmtScore(r.run.score)} / ${fmtScore(r.run.max_score)}점`);
     } catch (e) {
       toast.error(e);
     } finally {
@@ -120,12 +129,27 @@ function Diagnosis({ data }: { data: DiagLatest }) {
     </Button>
   );
 
+  const mc = ruleset.method_counts ?? {};
+  const autoCount = (mc["AUTO-GRAPH"] ?? 0) + (mc["AUTO-PROFILE"] ?? 0);
+  const full = ruleset.implemented_total >= ruleset.guideline_total;
+
   return (
     <>
       <Banner tone="info">
         <div>
-          <b>{ruleset.guideline}</b> · 규칙 세트 <span className="mono">{ruleset.version}</span> · 구현 <b>{ruleset.implemented_total}</b> / 가이드라인{" "}
-          {ruleset.guideline_total}항목
+          <b>{ruleset.guideline}</b> · 규칙 세트 <span className="mono">{ruleset.version}</span> ·{" "}
+          {full ? (
+            <>
+              <b>{ruleset.guideline_total}항목</b> 전체 판정
+            </>
+          ) : (
+            <>
+              구현 <b>{ruleset.implemented_total}</b> / 가이드라인 {ruleset.guideline_total}항목
+            </>
+          )}{" "}
+          <span className="small">
+            (자동 {autoCount} · 연결 항목 종합 {mc["AUTO-DERIVED"] ?? 0} · 담당자 확인 {mc["HUMAN-ATTEST"] ?? 0})
+          </span>
         </div>
         <div className="small mt-4">{ruleset.note}</div>
       </Banner>
@@ -153,7 +177,8 @@ function Diagnosis({ data }: { data: DiagLatest }) {
         <Empty>
           아직 진단을 실행하지 않았습니다.
           <br />
-          [▶ 진단 실행]을 누르면 조합 {combo.length}건에 대해 구현된 규칙 {ruleset.implemented_total}항목을 판정합니다 (가이드라인 {ruleset.guideline_total}항목 전체가 아닙니다).
+          [▶ 진단 실행]을 누르면 조합 {combo.length}건에 대해 가이드라인 {ruleset.implemented_total}항목을 판정합니다.
+          {!full && ` (가이드라인 ${ruleset.guideline_total}항목 전체가 아닙니다)`}
         </Empty>
       ) : (
         <>
@@ -228,19 +253,20 @@ function ScoreCard({ run }: { run: DiagRun }) {
   const level = pctLevel(run.pct);
   const ratio = run.max_score > 0 ? run.score / run.max_score : 0;
   const notImplemented = s.guideline_total - s.implemented_total;
+  const basisLabel = notImplemented > 0 ? "구현된 규칙 기준" : `가이드라인 ${s.guideline_total}항목 기준`;
   const gain = Math.round((s.potential_score - run.score) * 10) / 10;
   const order: DiagStatus[] = ["met", "partial", "unmet", "pending", "na"];
   return (
     <Card
       title={
         <>
-          준수 점수 <Badge tone="dark">구현된 규칙 기준</Badge>
+          준수 점수 <Badge tone="dark">{basisLabel}</Badge>
         </>
       }
       style={{ flex: "1 1 320px", maxWidth: 400 }}
     >
       <div style={{ position: "relative", maxWidth: 240, margin: "0 auto" }} title="색 기준: 75% 이상 녹색 · 40~74% 주황 · 40% 미만 빨강">
-        <Gauge ratio={ratio} level={level} label={`구현된 규칙 기준 ${fmtScore(run.score)} / ${fmtScore(run.max_score)}점, ${run.pct}%`} />
+        <Gauge ratio={ratio} level={level} label={`${basisLabel} ${fmtScore(run.score)} / ${fmtScore(run.max_score)}점, ${run.pct}%`} />
         <div className="center" style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
           <div className="stat">
             {fmtScore(run.score)}{" "}
@@ -252,12 +278,14 @@ function ScoreCard({ run }: { run: DiagRun }) {
         </div>
       </div>
 
-      <div className="mt-12">
-        <Banner tone="warn">
-          가이드라인 <b>{s.guideline_total}항목</b> 중 <b>{s.implemented_total}항목</b>만 규칙으로 구현되어 있습니다. 이 점수는 구현된 규칙만으로 계산한 값이며 {s.guideline_total}점 만점 점수가 아닙니다
-          {notImplemented > 0 ? ` — 나머지 ${notImplemented}항목은 판정하지 않았습니다.` : "."}
-        </Banner>
-      </div>
+      {notImplemented > 0 && (
+        <div className="mt-12">
+          <Banner tone="warn">
+            가이드라인 <b>{s.guideline_total}항목</b> 중 <b>{s.implemented_total}항목</b>만 규칙으로 구현된 규칙 세트로 판정한 결과입니다. 나머지 {notImplemented}항목은 판정하지 않았습니다 — 재진단하면 현재 규칙 세트로
+            다시 판정합니다.
+          </Banner>
+        </div>
+      )}
 
       <div className="row wrap gap-4 mt-12">
         {order.map((k) => (
@@ -267,9 +295,9 @@ function ScoreCard({ run }: { run: DiagRun }) {
         ))}
       </div>
       <div className="small muted mt-8">
-        만점 {fmtScore(run.max_score)}점 = 판정 대상 {s.scored_total}항목 (구현 {s.implemented_total} − 해당 없음 {s.counts.na})
+        만점 {fmtScore(run.max_score)}점 = 판정 대상 {s.scored_total}항목 ({notImplemented > 0 ? "구현" : "가이드라인"} {s.implemented_total} − 해당 없음 {s.counts.na})
       </div>
-      <div className="small muted">충족 1.0 · 부분 0.5 · 미흡·대기 0 · 해당 없음은 만점에서 제외</div>
+      <div className="small muted">항목당 1점: 충족 1.0 · 부분 0.5 · 미흡·확인 대기 0 · 해당 없음은 만점에서 제외</div>
       <hr className="divider" />
       <div className="small">
         쉬운 조치(난이도 낮음)를 모두 반영하면 <b>{fmtScore(s.potential_score)}점</b>{" "}
@@ -308,8 +336,8 @@ function AreasCard({ run }: { run: DiagRun }) {
               <th className="num">판정 항목</th>
               <th className="num">점수</th>
               <th>충족률</th>
-              <th className="num">자동 / 수기</th>
-              <th className="num">구현 / 가이드라인</th>
+              <th className="num">자동 / 담당자 확인</th>
+              <th className="num">가이드라인 항목</th>
             </tr>
           </thead>
           <tbody>
@@ -329,7 +357,7 @@ function AreasCard({ run }: { run: DiagRun }) {
                   {a.auto} / {a.manual}
                 </td>
                 <td className={cx("num", a.implemented < a.guideline_items && "t-warn")}>
-                  구현 {a.implemented} / 가이드라인 {a.guideline_items}
+                  {a.implemented < a.guideline_items ? `구현 ${a.implemented} / ${a.guideline_items}` : a.guideline_items}
                 </td>
               </tr>
             ))}
@@ -346,14 +374,14 @@ function AreasCard({ run }: { run: DiagRun }) {
                 {auto} / {manual}
               </td>
               <td className={cx("num bold", s.implemented_total < s.guideline_total && "t-warn")}>
-                구현 {s.implemented_total} / 가이드라인 {s.guideline_total}
+                {s.implemented_total < s.guideline_total ? `구현 ${s.implemented_total} / ${s.guideline_total}` : s.guideline_total}
               </td>
             </tr>
           </tbody>
         </table>
       </div>
       <div className="small muted mt-8">
-        판정 항목은 구현된 규칙 가운데 이 조합에 적용되는 항목 수입니다(해당 없음 제외). 구현 수가 가이드라인 항목 수보다 적은 영역의 충족률은 그 영역 전체를 대표하지 않습니다.
+        판정 항목은 가이드라인 항목 가운데 이 조합에 적용되는 항목 수입니다(해당 없음 제외). 자동에는 연결 항목 종합이 포함됩니다.
       </div>
     </Card>
   );
@@ -363,7 +391,7 @@ function AreasCard({ run }: { run: DiagRun }) {
 function MethodsCard({ summary }: { summary: Summary }) {
   return (
     <Card title="판정 방식" right={<span className="small muted">해당 없음 항목은 집계에서 제외</span>}>
-      <div className="grid c3">
+      <div className={cx("grid", summary.methods.length > 3 ? "c4" : "c3")}>
         {summary.methods.map((m) => (
           <div key={m.id} className="card tight flat">
             <div className="row between">
@@ -381,7 +409,8 @@ function MethodsCard({ summary }: { summary: Summary }) {
         ))}
       </div>
       <div className="small muted mt-8">
-        AUTO 항목은 저장된 그래프·프로파일·검증 결과로 자동 판정합니다. HUMAN-ATTEST 항목은 담당자가 증빙과 함께 확인한 기록으로 판정하며, 확인 기록이 없으면 '확인 대기'(0점)입니다.
+        AUTO-GRAPH · AUTO-PROFILE 항목은 저장된 그래프·프로파일·검증 결과로 자동 판정합니다. AUTO-DERIVED 항목(15개 원칙 등)은 가이드라인에 판정 기준이 없어 연결된 세부 항목의 판정을 종합합니다. HUMAN-ATTEST
+        항목은 담당자가 증빙과 함께 확인한 기록으로 판정하며, 확인 기록이 없으면 '확인 대기'(0점)입니다.
       </div>
     </Card>
   );
@@ -392,6 +421,9 @@ function RoadmapCard({ roadmap, onShowItem }: { roadmap: RoadmapRow[]; onShowIte
   const { go } = useStudio();
   return (
     <Card title="조치 우선순위" right={<span className="small muted">난이도 낮은 순 · 가산 큰 순 — 가산은 조치 후 재진단했을 때 오르는 점수</span>}>
+      {roadmap.length > 0 && (
+        <div className="small muted mb-8">연결 항목 종합(AUTO-DERIVED) 항목은 목록에 없습니다. 아래 항목을 조치하면 그 항목들의 점수도 함께 오릅니다.</div>
+      )}
       {roadmap.length === 0 ? (
         <div className="small t-ok bold">✓ 조치가 필요한 항목이 없습니다</div>
       ) : (
@@ -415,7 +447,8 @@ function RoadmapCard({ roadmap, onShowItem }: { roadmap: RoadmapRow[]; onShowIte
                     <div>{r.action}</div>
                     <button className="link-btn tiny" onClick={() => onShowItem(r.item_id)} title="항목별 판정에서 이 항목 보기">
                       <span className="mono">{r.item_id}</span> {r.name}
-                    </button>
+                    </button>{" "}
+                    <LevelBadge level={r.level} />
                   </td>
                   <td className="num bold t-ok">+{fmtScore(r.gain)}</td>
                   <td>
@@ -478,20 +511,25 @@ function ItemsCard(props: {
     ...run.summary.areas.map((a) => ({ key: a.id, label: `${a.name} ${a.implemented}` })),
   ];
 
-  // 조치 우선순위·다른 화면에서 지목한 항목: 필터를 풀고 펼친 뒤 강조한다
+  // 조치 우선순위·연결 항목·다른 화면에서 지목한 항목: 필터를 풀고 펼친 뒤 강조한다
+  const [target, setTarget] = useState<{ id: string; seq: number } | null>(focus);
   useEffect(() => {
-    if (!focus) return;
+    if (focus) setTarget(focus);
+  }, [focus]);
+  useEffect(() => {
+    if (!target) return;
     setStatus("all");
     setArea("all");
-    setOpen((prev) => new Set(prev).add(focus.id));
-    setFlash(focus.id);
-    const scroll = setTimeout(() => rowRefs.current[focus.id]?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+    setOpen((prev) => new Set(prev).add(target.id));
+    setFlash(target.id);
+    const scroll = setTimeout(() => rowRefs.current[target.id]?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
     const clear = setTimeout(() => setFlash(null), 2400);
     return () => {
       clearTimeout(scroll);
       clearTimeout(clear);
     };
-  }, [focus]);
+  }, [target]);
+  const showItem = (id: string) => setTarget((t) => ({ id, seq: (t?.seq ?? 0) + 1 }));
 
   const toggle = (id: string) =>
     setOpen((prev) => {
@@ -508,7 +546,9 @@ function ItemsCard(props: {
         <>
           항목별 판정{" "}
           <span className="small muted" style={{ fontWeight: 400 }}>
-            구현된 {run.items.length}항목 — 가이드라인 {run.summary.guideline_total}항목 중 구현되지 않은 항목은 목록에 없습니다
+            {run.items.length >= run.summary.guideline_total
+              ? `가이드라인 ${run.items.length}항목 — 항목 문구는 원문이고, 판정 기준은 이 스튜디오가 정한 것입니다`
+              : `구현된 ${run.items.length}항목 — 가이드라인 ${run.summary.guideline_total}항목 중 구현되지 않은 항목은 목록에 없습니다`}
           </span>
         </>
       }
@@ -543,6 +583,7 @@ function ItemsCard(props: {
               attestBlocked={attestBlocked}
               onToggle={() => toggle(item.id)}
               onAttest={() => setAttesting(item)}
+              onShowItem={showItem}
               rowRef={(el) => {
                 rowRefs.current[item.id] = el;
               }}
@@ -574,10 +615,27 @@ function ItemRow(props: {
   attestBlocked: string | null;
   onToggle: () => void;
   onAttest: () => void;
+  onShowItem: (itemId: string) => void;
   rowRef: (el: HTMLDivElement | null) => void;
 }) {
   const { item, open, local } = props;
-  const { go } = useStudio();
+  const { go, pid, refresh } = useStudio();
+  const toast = useToast();
+  const [removing, setRemoving] = useState(false);
+  const [removed, setRemoved] = useState(false);
+  const removeAttest = async () => {
+    setRemoving(true);
+    try {
+      await api.deleteAttestation(pid, item.id);
+      await refresh();
+      setRemoved(true);
+      toast.ok("확인 기록을 삭제했습니다 — 재진단하면 판정에 반영됩니다");
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      setRemoving(false);
+    }
+  };
   const route = item.route;
   // 이동한 화면에서 바로 고칠 수 있게, 충족하지 못한 첫 데이터셋을 선택해서 넘긴다
   const firstOpen = item.datasets.find((d) => d.status !== "met");
@@ -598,8 +656,13 @@ function ItemRow(props: {
         </span>
         <span className="grow">
           <span className="bold" style={{ display: "block" }}>
-            {item.name}
+            {item.name} {item.property && <span className="kbd">{item.property}</span>} <LevelBadge level={item.level} />
           </span>
+          {item.text && (
+            <span className="small" style={{ display: "block" }}>
+              {item.text}
+            </span>
+          )}
           <span className="small muted" style={{ display: "block" }}>
             {item.basis}
           </span>
@@ -614,6 +677,12 @@ function ItemRow(props: {
 
       {open && (
         <div id={bodyId} className="col" style={{ padding: "2px 12px 12px 74px", gap: 10 }}>
+          {item.criteria && (
+            <Section label="판정 기준 (이 스튜디오가 정한 기준)">
+              <div className="small">{item.criteria}</div>
+            </Section>
+          )}
+
           <Section label="판정 근거">
             {item.evidence.length === 0 ? (
               <span className="small muted">기록된 근거가 없습니다</span>
@@ -629,8 +698,20 @@ function ItemRow(props: {
             </div>
           </Section>
 
+          {item.related && item.related.length > 0 && (
+            <Section label={`연결 항목 ${item.related.length}개`}>
+              <div className="row wrap gap-4">
+                {item.related.map((c) => (
+                  <button key={c.id} className="chip" title="이 항목의 판정 보기" onClick={() => props.onShowItem(c.id)}>
+                    <span className="mono">{c.id}</span> {c.name} <StatusBadge status={c.status} />
+                  </button>
+                ))}
+              </div>
+            </Section>
+          )}
+
           {item.datasets.length > 0 && (
-            <Section label={`데이터셋별 판정 ${item.datasets.length}건`}>
+            <Section label={`데이터셋별 ${attestable ? "자동 증빙" : "판정"} ${item.datasets.length}건`}>
               <div className="table-wrap">
                 <table className="table">
                   <thead>
@@ -652,7 +733,7 @@ function ItemRow(props: {
                         {route && (
                           <td className="nowrap right">
                             {d.status !== "met" && (
-                              <button className="link-btn small" onClick={() => go(route.step, { dataset: d.id, focus: route.focus })}>
+                              <button className="link-btn small" onClick={() => go(route.step, { dataset: d.id, focus: d.focus ?? route.focus })}>
                                 STEP {route.step} 에서 수정
                               </button>
                             )}
@@ -673,7 +754,7 @@ function ItemRow(props: {
           )}
 
           {item.attestation && (
-            <Section label="담당자 확인 기록 (이 진단에 반영됨)">
+            <Section label={item.attestation.outdated ? "이전 담당자 확인 기록 (확인한 뒤 조합 구성이 바뀌어 반영하지 않음 — 다시 확인 필요)" : "담당자 확인 기록 (이 진단에 반영됨)"}>
               <AttestRecord
                 status={item.attestation.status}
                 by={item.attestation.by}
@@ -692,7 +773,7 @@ function ItemRow(props: {
           {(route || item.method === "HUMAN-ATTEST") && (
             <div className="row wrap">
               {route && (
-                <Button size="sm" title={route.label} onClick={() => go(route.step, { dataset: firstOpen?.id, focus: route.focus })}>
+                <Button size="sm" title={route.label} onClick={() => go(route.step, { dataset: firstOpen?.id, focus: firstOpen?.focus ?? route.focus })}>
                   수정하러 이동 → STEP {route.step}
                 </Button>
               )}
@@ -701,8 +782,17 @@ function ItemRow(props: {
                   담당자 확인
                 </Button>
               )}
+              {attestable && item.attestation && !local && !removed && !props.attestBlocked && (
+                <ConfirmButton size="sm" confirmLabel="한 번 더 눌러 삭제" busy={removing} onConfirm={removeAttest}>
+                  확인 기록 삭제
+                </ConfirmButton>
+              )}
+              {removed && <span className="small muted">확인 기록을 삭제했습니다 · 재진단 전</span>}
               {attestable && props.attestBlocked && <span className="small muted">{props.attestBlocked}</span>}
               {item.method === "HUMAN-ATTEST" && !attestable && <span className="small muted">자동 증빙으로 판정이 끝난 항목입니다 — 담당자 확인이 필요하지 않습니다.</span>}
+              {attestable && item.status === "na" && !item.attestation && (
+                <span className="small muted">자동 탐지 결과가 실제와 다르면 담당자 확인으로 판정을 기록할 수 있습니다.</span>
+              )}
             </div>
           )}
         </div>
@@ -773,6 +863,7 @@ function AttestForm(props: { item: DiagItem; local: LocalAttest | undefined; onC
   const [busy, setBusy] = useState(false);
   const needEvidence = status !== "unmet";
   const missing = needEvidence && !evidence.trim();
+  const isNa = status === "na";
 
   const save = async () => {
     setBusy(true);
@@ -790,8 +881,10 @@ function AttestForm(props: { item: DiagItem; local: LocalAttest | undefined; onC
 
   return (
     <div className="col gap-12">
+      {item.text && <div className="small bold">{item.text}</div>}
       <div className="small muted">
         {item.basis}
+        {item.level ? ` · ${item.level}` : ""}
         {item.remedy ? ` · ${item.remedy}` : ""}
       </div>
       {item.evidence.length > 0 && (
@@ -806,17 +899,30 @@ function AttestForm(props: { item: DiagItem; local: LocalAttest | undefined; onC
           <option value="met">{ATTEST_LABEL.met} (1.0점)</option>
           <option value="partial">{ATTEST_LABEL.partial} (0.5점)</option>
           <option value="unmet">{ATTEST_LABEL.unmet} (0점)</option>
+          {(item.allow_na || status === "na") && <option value="na">{ATTEST_LABEL.na} (만점에서 제외)</option>}
         </select>
       </Field>
       <Field
         label={
           <>
-            증빙 {needEvidence ? <Badge tone="err">필수</Badge> : <Badge>선택</Badge>}
+            {isNa ? "해당 없음 사유" : "증빙"} {needEvidence ? <Badge tone="err">필수</Badge> : <Badge>선택</Badge>}
           </>
         }
-        hint={missing ? "충족·부분 충족 판정에는 증빙(문서 위치·링크·설명)이 필요합니다" : "문서 위치·링크·설명을 적습니다"}
+        hint={
+          isNa
+            ? "이 항목이 이 데이터에 적용되지 않는 이유를 적습니다"
+            : missing
+              ? "충족·부분 충족 판정에는 증빙(문서 위치·링크·설명)이 필요합니다"
+              : "문서 위치·링크·설명을 적습니다"
+        }
       >
-        <textarea className="textarea" value={evidence} disabled={busy} onChange={(e) => setEvidence(e.target.value)} placeholder="예: 문서 관리 시스템의 문서 번호, 공유 폴더 경로, 링크" />
+        <textarea
+          className="textarea"
+          value={evidence}
+          disabled={busy}
+          onChange={(e) => setEvidence(e.target.value)}
+          placeholder={isNa ? "예: 합성 데이터나 자동 주석이 포함되어 있지 않음" : "예: 문서 관리 시스템의 문서 번호, 공유 폴더 경로, 링크"}
+        />
       </Field>
       <Field label="메모">
         <input className="input" value={note} disabled={busy} onChange={(e) => setNote(e.target.value)} />

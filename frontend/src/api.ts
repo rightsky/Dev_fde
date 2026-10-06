@@ -251,8 +251,9 @@ export const api = {
   // STEP 8
   runDiagnosis: (pid: number) => post<{ run: T.DiagRun; state: T.ProcessState }>(`/processes/${pid}/diagnosis-runs`),
   latestDiagnosis: (pid: number) => get<T.DiagLatest>(`/processes/${pid}/diagnosis-runs/latest`),
-  attest: (pid: number, itemId: string, body: { status: "met" | "partial" | "unmet"; note?: string; evidence?: string }) =>
+  attest: (pid: number, itemId: string, body: { status: "met" | "partial" | "unmet" | "na"; note?: string; evidence?: string }) =>
     put<{ ok: boolean }>(`/processes/${pid}/attestations/${itemId}`, body),
+  deleteAttestation: (pid: number, itemId: string) => del<{ ok: boolean }>(`/processes/${pid}/attestations/${itemId}`),
 
   // 카탈로그
   catalog: (params?: { q?: string; kind?: string; theme?: string; data_type?: string; status?: string }) => get<T.CatalogList>("/catalog", params),
