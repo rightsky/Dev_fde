@@ -9,9 +9,10 @@ echo "복원할 백업: $backup"
 read -r -p "지금 데이터를 모두 지우고 이 백업으로 되돌립니다. 계속하려면 yes 를 입력하세요: " answer
 [ "$answer" = "yes" ] || { echo "취소했습니다."; exit 1; }
 
+# docker compose cp 로 넣은 파일은 root 소유라 백엔드 사용자(fde)가 지울 수 없다. 풀기는 root 로 하고 소유자를 fde 로 돌린다
 echo "1/3 업로드 파일 되돌리는 중..."
 docker compose cp "$backup/storage.tgz" backend:/tmp/storage.tgz
-docker compose exec -T backend sh -c "find /data/storage -mindepth 1 -delete && tar xzf /tmp/storage.tgz -C /data/storage && rm -f /tmp/storage.tgz"
+docker compose exec -T -u root backend sh -c "find /data/storage -mindepth 1 -delete && tar xzf /tmp/storage.tgz -C /data/storage && chown -R fde /data/storage && rm -f /tmp/storage.tgz"
 
 echo "2/3 데이터베이스 되돌리는 중 (백엔드 잠시 중지)..."
 docker compose stop backend
