@@ -378,6 +378,8 @@ def _clean_meta(pd: ProcessDataset, db: Session, values: dict[str, Any]) -> dict
             raise HTTPException(422, "미디어타입 형식이 올바르지 않습니다 (예: text/csv)")
         if k == "contact_email" and not re.fullmatch(r"[\w.+-]+@[\w-]+\.[\w.-]+", str(v)):
             raise HTTPException(422, "담당 이메일 형식이 올바르지 않습니다")
+        if k == "contact_phone" and not re.fullmatch(r"\+?[0-9][0-9 ()-]{5,22}[0-9]", str(v)):
+            raise HTTPException(422, "담당 전화번호 형식이 올바르지 않습니다 (예: 044-201-3114)")
         out[k] = v
     return out
 
@@ -921,7 +923,9 @@ def latest_diagnosis(pid: int, db: Session = Depends(get_db), _: User = Depends(
             "pending_attestations": [a.item_id for a in atts if dr is not None and a.attested_at > dr.started_at],
             "ruleset": {"version": rules["version"], "guideline": rules["guideline"], "note": rules["note"],
                         "guideline_total": rules["total_items_in_guideline"], "implemented_total": len(rules["rules"]),
-                        "methods": rules["methods"], "areas": rules["areas"]}}
+                        "methods": rules["methods"], "areas": rules["areas"],
+                        "method_counts": {m["id"]: len([r for r in rules["rules"] if r["method"] == m["id"]])
+                                          for m in rules["methods"]}}}
 
 
 class AttestIn(BaseModel):
@@ -938,21 +942,37 @@ def attest(pid: int, item_id: str, body: AttestIn, db: Session = Depends(get_db)
         raise HTTPException(404, "진단 항목을 찾을 수 없습니다")
     if rule["method"] != "HUMAN-ATTEST":
         raise HTTPException(422, "담당자 확인 대상 항목이 아닙니다 (자동 판정 항목)")
-    if body.status not in ("met", "partial", "unmet"):
-        raise HTTPException(422, "판정은 met · partial · unmet 중 하나여야 합니다")
+    if body.status not in ("met", "partial", "unmet", "na"):
+        raise HTTPException(422, "판정은 met · partial · unmet · na 중 하나여야 합니다")
+    if body.status == "na" and not rule.get("allow_na"):
+        raise HTTPException(422, "이 항목은 해당 없음으로 판정할 수 없습니다")
     if body.status != "unmet" and not (body.evidence or "").strip():
-        raise HTTPException(422, "충족·부분 충족 판정에는 증빙(문서 위치·링크·설명)이 필요합니다")
+        raise HTTPException(422, "해당 없음 판정에는 그 사유가 필요합니다" if body.status == "na"
+                            else "충족·부분 충족 판정에는 증빙(문서 위치·링크·설명)이 필요합니다")
     att = db.scalar(select(Attestation).where(Attestation.process_id == pid, Attestation.item_id == item_id))
     if att is None:
         att = Attestation(process_id=pid, item_id=item_id, status=body.status)
         db.add(att)
     att.status, att.note, att.evidence = body.status, body.note, body.evidence
     att.attested_by, att.attested_label, att.attested_at = user.id, user.name, utcnow()
-    label = {"met": "충족", "partial": "부분 충족", "unmet": "미흡"}[body.status]
+    label = {"met": "충족", "partial": "부분 충족", "unmet": "미흡", "na": "해당 없음"}[body.status]
     act = activity.log(db, "attestation", f"담당자 확인 — {item_id} {rule['name']}: {label}", user=user, process_id=p.id)
     att.activity_id = act.id
     db.commit()
     return {"ok": True, "item_id": item_id, "status": att.status}
+
+
+@router.delete("/processes/{pid}/attestations/{item_id}")
+def delete_attestation(pid: int, item_id: str, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    """담당자 확인을 지운다. 재진단하면 그 항목은 확인 대기(또는 자동 증빙의 해당 없음)로 돌아간다."""
+    p = _process(db, pid)
+    att = db.scalar(select(Attestation).where(Attestation.process_id == pid, Attestation.item_id == item_id))
+    if att is None:
+        raise HTTPException(404, "담당자 확인 기록이 없습니다")
+    db.delete(att)
+    activity.log(db, "attestation", f"담당자 확인 삭제 — {item_id}", user=user, process_id=p.id)
+    db.commit()
+    return {"ok": True, "item_id": item_id}
 
 
 @router.get("/diagnosis-runs/{run_id}/report")

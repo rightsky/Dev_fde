@@ -1,32 +1,32 @@
 {
  "run": {
-  "id": 2,
+  "id": 3,
   "process_id": 1,
-  "ruleset_version": "fde-rules-0.1",
-  "score": 20.5,
-  "max_score": 33.0,
-  "pct": 62,
+  "ruleset_version": "fde-rules-1.0",
+  "score": 35.0,
+  "max_score": 79.0,
+  "pct": 44,
   "summary": {
    "areas": [
     {
      "id": "A1",
-     "name": "메타데이터 필수 항목",
+     "name": "메타데이터 필수 항목 (표 9~11)",
      "guideline_items": 22,
-     "implemented": 8,
-     "items": 8,
-     "score": 7.5,
-     "pct": 94,
-     "auto": 8,
+     "implemented": 22,
+     "items": 22,
+     "score": 15.0,
+     "pct": 68,
+     "auto": 22,
      "manual": 0
     },
     {
      "id": "A2",
-     "name": "메타데이터 권장·선택 항목",
+     "name": "메타데이터 권장·선택 항목 (표 9·12)",
      "guideline_items": 7,
      "implemented": 7,
      "items": 7,
-     "score": 1.5,
-     "pct": 21,
+     "score": 3.5,
+     "pct": 50,
      "auto": 7,
      "manual": 0
     },
@@ -34,115 +34,134 @@
      "id": "A3",
      "name": "15개 원칙",
      "guideline_items": 15,
-     "implemented": 4,
-     "items": 4,
-     "score": 1.5,
-     "pct": 38,
-     "auto": 3,
+     "implemented": 15,
+     "items": 15,
+     "score": 5.5,
+     "pct": 37,
+     "auto": 14,
      "manual": 1
     },
     {
      "id": "A4",
-     "name": "체크리스트 공통 필수",
+     "name": "체크리스트 공통 필수 (부록 3)",
      "guideline_items": 15,
-     "implemented": 6,
-     "items": 6,
-     "score": 5.0,
-     "pct": 83,
-     "auto": 5,
-     "manual": 1
+     "implemented": 15,
+     "items": 15,
+     "score": 5.5,
+     "pct": 37,
+     "auto": 10,
+     "manual": 5
     },
     {
      "id": "A5",
-     "name": "체크리스트 공통 권장",
+     "name": "체크리스트 공통 권장 (부록 3)",
      "guideline_items": 18,
-     "implemented": 6,
-     "items": 6,
-     "score": 4.0,
-     "pct": 67,
-     "auto": 5,
-     "manual": 1
+     "implemented": 18,
+     "items": 17,
+     "score": 5.5,
+     "pct": 32,
+     "auto": 8,
+     "manual": 9
     },
     {
      "id": "A6",
      "name": "체크리스트 유형별 (수치·개인정보)",
      "guideline_items": 3,
-     "implemented": 2,
-     "items": 2,
-     "score": 1.0,
-     "pct": 50,
-     "auto": 1,
-     "manual": 1
+     "implemented": 3,
+     "items": 3,
+     "score": 0.0,
+     "pct": 0,
+     "auto": 0,
+     "manual": 3
     }
    ],
    "methods": [
     {
      "id": "AUTO-GRAPH",
-     "name": "카탈로그 그래프 SPARQL/SHACL 질의 자동 판정",
-     "items": 25,
-     "met": 15,
-     "partial": 4,
-     "unmet": 6,
+     "name": "정본 그래프 질의와 검증·변환 실행 결과로 자동 판정",
+     "items": 44,
+     "total": 44,
+     "met": 16,
+     "partial": 26,
+     "unmet": 2,
      "pending": 0
     },
     {
      "id": "AUTO-PROFILE",
-     "name": "프로파일 통계 자동 판정",
+     "name": "원천 파일의 프로파일 통계로 자동 판정",
      "items": 4,
-     "met": 1,
-     "partial": 3,
+     "total": 5,
+     "met": 0,
+     "partial": 4,
      "unmet": 0,
      "pending": 0
     },
     {
+     "id": "AUTO-DERIVED",
+     "name": "연결된 세부 항목의 판정을 종합해 자동 판정",
+     "items": 13,
+     "total": 13,
+     "met": 0,
+     "partial": 8,
+     "unmet": 4,
+     "pending": 1
+    },
+    {
      "id": "HUMAN-ATTEST",
-     "name": "증빙 첨부 + 담당자 확인 (확인도 prov:Activity 로 기록)",
-     "items": 4,
-     "met": 1,
+     "name": "담당자가 증빙과 함께 확인 (확인도 prov:Activity 로 기록)",
+     "items": 18,
+     "total": 18,
+     "met": 0,
      "partial": 0,
      "unmet": 0,
-     "pending": 3
+     "pending": 18
     }
    ],
    "roadmap": [
     {
      "rank": 1,
-     "item_id": "O-03",
-     "action": "담당 부서 또는 담당자를 입력한다",
-     "name": "담당 연락처 (dcat:contactPoint)",
+     "item_id": "O-04",
+     "action": "STEP 3 의 데이터 편향성에 확인된 편향 유형을 적는다",
+     "name": "데이터 편향성",
      "gain": 1.0,
      "difficulty": "낮음",
-     "basis": "제품 규칙",
+     "basis": "표 12 데이터 품질 메타데이터",
+     "level": "권장",
+     "method": "AUTO-GRAPH",
      "route": {
       "key": "meta3",
       "step": 3,
       "label": "프러퍼티 폼",
-      "focus": "contact_name"
+      "focus": "rai_data_biases"
      }
     },
     {
      "rank": 2,
-     "item_id": "O-04",
-     "action": "버전을 입력한다",
-     "name": "버전 (dcat:version)",
+     "item_id": "O-06",
+     "action": "STEP 3 의 데이터 한계에 제한사항과 해석할 때 유의할 점을 적는다",
+     "name": "데이터 한계",
      "gain": 1.0,
      "difficulty": "낮음",
-     "basis": "제품 규칙",
+     "basis": "표 12 데이터 품질 메타데이터",
+     "level": "선택",
+     "method": "AUTO-GRAPH",
      "route": {
       "key": "meta3",
       "step": 3,
       "label": "프러퍼티 폼",
-      "focus": "version"
+      "focus": "rai_known_limitations"
      }
     },
     {
      "rank": 3,
-     "item_id": "O-05",
-     "action": "STEP 3 클래스 선택에서 dcat:CatalogRecord 를 추가한다",
-     "name": "등재 이력 (dcat:CatalogRecord)",
-     "gain": 1.0,
+     "item_id": "C-03",
+     "action": "STEP 3 의 추가 클래스에서 csvw:Table 을 선택한다. 프로파일한 컬럼 구조가 스키마로 정본에 들어간다",
+     "name": "데이터 구조(스키마) 정의",
+     "gain": 0.5,
      "difficulty": "낮음",
-     "basis": "표12 등재 이력 관리",
+     "basis": "부록 3 공통 · 형식 및 구조",
+     "level": "필수",
+     "method": "AUTO-GRAPH",
      "route": {
       "key": "meta3",
       "step": 3,
@@ -152,106 +171,778 @@
     },
     {
      "rank": 4,
-     "item_id": "O-06",
-     "action": "프로파일 통계에서 분포 편향(지역·기간·유형별 집계)을 산출해 기술한다",
-     "name": "편향성 명세 (rai:dataBiases)",
-     "gain": 1.0,
+     "item_id": "C-10",
+     "action": "STEP 3 의 품질 검증 정보에 품질평가를 했는지와 그 결과를 적는다",
+     "name": "품질평가 수행 여부와 결과 명시",
+     "gain": 0.5,
      "difficulty": "낮음",
-     "basis": "표10 권장항목 rai:dataBiases · 원칙 8",
+     "basis": "부록 3 공통 · 품질 및 이력",
+     "level": "필수",
+     "method": "AUTO-GRAPH",
      "route": {
       "key": "meta3",
       "step": 3,
       "label": "프러퍼티 폼",
-      "focus": "rai_data_biases"
+      "focus": "quality_annotation"
      }
     },
     {
      "rank": 5,
-     "item_id": "O-07",
-     "action": "수집 장비·기간·대표성의 한계를 기술한다",
-     "name": "알려진 한계 (rai:knownLimitations)",
-     "gain": 1.0,
+     "item_id": "C-13",
+     "action": "STEP 4 의 F4 유통·이용조건에서 공공누리 유형을 지정한다",
+     "name": "라이선스 표시와 메타데이터 제공",
+     "gain": 0.5,
      "difficulty": "낮음",
-     "basis": "표10 권장항목 rai:knownLimitations · 원칙 8",
+     "basis": "부록 3 공통 · 관리 및 보안",
+     "level": "필수",
+     "method": "AUTO-GRAPH",
      "route": {
-      "key": "meta3",
-      "step": 3,
-      "label": "프러퍼티 폼",
-      "focus": "rai_known_limitations"
+      "key": "license",
+      "step": 4,
+      "label": "F4 유통·이용조건",
+      "focus": "F4"
      }
     },
     {
      "rank": 6,
-     "item_id": "P-08",
-     "action": "편향 명세와 알려진 한계를 모두 작성한다",
-     "name": "원칙 8 품질·한계 명시",
-     "gain": 1.0,
+     "item_id": "C-14",
+     "action": "STEP 3 에서 소관기관, 담당 부서·담당자, 담당 이메일을 입력한다",
+     "name": "책임 주체와 연락 창구 명시",
+     "gain": 0.5,
      "difficulty": "낮음",
-     "basis": "15개 원칙 중 원칙 8(품질·한계 명시)",
+     "basis": "부록 3 공통 · 관리 유지",
+     "level": "필수",
+     "method": "AUTO-GRAPH",
      "route": {
       "key": "meta3",
       "step": 3,
       "label": "프러퍼티 폼",
-      "focus": "rai_data_biases"
+      "focus": "contact_name"
+     }
+    },
+    {
+     "rank": 7,
+     "item_id": "M-02",
+     "action": "STEP 3 에서 데이터 설명(내용·보유 목적·수집 대상)을 입력한다",
+     "name": "데이터 설명",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "표 9 데이터 관리 메타데이터",
+     "level": "필수",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "description"
+     }
+    },
+    {
+     "rank": 8,
+     "item_id": "M-03",
+     "action": "STEP 3 의 관련법령에 근거 법령 이름이나 법령 URL 을 입력한다",
+     "name": "관련법령",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "표 9 데이터 관리 메타데이터",
+     "level": "필수",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "references"
+     }
+    },
+    {
+     "rank": 9,
+     "item_id": "M-04",
+     "action": "STEP 3 의 소관기관에 데이터를 생산·관리하는 부서 이름을 입력한다",
+     "name": "소관기관 (운영부서명)",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "표 9 데이터 관리 메타데이터",
+     "level": "필수",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "creator"
+     }
+    },
+    {
+     "rank": 10,
+     "item_id": "M-06",
+     "action": "STEP 3 의 제공시스템에 데이터를 안내·제공하는 웹 페이지 주소를 입력한다",
+     "name": "제공시스템",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "표 9 데이터 관리 메타데이터",
+     "level": "필수",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "landing_page"
+     }
+    },
+    {
+     "rank": 11,
+     "item_id": "M-07",
+     "action": "STEP 3 에서 갱신주기를 선택한다 (스트림은 시간 해상도를 승인한다)",
+     "name": "갱신주기",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "표 9 데이터 관리 메타데이터",
+     "level": "필수",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "accrual_periodicity"
+     }
+    },
+    {
+     "rank": 12,
+     "item_id": "M-09",
+     "action": "STEP 3 에서 키워드를 입력한다",
+     "name": "키워드",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "표 9 데이터 관리 메타데이터",
+     "level": "필수",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "keywords"
+     }
+    },
+    {
+     "rank": 13,
+     "item_id": "M-11",
+     "action": "STEP 3 에서 담당 부서·담당자와 담당 이메일(또는 전화번호)을 입력한다",
+     "name": "담당자연락처",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "표 9 데이터 관리 메타데이터",
+     "level": "필수",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "contact_name"
+     }
+    },
+    {
+     "rank": 14,
+     "item_id": "M-14",
+     "action": "STEP 3 에서 데이터셋 유형을 승인한 뒤 접속 URL 을 입력한다 (스트림은 엔드포인트 URL)",
+     "name": "접속 URL",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "표 9 데이터 관리 메타데이터",
+     "level": "필수",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "access_url"
+     }
+    },
+    {
+     "rank": 15,
+     "item_id": "M-17",
+     "action": "STEP 3 에서 버전을 입력한다 (예: 2025.01.v1)",
+     "name": "버전",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "표 10 데이터 계보 메타데이터",
+     "level": "필수",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "version"
+     }
+    },
+    {
+     "rank": 16,
+     "item_id": "M-18",
+     "action": "STEP 3 에서 등록일시(최초 등록일)를 입력한다",
+     "name": "등록일시",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "표 10 데이터 계보 메타데이터",
+     "level": "필수",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "issued"
+     }
+    },
+    {
+     "rank": 17,
+     "item_id": "M-19",
+     "action": "STEP 3 에서 수정일시(마지막 수정일)를 입력한다",
+     "name": "수정일시",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "표 10 데이터 계보 메타데이터",
+     "level": "필수",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "modified"
+     }
+    },
+    {
+     "rank": 18,
+     "item_id": "M-20",
+     "action": "STEP 3 의 버전 노트에 이전 버전과 달라진 점을 적는다 (첫 공개라면 '최초 공개')",
+     "name": "버전 노트",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "표 10 데이터 계보 메타데이터",
+     "level": "필수",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "version_notes"
+     }
+    },
+    {
+     "rank": 19,
+     "item_id": "M-21",
+     "action": "STEP 4 의 F4 유통·이용조건에서 공공누리 유형을 지정한다",
+     "name": "라이선스",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "표 11 데이터 이용 메타데이터",
+     "level": "필수",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "license",
+      "step": 4,
+      "label": "F4 유통·이용조건",
+      "focus": "F4"
+     }
+    },
+    {
+     "rank": 20,
+     "item_id": "M-22",
+     "action": "STEP 3 의 저작권에 저작자 표시, 영리 이용, 변경 허용 여부를 적는다",
+     "name": "저작권",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "표 11 데이터 이용 메타데이터",
+     "level": "필수",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "rights"
+     }
+    },
+    {
+     "rank": 21,
+     "item_id": "O-02",
+     "action": "STEP 3 에서 공간범위를 입력한다",
+     "name": "공간범위",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "표 9 데이터 관리 메타데이터",
+     "level": "권장",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "spatial"
+     }
+    },
+    {
+     "rank": 22,
+     "item_id": "O-05",
+     "action": "STEP 3 의 품질 검증 정보에 수행한 품질 검토·평가 내용을 적는다",
+     "name": "품질 검증 정보",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "표 12 데이터 품질 메타데이터",
+     "level": "선택",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "quality_annotation"
+     }
+    },
+    {
+     "rank": 23,
+     "item_id": "O-07",
+     "action": "STEP 3 의 결측치 정보에 결측 비율과 처리 방식을 적는다",
+     "name": "결측치 정보",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "표 12 데이터 품질 메타데이터",
+     "level": "선택",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "rai_missing_data"
+     }
+    },
+    {
+     "rank": 24,
+     "item_id": "R-03",
+     "action": "STEP 3 의 준수 표준에 적용한 표준을 적는다 (예: ISO 8601, 행정표준코드, EPSG:5186)",
+     "name": "적용 표준과 기준 문서화",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "부록 3 공통 · 의미 및 표준",
+     "level": "권장",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "conforms_to"
+     }
+    },
+    {
+     "rank": 25,
+     "item_id": "R-05",
+     "action": "STEP 3 의 결측치 정보에 결측값의 정의, 발생 사유, 처리 원칙을 적는다",
+     "name": "결측값·특수값의 정의와 처리 원칙 제공",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "부록 3 공통 · 품질 및 이력",
+     "level": "권장",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "rai_missing_data"
+     }
+    },
+    {
+     "rank": 26,
+     "item_id": "R-06",
+     "action": "STEP 3 의 출처·가공 이력에 원천 시스템, 수집 방식, 정제·비식별 처리 내용을 적는다 (다른 데이터셋에서 만든 데이터라면 STEP 5 에서 파생 관계를 확정한다)",
+     "name": "원천·수집경로·가공 이력 제공",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "부록 3 공통 · 품질 및 이력",
+     "level": "권장",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "provenance"
+     }
+    },
+    {
+     "rank": 27,
+     "item_id": "R-17",
+     "action": "STEP 3 에서 버전과 버전 노트를 입력한다",
+     "name": "버전별 변경 이력 제공",
+     "gain": 0.5,
+     "difficulty": "낮음",
+     "basis": "부록 3 공통 · 관리 유지",
+     "level": "권장",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "version_notes"
+     }
+    },
+    {
+     "rank": 28,
+     "item_id": "C-06",
+     "action": "항목별 정의·단위·산정기준·코드값 의미를 담은 데이터 사전을 만들고 제공 위치를 증빙으로 남긴다",
+     "name": "데이터 사전 제공",
+     "gain": 1.0,
+     "difficulty": "중간",
+     "basis": "부록 3 공통 · 의미 및 표준",
+     "level": "필수",
+     "method": "HUMAN-ATTEST",
+     "route": null
+    },
+    {
+     "rank": 29,
+     "item_id": "C-08",
+     "action": "같은 개념을 가리키는 컬럼 이름·코드값·라벨이 데이터셋 사이에서 같은지 점검하고 결과를 증빙으로 남긴다",
+     "name": "동일 개념에 동일 용어 사용",
+     "gain": 1.0,
+     "difficulty": "중간",
+     "basis": "부록 3 공통 · 의미 및 표준",
+     "level": "필수",
+     "method": "HUMAN-ATTEST",
+     "route": null
+    },
+    {
+     "rank": 30,
+     "item_id": "C-11",
+     "action": "합성 데이터나 기계가 단 주석이 들어 있는지 확인하고, 있다면 어디에 어떻게 표기했는지 증빙으로 남긴다",
+     "name": "합성 데이터·자동 주석 구분 표기",
+     "gain": 1.0,
+     "difficulty": "중간",
+     "basis": "부록 3 공통 · 품질 및 이력",
+     "level": "필수",
+     "method": "HUMAN-ATTEST",
+     "route": null
+    },
+    {
+     "rank": 31,
+     "item_id": "C-12",
+     "action": "의심 컬럼에 적용한 비식별·가명처리 조치를 확인하고 증빙을 남긴다",
+     "name": "개인정보 보호조치 적용",
+     "gain": 1.0,
+     "difficulty": "중간",
+     "basis": "부록 3 공통 · 관리 및 보안",
+     "level": "필수",
+     "method": "HUMAN-ATTEST",
+     "route": null
+    },
+    {
+     "rank": 32,
+     "item_id": "C-15",
+     "action": "오류 신고와 개선 요청을 받는 창구, 처리 절차를 확인하고 그 위치를 증빙으로 남긴다",
+     "name": "오류 신고·피드백 체계 운영",
+     "gain": 1.0,
+     "difficulty": "중간",
+     "basis": "부록 3 공통 · 관리 유지",
+     "level": "필수",
+     "method": "HUMAN-ATTEST",
+     "route": null
+    },
+    {
+     "rank": 33,
+     "item_id": "P-10",
+     "action": "AI 에이전트가 접근할 수 있는 범위와 권한, 호출 이력 기록, 보안 위험 검토 결과(3.4절 표 39·표 40)를 확인하고 증빙을 남긴다",
+     "name": "원칙 10",
+     "gain": 1.0,
+     "difficulty": "중간",
+     "basis": "FAIR 원칙 10 · 3.4절",
+     "level": "원칙",
+     "method": "HUMAN-ATTEST",
+     "route": null
+    },
+    {
+     "rank": 34,
+     "item_id": "R-01",
+     "action": "허용값·필수값·형식·관계 제약을 적은 검증 기준 문서의 제공 위치를 증빙으로 남긴다",
+     "name": "데이터 검증 기준 제공",
+     "gain": 1.0,
+     "difficulty": "중간",
+     "basis": "부록 3 공통 · 형식 및 구조",
+     "level": "권장",
+     "method": "HUMAN-ATTEST",
+     "route": null
+    },
+    {
+     "rank": 35,
+     "item_id": "R-04",
+     "action": "도메인 표준 용어체계와의 매핑·검증 절차를 확인하고 증빙을 남긴다",
+     "name": "도메인 표준 용어체계와의 정합성 점검",
+     "gain": 1.0,
+     "difficulty": "중간",
+     "basis": "부록 3 공통 · 의미 및 표준",
+     "level": "권장",
+     "method": "HUMAN-ATTEST",
+     "route": null
+    },
+    {
+     "rank": 36,
+     "item_id": "R-08",
+     "action": "데이터, 메타데이터, 스키마·데이터 사전·접근 안내를 한 경로에서 볼 수 있는지 확인하고 그 주소를 증빙으로 남긴다",
+     "name": "데이터·메타데이터·핵심 문서의 동일 경로 제공",
+     "gain": 1.0,
+     "difficulty": "중간",
+     "basis": "부록 3 공통 · 품질 및 이력",
+     "level": "권장",
+     "method": "HUMAN-ATTEST",
+     "route": null
+    },
+    {
+     "rank": 37,
+     "item_id": "R-09",
+     "action": "데이터가 바뀔 때 메타데이터와 문서를 함께 고치는 절차를 확인하고 증빙을 남긴다",
+     "name": "변경 시 메타데이터·문서 동시 현행화",
+     "gain": 1.0,
+     "difficulty": "중간",
+     "basis": "부록 3 공통 · 품질 및 이력",
+     "level": "권장",
+     "method": "HUMAN-ATTEST",
+     "route": null
+    },
+    {
+     "rank": 38,
+     "item_id": "R-10",
+     "action": "부록 4 양식에 따라 데이터 카드를 작성하고 제공 위치를 증빙으로 남긴다",
+     "name": "데이터 카드 제공",
+     "gain": 1.0,
+     "difficulty": "중간",
+     "basis": "부록 3 공통 · 품질 및 이력",
+     "level": "권장",
+     "method": "HUMAN-ATTEST",
+     "route": null
+    },
+    {
+     "rank": 39,
+     "item_id": "U-01",
+     "action": "수치 항목의 산식, 집계 단위, 기준시점을 적은 문서의 위치를 증빙으로 남긴다",
+     "name": "수치 데이터의 산출 규칙 제공",
+     "gain": 1.0,
+     "difficulty": "중간",
+     "basis": "부록 3 유형별 · 수치",
+     "level": "권장",
+     "method": "HUMAN-ATTEST",
+     "route": null
+    },
+    {
+     "rank": 40,
+     "item_id": "U-03",
+     "action": "비식별·가공으로 생기는 정보 공백이나 왜곡 가능성을 이용자에게 안내한 위치를 증빙으로 남긴다",
+     "name": "비식별 가공 범위와 주의사항 안내",
+     "gain": 1.0,
+     "difficulty": "중간",
+     "basis": "부록 3 유형별 · 개인정보 보호",
+     "level": "권장",
+     "method": "HUMAN-ATTEST",
+     "route": null
+    },
+    {
+     "rank": 41,
+     "item_id": "R-13",
+     "action": "API 로 제공하고 있다면 STEP 3 의 API 엔드포인트 URL 에 주소를 입력한다",
+     "name": "웹 표준 API 제공",
+     "gain": 0.5,
+     "difficulty": "중간",
+     "basis": "부록 3 공통 · 데이터 제공",
+     "level": "권장",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "endpoint_url"
+     }
+    },
+    {
+     "rank": 42,
+     "item_id": "R-07",
+     "action": "정제·변환에 쓴 코드의 저장소 위치와 라이선스를 증빙으로 남긴다",
+     "name": "정제·변환 소스 코드 공개",
+     "gain": 1.0,
+     "difficulty": "높음",
+     "basis": "부록 3 공통 · 품질 및 이력",
+     "level": "권장",
+     "method": "HUMAN-ATTEST",
+     "route": null
+    },
+    {
+     "rank": 43,
+     "item_id": "R-11",
+     "action": "재식별 위험 평가 결과와 조치 사항을 적은 문서의 위치를 증빙으로 남긴다",
+     "name": "재식별 위험 평가와 문서화",
+     "gain": 1.0,
+     "difficulty": "높음",
+     "basis": "부록 3 공통 · 관리 및 보안",
+     "level": "권장",
+     "method": "HUMAN-ATTEST",
+     "route": null
+    },
+    {
+     "rank": 44,
+     "item_id": "R-15",
+     "action": "API 응답에 메타데이터가 들어 있는지, 또는 메타데이터 참조 링크가 있는지 확인하고 증빙을 남긴다",
+     "name": "API 응답의 메타데이터 연계",
+     "gain": 1.0,
+     "difficulty": "높음",
+     "basis": "부록 3 공통 · 데이터 제공",
+     "level": "권장",
+     "method": "HUMAN-ATTEST",
+     "route": null
+    },
+    {
+     "rank": 45,
+     "item_id": "R-16",
+     "action": "API 가 필터링·조건 검색·페이지네이션을 지원하는지 확인하고 API 문서 위치를 증빙으로 남긴다",
+     "name": "필터링·분할 조회 기능",
+     "gain": 1.0,
+     "difficulty": "높음",
+     "basis": "부록 3 공통 · 데이터 제공",
+     "level": "권장",
+     "method": "HUMAN-ATTEST",
+     "route": null
+    },
+    {
+     "rank": 46,
+     "item_id": "U-02",
+     "action": "의심 컬럼의 마스킹·익명화 처리와 재식별 위험성 평가 결과를 확인하고 증빙을 남긴다",
+     "name": "민감 정보 마스킹과 재식별 위험성 평가",
+     "gain": 1.0,
+     "difficulty": "높음",
+     "basis": "부록 3 유형별 · 개인정보 보호",
+     "level": "필수",
+     "method": "HUMAN-ATTEST",
+     "route": null
+    },
+    {
+     "rank": 47,
+     "item_id": "C-01",
+     "action": "CSV·JSON·Parquet 같은 개방형 포맷으로 변환한 파일을 STEP 1 에서 원천으로 등록한다",
+     "name": "개방형 표준 포맷 제공",
+     "gain": 0.5,
+     "difficulty": "높음",
+     "basis": "부록 3 공통 · 형식 및 구조",
+     "level": "필수",
+     "method": "AUTO-PROFILE",
+     "route": {
+      "key": null,
+      "step": 1,
+      "label": "STEP 1",
+      "focus": null
+     }
+    },
+    {
+     "rank": 48,
+     "item_id": "C-02",
+     "action": "첫 줄이 컬럼 이름이고 한 줄이 한 건인 표 형태로 파일을 정리해 다시 등록한다",
+     "name": "기계 처리가 가능한 구조화",
+     "gain": 0.5,
+     "difficulty": "높음",
+     "basis": "부록 3 공통 · 형식 및 구조",
+     "level": "필수",
+     "method": "AUTO-PROFILE",
+     "route": {
+      "key": null,
+      "step": 1,
+      "label": "STEP 1",
+      "focus": null
+     }
+    },
+    {
+     "rank": 49,
+     "item_id": "C-07",
+     "action": "원천의 날짜·시각 값을 YYYY-MM-DD 또는 YYYY-MM-DDThh:mm:ss 형식으로 바꿔 다시 등록한다",
+     "name": "날짜·시간·코드 표기 형식 일관",
+     "gain": 0.5,
+     "difficulty": "높음",
+     "basis": "부록 3 공통 · 의미 및 표준",
+     "level": "필수",
+     "method": "AUTO-PROFILE",
+     "route": {
+      "key": null,
+      "step": 1,
+      "label": "STEP 1",
+      "focus": null
+     }
+    },
+    {
+     "rank": 50,
+     "item_id": "C-09",
+     "action": "원천의 결측 표기를 한 가지(빈 값 또는 NULL)로 통일해 다시 등록한다",
+     "name": "결측값·특수값 표기 통일",
+     "gain": 0.5,
+     "difficulty": "높음",
+     "basis": "부록 3 공통 · 품질 및 이력",
+     "level": "필수",
+     "method": "AUTO-PROFILE",
+     "route": {
+      "key": null,
+      "step": 1,
+      "label": "STEP 1",
+      "focus": null
      }
     }
    ],
    "dataset_count": 3,
    "mode": "publish",
-   "guideline": "공공데이터의 인공지능 친화적 관리 가이드라인 v1.1 (행정안전부·NIA)",
+   "guideline": "공공데이터의 인공지능 친화적 관리 가이드라인 v1.1 (행정안전부·NIA, 2026.07)",
    "guideline_total": 80,
-   "implemented_total": 33,
-   "scored_total": 33,
-   "note": "가이드라인 80항목 전체가 아니라, 목업에 근거가 드러난 항목과 저장된 메타데이터·프로파일로 자동 판정할 수 있는 항목만 구현한 초기 규칙 세트다. basis 가 '제품 규칙'인 항목은 가이드라인 원문과 대조해 확정해야 한다. 항목은 이 파일에 추가하면 진단에 반영된다.",
+   "implemented_total": 80,
+   "scored_total": 79,
+   "note": "가이드라인 v1.1 에서 표 9~11 의 메타데이터 필수 22항목, 표 9·12 의 권장·선택 7항목, 15개 원칙, 부록 3 체크리스트의 공통 필수 15 · 공통 권장 18 · 유형별(수치·개인정보 보호) 3항목을 원문 문구 그대로 옮긴 80항목이다. 가이드라인 본문에 '80항목'이라는 표현은 없으며, 이 구성은 목업의 영역 구분을 원문에 대조한 것이다. 항목 문구는 원문이고, 판정 기준과 조치 방법은 이 스튜디오가 정한 것이다. 다음은 넣지 않았다: 부록 3 유형별의 이미지/영상 2항목, 표 13~16 의 데이터 타입별 메타데이터(수치 4 · 이미지 4 · 음성 3 · 영상 5). 15개 원칙은 가이드라인에 판정 기준이 없어, 관련된 세부 항목의 판정을 종합하거나(12개) 분류 결과(원칙 12·15) 또는 담당자 확인(원칙 10)으로 판정한다.",
    "validation_run_id": 5,
    "validation_stale": null,
    "counts": {
-    "met": 17,
-    "partial": 7,
+    "met": 16,
+    "partial": 38,
     "unmet": 6,
-    "pending": 3,
-    "na": 0
+    "pending": 19,
+    "na": 1
    },
-   "potential_score": 28.5
+   "potential_score": 49.5
   },
   "items": [
    {
     "id": "M-01",
     "area": "A1",
-    "name": "제목 (dcterms:title)",
+    "name": "데이터명",
     "method": "AUTO-GRAPH",
-    "basis": "제품 규칙",
-    "remedy": "STEP 3 프러퍼티 폼에서 제목을 입력한다",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "필수",
+    "text": "데이터셋의 공식 명칭",
+    "property": "dct:title",
+    "group": null,
+    "criteria": "정본 그래프에 dcterms:title 이 있으면 충족",
+    "remedy": "STEP 3 에서 데이터명을 입력한다",
     "difficulty": 1,
     "datasets": [
      {
       "id": 1,
       "name": "도로목록",
       "status": "met",
-      "detail": "그래프 질의 충족"
+      "detail": "정본 그래프에 있음"
      },
      {
       "id": 2,
       "name": "교통사고",
       "status": "met",
-      "detail": "그래프 질의 충족"
+      "detail": "정본 그래프에 있음"
      },
      {
       "id": 3,
       "name": "cctv.vehicle.det.v1",
       "status": "met",
-      "detail": "그래프 질의 충족"
+      "detail": "정본 그래프에 있음"
      }
     ],
     "evidence": [
      "데이터셋 3건 중 충족 3 · 부분 0 · 미흡 0"
     ],
+    "related": [],
     "route": {
      "key": "title",
      "step": 3,
      "label": "title 필드",
      "focus": "title"
     },
+    "attestable": false,
+    "allow_na": false,
     "attestation": null,
     "status": "met",
     "score": 1.0
@@ -259,40 +950,48 @@
    {
     "id": "M-02",
     "area": "A1",
-    "name": "설명 (dcterms:description)",
+    "name": "데이터 설명",
     "method": "AUTO-GRAPH",
-    "basis": "제품 규칙",
-    "remedy": "데이터셋의 내용·수집 방법·범위를 10자 이상으로 기술한다",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "필수",
+    "text": "데이터셋의 내용, 보유 목적, 수집 대상 등 설명",
+    "property": "dct:description",
+    "group": null,
+    "criteria": "정본 그래프에 dcterms:description 이 있으면 충족",
+    "remedy": "STEP 3 에서 데이터 설명(내용·보유 목적·수집 대상)을 입력한다",
     "difficulty": 1,
     "datasets": [
      {
       "id": 1,
       "name": "도로목록",
       "status": "met",
-      "detail": "그래프 질의 충족"
+      "detail": "정본 그래프에 있음"
      },
      {
       "id": 2,
       "name": "교통사고",
       "status": "met",
-      "detail": "그래프 질의 충족"
+      "detail": "정본 그래프에 있음"
      },
      {
       "id": 3,
       "name": "cctv.vehicle.det.v1",
       "status": "unmet",
-      "detail": "그래프에 해당 트리플 없음"
+      "detail": "정본 그래프에 없음"
      }
     ],
     "evidence": [
      "데이터셋 3건 중 충족 2 · 부분 0 · 미흡 1"
     ],
+    "related": [],
     "route": {
      "key": "meta3",
      "step": 3,
      "label": "프러퍼티 폼",
      "focus": "description"
     },
+    "attestable": false,
+    "allow_na": false,
     "attestation": null,
     "status": "partial",
     "score": 0.5
@@ -300,51 +999,359 @@
    {
     "id": "M-03",
     "area": "A1",
-    "name": "제공기관 (dcterms:publisher)",
+    "name": "관련법령",
     "method": "AUTO-GRAPH",
-    "basis": "제품 규칙",
-    "remedy": "STEP 3 에서 제공기관을 선택하고 승인한다",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "필수",
+    "text": "법령 참조, 법적 근거",
+    "property": "dct:references",
+    "group": null,
+    "criteria": "정본 그래프에 dcterms:references 가 있으면 충족",
+    "remedy": "STEP 3 의 관련법령에 근거 법령 이름이나 법령 URL 을 입력한다",
     "difficulty": 1,
     "datasets": [
      {
       "id": 1,
       "name": "도로목록",
       "status": "met",
-      "detail": "그래프 질의 충족"
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "references"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "M-04",
+    "area": "A1",
+    "name": "소관기관 (운영부서명)",
+    "method": "AUTO-GRAPH",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "필수",
+    "text": "데이터셋을 생산·관리하는 주체",
+    "property": "dct:creator",
+    "group": null,
+    "criteria": "정본 그래프에 dcterms:creator 가 있으면 충족",
+    "remedy": "STEP 3 의 소관기관에 데이터를 생산·관리하는 부서 이름을 입력한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "creator"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "M-05",
+    "area": "A1",
+    "name": "제공기관",
+    "method": "AUTO-GRAPH",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "필수",
+    "text": "데이터셋을 대외적으로 배포·게재하는 기관",
+    "property": "dct:publisher",
+    "group": null,
+    "criteria": "승인된 제공기관이 dcterms:publisher 로 정본 그래프에 있으면 충족 (승인 전에는 미입력으로 본다)",
+    "remedy": "STEP 3 에서 제공기관을 고르고 승인한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
      },
      {
       "id": 2,
       "name": "교통사고",
       "status": "met",
-      "detail": "그래프 질의 충족"
+      "detail": "정본 그래프에 있음"
      },
      {
       "id": 3,
       "name": "cctv.vehicle.det.v1",
       "status": "met",
-      "detail": "그래프 질의 충족"
+      "detail": "정본 그래프에 있음"
      }
     ],
     "evidence": [
      "데이터셋 3건 중 충족 3 · 부분 0 · 미흡 0"
     ],
+    "related": [],
     "route": {
      "key": "publisher",
      "step": 3,
      "label": "publisher 필드",
      "focus": "publisher"
     },
+    "attestable": false,
+    "allow_na": false,
     "attestation": null,
     "status": "met",
     "score": 1.0
    },
    {
-    "id": "M-04",
+    "id": "M-06",
     "area": "A1",
-    "name": "영구 식별자 발급 (민팅 대장 등록)",
+    "name": "제공시스템",
     "method": "AUTO-GRAPH",
-    "basis": "제품 규칙 · 게이트 0 ④",
-    "remedy": "관리자가 민팅 대장에서 발행 ID 를 발급한다 (초안 ID 로는 발행할 수 없다)",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "필수",
+    "text": "배포 또는 추가 정보에 대한 액세스를 제공하는 웹 페이지",
+    "property": "dcat:landingPage",
+    "group": null,
+    "criteria": "정본 그래프에 dcat:landingPage 가 있으면 충족",
+    "remedy": "STEP 3 의 제공시스템에 데이터를 안내·제공하는 웹 페이지 주소를 입력한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "landing_page"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "M-07",
+    "area": "A1",
+    "name": "갱신주기",
+    "method": "AUTO-GRAPH",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "필수",
+    "text": "데이터셋 업데이트 빈도",
+    "property": "dct:accrualPeriodicity",
+    "group": null,
+    "criteria": "dcterms:accrualPeriodicity 가 표준 표기(ISO 8601 duration 또는 irregular)이면 충족, 비표준 표기면 부분. 스트림은 승인된 dcat:temporalResolution 으로 판정",
+    "remedy": "STEP 3 에서 갱신주기를 선택한다 (스트림은 시간 해상도를 승인한다)",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "갱신주기 P1M"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "갱신주기 미입력"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "met",
+      "detail": "temporalResolution PT1S",
+      "focus": "temporal_resolution"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 2 · 부분 0 · 미흡 1"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "accrual_periodicity"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "M-08",
+    "area": "A1",
+    "name": "업무/주제분류체계",
+    "method": "AUTO-GRAPH",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "필수",
+    "text": "데이터셋의 카테고리를 참조. 데이터셋은 여러 테마와 연결 가능",
+    "property": "dcat:theme",
+    "group": null,
+    "criteria": "정본 그래프에 dcat:theme 이 있으면 충족 (STEP 4 의 F1 주제영역)",
+    "remedy": "STEP 4 에서 F1 주제영역을 1개 이상 선택한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 3 · 부분 0 · 미흡 0"
+    ],
+    "related": [],
+    "route": {
+     "key": "class4",
+     "step": 4,
+     "label": "분류 매트릭스",
+     "focus": "F1"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "met",
+    "score": 1.0
+   },
+   {
+    "id": "M-09",
+    "area": "A1",
+    "name": "키워드",
+    "method": "AUTO-GRAPH",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "필수",
+    "text": "검색 및 분류를 위한 핵심 키워드",
+    "property": "dcat:keyword",
+    "group": null,
+    "criteria": "정본 그래프에 dcat:keyword 가 1개 이상 있으면 충족",
+    "remedy": "STEP 3 에서 키워드를 입력한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 2 · 부분 0 · 미흡 1"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "keywords"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "M-10",
+    "area": "A1",
+    "name": "고유식별자",
+    "method": "AUTO-GRAPH",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "필수",
+    "text": "중복되지 않는 영구 식별자",
+    "property": "dct:identifier",
+    "group": null,
+    "criteria": "민팅 대장에 발행 ID(DST-000001 형식)가 등록되어 있으면 충족. 초안 ID 만 있으면 영구 식별자가 아니므로 미흡",
+    "remedy": "STEP 6 에서 관리자가 발행 ID 를 발급한다",
     "difficulty": 1,
     "datasets": [
      {
@@ -369,133 +1376,3081 @@
     "evidence": [
      "데이터셋 3건 중 충족 3 · 부분 0 · 미흡 0"
     ],
+    "related": [],
     "route": {
      "key": "mint",
      "step": 6,
      "label": "ID 발급 (민팅 대장)",
      "focus": "mint"
     },
+    "attestable": false,
+    "allow_na": false,
     "attestation": null,
     "status": "met",
     "score": 1.0
    },
    {
-    "id": "M-05",
+    "id": "M-11",
     "area": "A1",
-    "name": "이용허락 (dcterms:license)",
+    "name": "담당자연락처",
     "method": "AUTO-GRAPH",
-    "basis": "표9 필수항목 dcterms:license",
-    "remedy": "STEP 4 의 F4 유통·이용조건에서 공공누리 유형 또는 제공 조건을 지정한다",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "필수",
+    "text": "데이터셋 담당자에 대한 연락처 정보. 이름, 전화번호, 이메일을 하위로 제공",
+    "property": "dcat:contactPoint",
+    "group": null,
+    "criteria": "dcat:contactPoint 에 이름과 이메일(또는 전화번호)이 함께 있으면 충족, 일부만 있으면 부분",
+    "remedy": "STEP 3 에서 담당 부서·담당자와 담당 이메일(또는 전화번호)을 입력한다",
     "difficulty": 1,
     "datasets": [
      {
       "id": 1,
       "name": "도로목록",
       "status": "met",
-      "detail": "그래프 질의 충족"
+      "detail": "정본 그래프에 있음"
      },
      {
       "id": 2,
       "name": "교통사고",
-      "status": "met",
-      "detail": "그래프 질의 충족"
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
      },
      {
       "id": 3,
       "name": "cctv.vehicle.det.v1",
-      "status": "met",
-      "detail": "그래프 질의 충족"
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
      }
     ],
     "evidence": [
-     "데이터셋 3건 중 충족 3 · 부분 0 · 미흡 0"
+     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
     ],
+    "related": [],
     "route": {
-     "key": "license",
-     "step": 4,
-     "label": "F4 유통·이용조건",
-     "focus": "F4"
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "contact_name"
     },
+    "attestable": false,
+    "allow_na": false,
     "attestation": null,
-    "status": "met",
-    "score": 1.0
+    "status": "partial",
+    "score": 0.5
    },
    {
-    "id": "M-06",
+    "id": "M-12",
     "area": "A1",
-    "name": "배포 형식 (dcat:mediaType) / 스트림 시간 규격",
+    "name": "언어",
     "method": "AUTO-GRAPH",
-    "basis": "표11 mediaType",
-    "remedy": "파일형은 IANA 미디어타입을, 스트림은 temporalResolution 과 event-time 컬럼을 승인한다",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "필수",
+    "text": "데이터셋의 언어를 참조하며 여러 언어가 있는 경우 이 속성을 반복 가능",
+    "property": "dct:language",
+    "group": null,
+    "criteria": "정본 그래프에 dcterms:language 가 있으면 충족",
+    "remedy": "STEP 3 에서 언어 코드를 입력한다 (예: ko)",
     "difficulty": 1,
     "datasets": [
      {
       "id": 1,
       "name": "도로목록",
       "status": "met",
-      "detail": "그래프 질의 충족"
+      "detail": "정본 그래프에 있음"
      },
      {
       "id": 2,
       "name": "교통사고",
       "status": "met",
-      "detail": "그래프 질의 충족"
+      "detail": "정본 그래프에 있음"
      },
      {
       "id": 3,
       "name": "cctv.vehicle.det.v1",
       "status": "met",
-      "detail": "그래프 질의 충족"
+      "detail": "정본 그래프에 있음"
      }
     ],
     "evidence": [
      "데이터셋 3건 중 충족 3 · 부분 0 · 미흡 0"
     ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "language"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "met",
+    "score": 1.0
+   },
+   {
+    "id": "M-13",
+    "area": "A1",
+    "name": "배포본",
+    "method": "AUTO-GRAPH",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "필수",
+    "text": "데이터셋에 배포본이 존재함을 의미",
+    "property": "dcat:distribution",
+    "group": null,
+    "criteria": "정본 그래프에 dcat:distribution 이 있으면 충족. 배포본은 데이터셋 유형(미디어타입)을 승인하면 만들어진다. 스트림은 해당 없음",
+    "remedy": "STEP 3 에서 데이터셋 유형(미디어타입)을 승인한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 2건 중 충족 2 · 부분 0 · 미흡 0"
+    ],
+    "related": [],
     "route": {
      "key": "mediaType",
      "step": 3,
      "label": "mediaType 드롭다운",
      "focus": "media_type"
     },
+    "attestable": false,
+    "allow_na": false,
     "attestation": null,
     "status": "met",
     "score": 1.0
+   },
+   {
+    "id": "M-14",
+    "area": "A1",
+    "name": "접속 URL",
+    "method": "AUTO-GRAPH",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "필수",
+    "text": "데이터셋의 배포본 URL",
+    "property": "dcat:accessURL",
+    "group": null,
+    "criteria": "배포본에 dcat:accessURL 이 있으면 충족. 스트림은 dcat:endpointURL 로 판정",
+    "remedy": "STEP 3 에서 데이터셋 유형을 승인한 뒤 접속 URL 을 입력한다 (스트림은 엔드포인트 URL)",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "met",
+      "detail": "정본 그래프에 있음",
+      "focus": "endpoint_url"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 2 · 부분 0 · 미흡 1"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "access_url"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "M-15",
+    "area": "A1",
+    "name": "데이터용량",
+    "method": "AUTO-GRAPH",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "필수",
+    "text": "데이터의 크기(바이트)",
+    "property": "dcat:byteSize",
+    "group": null,
+    "criteria": "배포본에 dcat:byteSize 가 있으면 충족. 업로드한 파일 크기를 배포본에 자동으로 적는다. 스트림은 해당 없음",
+    "remedy": "STEP 3 에서 데이터셋 유형(미디어타입)을 승인하면 파일 크기가 배포본에 기록된다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 2건 중 충족 2 · 부분 0 · 미흡 0"
+    ],
+    "related": [],
+    "route": {
+     "key": "mediaType",
+     "step": 3,
+     "label": "mediaType 드롭다운",
+     "focus": "media_type"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "met",
+    "score": 1.0
+   },
+   {
+    "id": "M-16",
+    "area": "A1",
+    "name": "데이터셋 유형",
+    "method": "AUTO-GRAPH",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "필수",
+    "text": "수치, 이미지, 음성, 영상 등 구분",
+    "property": "dcat:mediaType",
+    "group": null,
+    "criteria": "배포본에 dcat:mediaType 이 있으면 충족. 스트림은 해당 없음",
+    "remedy": "STEP 3 에서 데이터셋 유형(미디어타입)을 고르고 승인한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 2건 중 충족 2 · 부분 0 · 미흡 0"
+    ],
+    "related": [],
+    "route": {
+     "key": "mediaType",
+     "step": 3,
+     "label": "mediaType 드롭다운",
+     "focus": "media_type"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "met",
+    "score": 1.0
+   },
+   {
+    "id": "M-17",
+    "area": "A1",
+    "name": "버전",
+    "method": "AUTO-GRAPH",
+    "basis": "표 10 데이터 계보 메타데이터",
+    "level": "필수",
+    "text": "현재 버전 정보",
+    "property": "owl:versionInfo",
+    "group": null,
+    "criteria": "정본 그래프에 owl:versionInfo 가 있으면 충족",
+    "remedy": "STEP 3 에서 버전을 입력한다 (예: 2025.01.v1)",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "version"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "M-18",
+    "area": "A1",
+    "name": "등록일시",
+    "method": "AUTO-GRAPH",
+    "basis": "표 10 데이터 계보 메타데이터",
+    "level": "필수",
+    "text": "시스템 최초 등록 날짜(초기 등록 후 변경 금지)",
+    "property": "dct:issued",
+    "group": null,
+    "criteria": "정본 그래프에 dcterms:issued 가 있으면 충족",
+    "remedy": "STEP 3 에서 등록일시(최초 등록일)를 입력한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "issued"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "M-19",
+    "area": "A1",
+    "name": "수정일시",
+    "method": "AUTO-GRAPH",
+    "basis": "표 10 데이터 계보 메타데이터",
+    "level": "필수",
+    "text": "마지막 수정 날짜",
+    "property": "dct:modified",
+    "group": null,
+    "criteria": "정본 그래프에 dcterms:modified 가 있으면 충족",
+    "remedy": "STEP 3 에서 수정일시(마지막 수정일)를 입력한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "modified"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "M-20",
+    "area": "A1",
+    "name": "버전 노트",
+    "method": "AUTO-GRAPH",
+    "basis": "표 10 데이터 계보 메타데이터",
+    "level": "필수",
+    "text": "이전 버전 대비 변경 사항",
+    "property": "adms:versionNotes",
+    "group": null,
+    "criteria": "정본 그래프에 adms:versionNotes 가 있으면 충족",
+    "remedy": "STEP 3 의 버전 노트에 이전 버전과 달라진 점을 적는다 (첫 공개라면 '최초 공개')",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "version_notes"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "M-21",
+    "area": "A1",
+    "name": "라이선스",
+    "method": "AUTO-GRAPH",
+    "basis": "표 11 데이터 이용 메타데이터",
+    "level": "필수",
+    "text": "데이터셋의 권리 관련 공식적인 법적 문서를 기술하는 속성 - 특정 라이선스 문서(예: CC BY, GPL 등)의 URI를 직접 참조하는 용도",
+    "property": "dct:license",
+    "group": null,
+    "criteria": "정본 그래프에 dcterms:license 가 있으면 충족 (STEP 4 의 F4 에서 공공누리 유형 지정). 제공 조건(dcterms:accessRights)만 있으면 부분",
+    "remedy": "STEP 4 의 F4 유통·이용조건에서 공공누리 유형을 지정한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "partial",
+      "detail": "일부만 있음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "partial",
+      "detail": "일부만 있음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 2 · 미흡 0"
+    ],
+    "related": [],
+    "route": {
+     "key": "license",
+     "step": 4,
+     "label": "F4 유통·이용조건",
+     "focus": "F4"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "M-22",
+    "area": "A1",
+    "name": "저작권",
+    "method": "AUTO-GRAPH",
+    "basis": "표 11 데이터 이용 메타데이터",
+    "level": "필수",
+    "text": "데이터셋 관련 저작권 정보 전반에 관한 정보를 기술하는 속성 - 저작자 표시, 비영리 여부, 변경금지 여부, 변경허락 여부",
+    "property": "dct:rights",
+    "group": null,
+    "criteria": "정본 그래프에 dcterms:rights 가 있으면 충족",
+    "remedy": "STEP 3 의 저작권에 저작자 표시, 영리 이용, 변경 허용 여부를 적는다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "rights"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "O-01",
+    "area": "A2",
+    "name": "시간범위",
+    "method": "AUTO-GRAPH",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "권장",
+    "text": "데이터셋에서 다루는 시간적 기간",
+    "property": "dct:temporal",
+    "group": null,
+    "criteria": "정본 그래프에 dcterms:temporal 이 있으면 충족. 스트림은 해당 없음",
+    "remedy": "STEP 3 에서 시간범위 시작·종료를 입력한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 2건 중 충족 2 · 부분 0 · 미흡 0"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "temporal_start"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "met",
+    "score": 1.0
+   },
+   {
+    "id": "O-02",
+    "area": "A2",
+    "name": "공간범위",
+    "method": "AUTO-GRAPH",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "권장",
+    "text": "데이터셋에서 다루는 지리적 영역",
+    "property": "dct:spatial",
+    "group": null,
+    "criteria": "정본 그래프에 dcterms:spatial 이 있으면 충족",
+    "remedy": "STEP 3 에서 공간범위를 입력한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "spatial"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "O-03",
+    "area": "A2",
+    "name": "연계데이터셋",
+    "method": "AUTO-GRAPH",
+    "basis": "표 9 데이터 관리 메타데이터",
+    "level": "선택",
+    "text": "연계 데이터셋이나 참조 리소스",
+    "property": "dct:relation",
+    "group": null,
+    "criteria": "조합 안의 다른 데이터셋과 확정된 관계가 있어 dcterms:relation 이 정본 그래프에 있으면 충족. 조합에 데이터셋이 1건뿐이면 해당 없음",
+    "remedy": "STEP 5 에서 조합 안의 다른 데이터셋과의 관계를 확정한다",
+    "difficulty": 2,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "확정 관계 1건"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "확정 관계 2건"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "met",
+      "detail": "확정 관계 1건"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 3 · 부분 0 · 미흡 0"
+    ],
+    "related": [],
+    "route": {
+     "key": "lineage5",
+     "step": 5,
+     "label": "관계 목록",
+     "focus": null
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "met",
+    "score": 1.0
+   },
+   {
+    "id": "O-04",
+    "area": "A2",
+    "name": "데이터 편향성",
+    "method": "AUTO-GRAPH",
+    "basis": "표 12 데이터 품질 메타데이터",
+    "level": "권장",
+    "text": "확인된 편향 유형",
+    "property": "rai:dataBiases",
+    "group": null,
+    "criteria": "정본 그래프에 rai:dataBiases 가 있으면 충족",
+    "remedy": "STEP 3 의 데이터 편향성에 확인된 편향 유형을 적는다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 0 · 부분 0 · 미흡 3"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "rai_data_biases"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "unmet",
+    "score": 0.0
+   },
+   {
+    "id": "O-05",
+    "area": "A2",
+    "name": "품질 검증 정보",
+    "method": "AUTO-GRAPH",
+    "basis": "표 12 데이터 품질 메타데이터",
+    "level": "선택",
+    "text": "수행된 품질 검토 및 평가 내용",
+    "property": "dqv:hasQualityAnnotation",
+    "group": null,
+    "criteria": "정본 그래프에 dqv:hasQualityAnnotation 이 있으면 충족",
+    "remedy": "STEP 3 의 품질 검증 정보에 수행한 품질 검토·평가 내용을 적는다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "quality_annotation"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "O-06",
+    "area": "A2",
+    "name": "데이터 한계",
+    "method": "AUTO-GRAPH",
+    "basis": "표 12 데이터 품질 메타데이터",
+    "level": "선택",
+    "text": "데이터셋의 구조적·내용적 제한사항 및 해석 시 유의 사항",
+    "property": "rai:knownLimitations",
+    "group": null,
+    "criteria": "정본 그래프에 rai:knownLimitations 가 있으면 충족",
+    "remedy": "STEP 3 의 데이터 한계에 제한사항과 해석할 때 유의할 점을 적는다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 0 · 부분 0 · 미흡 3"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "rai_known_limitations"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "unmet",
+    "score": 0.0
+   },
+   {
+    "id": "O-07",
+    "area": "A2",
+    "name": "결측치 정보",
+    "method": "AUTO-GRAPH",
+    "basis": "표 12 데이터 품질 메타데이터",
+    "level": "선택",
+    "text": "결측치 비율 및 처리방식",
+    "property": "rai:dataCollectionMissingData",
+    "group": null,
+    "criteria": "정본 그래프에 rai:dataCollectionMissingData 가 있으면 충족",
+    "remedy": "STEP 3 의 결측치 정보에 결측 비율과 처리 방식을 적는다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "rai_missing_data"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "P-01",
+    "area": "A3",
+    "name": "원칙 01",
+    "method": "AUTO-DERIVED",
+    "basis": "FAIR 원칙 01 · 2.1.1절",
+    "level": "원칙",
+    "text": "데이터는 개방형 방식으로 제공되어야 하며, 기계 이해가 가능한 형식으로 구조화되어야 한다.",
+    "property": null,
+    "group": null,
+    "criteria": "연결 항목 3개의 판정 점수 평균이 100%면 충족, 50% 이상이면 부분, 그 미만이면 미흡. 연결 항목이 전부 확인 대기면 확인 대기",
+    "remedy": "아래 연결 항목을 조치하면 함께 오른다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "연결 항목 3개 중 충족 0 · 부분 3 · 미흡 0 · 확인 대기 0 (점수 평균 50%)"
+    ],
+    "related": [
+     {
+      "id": "C-01",
+      "name": "개방형 표준 포맷 제공",
+      "status": "partial"
+     },
+     {
+      "id": "C-02",
+      "name": "기계 처리가 가능한 구조화",
+      "status": "partial"
+     },
+     {
+      "id": "C-03",
+      "name": "데이터 구조(스키마) 정의",
+      "status": "partial"
+     }
+    ],
+    "route": null,
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "P-02",
+    "area": "A3",
+    "name": "원칙 02",
+    "method": "AUTO-DERIVED",
+    "basis": "FAIR 원칙 02 · 2.1.2절",
+    "level": "원칙",
+    "text": "데이터는 부분 조회가 가능하여야 하며, 실시간 또는 준실시간 접근 및 활용을 지원하여야 한다.",
+    "property": null,
+    "group": null,
+    "criteria": "연결 항목 2개의 판정 점수 평균이 100%면 충족, 50% 이상이면 부분, 그 미만이면 미흡. 연결 항목이 전부 확인 대기면 확인 대기",
+    "remedy": "아래 연결 항목을 조치하면 함께 오른다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "연결 항목 2개 중 충족 0 · 부분 1 · 미흡 0 · 확인 대기 1 (점수 평균 25%)"
+    ],
+    "related": [
+     {
+      "id": "R-13",
+      "name": "웹 표준 API 제공",
+      "status": "partial"
+     },
+     {
+      "id": "R-16",
+      "name": "필터링·분할 조회 기능",
+      "status": "pending"
+     }
+    ],
+    "route": null,
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "unmet",
+    "score": 0.0
+   },
+   {
+    "id": "P-03",
+    "area": "A3",
+    "name": "원칙 03",
+    "method": "AUTO-DERIVED",
+    "basis": "FAIR 원칙 03 · 2.2.1절",
+    "level": "원칙",
+    "text": "데이터의 구조와 의미를 설명하는 포괄적이고 기계가 이해 가능한 메타데이터를 제공하여야 한다.",
+    "property": null,
+    "group": null,
+    "criteria": "연결 항목 2개의 판정 점수 평균이 100%면 충족, 50% 이상이면 부분, 그 미만이면 미흡. 연결 항목이 전부 확인 대기면 확인 대기",
+    "remedy": "아래 연결 항목을 조치하면 함께 오른다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "연결 항목 2개 중 충족 1 · 부분 1 · 미흡 0 · 확인 대기 0 (점수 평균 75%)"
+    ],
+    "related": [
+     {
+      "id": "C-04",
+      "name": "표준 스키마 메타데이터 제공",
+      "status": "met"
+     },
+     {
+      "id": "C-05",
+      "name": "메타데이터 필수 항목 누락 없음",
+      "status": "partial"
+     }
+    ],
+    "route": null,
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "P-04",
+    "area": "A3",
+    "name": "원칙 04",
+    "method": "AUTO-DERIVED",
+    "basis": "FAIR 원칙 04 · 2.2.2절",
+    "level": "원칙",
+    "text": "데이터 구조, 활용 목적, 편향성 및 한계점, 버전 및 변경 이력을 투명하게 문서화하고 공개하여야 한다.",
+    "property": null,
+    "group": null,
+    "criteria": "연결 항목 5개의 판정 점수 평균이 100%면 충족, 50% 이상이면 부분, 그 미만이면 미흡. 연결 항목이 전부 확인 대기면 확인 대기",
+    "remedy": "아래 연결 항목을 조치하면 함께 오른다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "연결 항목 5개 중 충족 0 · 부분 1 · 미흡 2 · 확인 대기 2 (점수 평균 10%)"
+    ],
+    "related": [
+     {
+      "id": "C-06",
+      "name": "데이터 사전 제공",
+      "status": "pending"
+     },
+     {
+      "id": "R-10",
+      "name": "데이터 카드 제공",
+      "status": "pending"
+     },
+     {
+      "id": "O-04",
+      "name": "데이터 편향성",
+      "status": "unmet"
+     },
+     {
+      "id": "O-06",
+      "name": "데이터 한계",
+      "status": "unmet"
+     },
+     {
+      "id": "M-20",
+      "name": "버전 노트",
+      "status": "partial"
+     }
+    ],
+    "route": null,
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "unmet",
+    "score": 0.0
+   },
+   {
+    "id": "P-05",
+    "area": "A3",
+    "name": "원칙 05",
+    "method": "AUTO-DERIVED",
+    "basis": "FAIR 원칙 05 · 2.3절",
+    "level": "원칙",
+    "text": "인공지능 활용에 적합한 공공데이터 품질을 지속적으로 점검하고 개선하여야 한다.",
+    "property": null,
+    "group": null,
+    "criteria": "연결 항목 3개의 판정 점수 평균이 100%면 충족, 50% 이상이면 부분, 그 미만이면 미흡. 연결 항목이 전부 확인 대기면 확인 대기",
+    "remedy": "아래 연결 항목을 조치하면 함께 오른다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "연결 항목 3개 중 충족 0 · 부분 3 · 미흡 0 · 확인 대기 0 (점수 평균 50%)"
+    ],
+    "related": [
+     {
+      "id": "C-09",
+      "name": "결측값·특수값 표기 통일",
+      "status": "partial"
+     },
+     {
+      "id": "C-10",
+      "name": "품질평가 수행 여부와 결과 명시",
+      "status": "partial"
+     },
+     {
+      "id": "R-05",
+      "name": "결측값·특수값의 정의와 처리 원칙 제공",
+      "status": "partial"
+     }
+    ],
+    "route": null,
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "P-06",
+    "area": "A3",
+    "name": "원칙 06",
+    "method": "AUTO-DERIVED",
+    "basis": "FAIR 원칙 06 · 2.4절",
+    "level": "원칙",
+    "text": "기관 간 데이터 연계성과 상호운용성을 확보하기 위하여 표준 코드를 일관되게 적용하여야 한다.",
+    "property": null,
+    "group": null,
+    "criteria": "연결 항목 4개의 판정 점수 평균이 100%면 충족, 50% 이상이면 부분, 그 미만이면 미흡. 연결 항목이 전부 확인 대기면 확인 대기",
+    "remedy": "아래 연결 항목을 조치하면 함께 오른다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "연결 항목 4개 중 충족 0 · 부분 2 · 미흡 0 · 확인 대기 2 (점수 평균 25%)"
+    ],
+    "related": [
+     {
+      "id": "C-07",
+      "name": "날짜·시간·코드 표기 형식 일관",
+      "status": "partial"
+     },
+     {
+      "id": "C-08",
+      "name": "동일 개념에 동일 용어 사용",
+      "status": "pending"
+     },
+     {
+      "id": "R-03",
+      "name": "적용 표준과 기준 문서화",
+      "status": "partial"
+     },
+     {
+      "id": "R-04",
+      "name": "도메인 표준 용어체계와의 정합성 점검",
+      "status": "pending"
+     }
+    ],
+    "route": null,
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "unmet",
+    "score": 0.0
+   },
+   {
+    "id": "P-07",
+    "area": "A3",
+    "name": "원칙 07",
+    "method": "AUTO-DERIVED",
+    "basis": "FAIR 원칙 07 · 3.1절",
+    "level": "원칙",
+    "text": "데이터 생애주기 단계별 관리정보와 출처·이력을 기록하여 AI 활용에 필요한 데이터 신뢰성과 추적성을 확보하여야 한다.",
+    "property": null,
+    "group": null,
+    "criteria": "연결 항목 4개의 판정 점수 평균이 100%면 충족, 50% 이상이면 부분, 그 미만이면 미흡. 연결 항목이 전부 확인 대기면 확인 대기",
+    "remedy": "아래 연결 항목을 조치하면 함께 오른다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "연결 항목 4개 중 충족 0 · 부분 4 · 미흡 0 · 확인 대기 0 (점수 평균 50%)"
+    ],
+    "related": [
+     {
+      "id": "R-06",
+      "name": "원천·수집경로·가공 이력 제공",
+      "status": "partial"
+     },
+     {
+      "id": "R-17",
+      "name": "버전별 변경 이력 제공",
+      "status": "partial"
+     },
+     {
+      "id": "M-18",
+      "name": "등록일시",
+      "status": "partial"
+     },
+     {
+      "id": "M-19",
+      "name": "수정일시",
+      "status": "partial"
+     }
+    ],
+    "route": null,
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "P-08",
+    "area": "A3",
+    "name": "원칙 08",
+    "method": "AUTO-DERIVED",
+    "basis": "FAIR 원칙 08 · 3.2절",
+    "level": "원칙",
+    "text": "데이터 품질, 보안, 윤리, 업데이트에 대한 책임 주체와 관리 체계를 명확히 지정하여야 한다.",
+    "property": null,
+    "group": null,
+    "criteria": "연결 항목 3개의 판정 점수 평균이 100%면 충족, 50% 이상이면 부분, 그 미만이면 미흡. 연결 항목이 전부 확인 대기면 확인 대기",
+    "remedy": "아래 연결 항목을 조치하면 함께 오른다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "연결 항목 3개 중 충족 0 · 부분 3 · 미흡 0 · 확인 대기 0 (점수 평균 50%)"
+    ],
+    "related": [
+     {
+      "id": "C-14",
+      "name": "책임 주체와 연락 창구 명시",
+      "status": "partial"
+     },
+     {
+      "id": "M-04",
+      "name": "소관기관 (운영부서명)",
+      "status": "partial"
+     },
+     {
+      "id": "M-11",
+      "name": "담당자연락처",
+      "status": "partial"
+     }
+    ],
+    "route": null,
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "P-09",
+    "area": "A3",
+    "name": "원칙 09",
+    "method": "AUTO-DERIVED",
+    "basis": "FAIR 원칙 09 · 3.3절",
+    "level": "원칙",
+    "text": "이용자 중심의 데이터 인프라를 구축·운영하여 데이터에 대한 접근성을 강화하여야 한다.",
+    "property": null,
+    "group": null,
+    "criteria": "연결 항목 3개의 판정 점수 평균이 100%면 충족, 50% 이상이면 부분, 그 미만이면 미흡. 연결 항목이 전부 확인 대기면 확인 대기",
+    "remedy": "아래 연결 항목을 조치하면 함께 오른다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "연결 항목 3개 중 충족 0 · 부분 2 · 미흡 0 · 확인 대기 1 (점수 평균 33%)"
+    ],
+    "related": [
+     {
+      "id": "M-06",
+      "name": "제공시스템",
+      "status": "partial"
+     },
+     {
+      "id": "M-14",
+      "name": "접속 URL",
+      "status": "partial"
+     },
+     {
+      "id": "R-08",
+      "name": "데이터·메타데이터·핵심 문서의 동일 경로 제공",
+      "status": "pending"
+     }
+    ],
+    "route": null,
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "unmet",
+    "score": 0.0
+   },
+   {
+    "id": "P-10",
+    "area": "A3",
+    "name": "원칙 10",
+    "method": "HUMAN-ATTEST",
+    "basis": "FAIR 원칙 10 · 3.4절",
+    "level": "원칙",
+    "text": "AI 에이전트의 데이터 접근 시 접근 범위·권한·호출 이력과 보안 위험을 관리하여 안전한 활용을 보장하여야 한다.",
+    "property": null,
+    "group": null,
+    "criteria": "담당자가 증빙과 함께 확인한다. AI 에이전트·MCP 로 제공하지 않는 데이터면 해당 없음으로 기록할 수 있다",
+    "remedy": "AI 에이전트가 접근할 수 있는 범위와 권한, 호출 이력 기록, 보안 위험 검토 결과(3.4절 표 39·표 40)를 확인하고 증빙을 남긴다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+    ],
+    "related": [],
+    "route": null,
+    "attestable": true,
+    "allow_na": true,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
+   },
+   {
+    "id": "P-11",
+    "area": "A3",
+    "name": "원칙 11",
+    "method": "AUTO-DERIVED",
+    "basis": "FAIR 원칙 11 · 3.5절",
+    "level": "원칙",
+    "text": "이용자 평가 및 피드백 체계를 운영하고, 그 결과를 데이터 품질 개선 과정에 반영하여야 한다.",
+    "property": null,
+    "group": null,
+    "criteria": "연결 항목 1개의 판정 점수 평균이 100%면 충족, 50% 이상이면 부분, 그 미만이면 미흡. 연결 항목이 전부 확인 대기면 확인 대기",
+    "remedy": "아래 연결 항목을 조치하면 함께 오른다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "연결 항목 1개 중 충족 0 · 부분 0 · 미흡 0 · 확인 대기 1 (점수 평균 0%)"
+    ],
+    "related": [
+     {
+      "id": "C-15",
+      "name": "오류 신고·피드백 체계 운영",
+      "status": "pending"
+     }
+    ],
+    "route": null,
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
+   },
+   {
+    "id": "P-12",
+    "area": "A3",
+    "name": "원칙 12",
+    "method": "AUTO-GRAPH",
+    "basis": "FAIR 원칙 12 · 3.6절",
+    "level": "원칙",
+    "text": "데이터 접근 권한을 차등 관리하고, 데이터에 대한 보안을 강화하여야 한다.",
+    "property": null,
+    "group": null,
+    "criteria": "보안등급(N²SF)과 F6 거버넌스(공유 범위)가 둘 다 지정되어 있으면 충족, 하나만 있으면 부분",
+    "remedy": "STEP 4 에서 N²SF 보안등급과 F6 거버넌스를 지정한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 3 · 부분 0 · 미흡 0"
+    ],
+    "related": [],
+    "route": {
+     "key": "class4",
+     "step": 4,
+     "label": "분류 매트릭스",
+     "focus": "N2SF"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "met",
+    "score": 1.0
+   },
+   {
+    "id": "P-13",
+    "area": "A3",
+    "name": "원칙 13",
+    "method": "AUTO-DERIVED",
+    "basis": "FAIR 원칙 13 · 3.7절",
+    "level": "원칙",
+    "text": "데이터의 생산부터 활용까지 전 주기에 대한 책임 소재를 명확히 하여야 한다.",
+    "property": null,
+    "group": null,
+    "criteria": "연결 항목 3개의 판정 점수 평균이 100%면 충족, 50% 이상이면 부분, 그 미만이면 미흡. 연결 항목이 전부 확인 대기면 확인 대기",
+    "remedy": "아래 연결 항목을 조치하면 함께 오른다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "연결 항목 3개 중 충족 1 · 부분 2 · 미흡 0 · 확인 대기 0 (점수 평균 67%)"
+    ],
+    "related": [
+     {
+      "id": "M-04",
+      "name": "소관기관 (운영부서명)",
+      "status": "partial"
+     },
+     {
+      "id": "M-05",
+      "name": "제공기관",
+      "status": "met"
+     },
+     {
+      "id": "R-06",
+      "name": "원천·수집경로·가공 이력 제공",
+      "status": "partial"
+     }
+    ],
+    "route": null,
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "P-14",
+    "area": "A3",
+    "name": "원칙 14",
+    "method": "AUTO-DERIVED",
+    "basis": "FAIR 원칙 14 · 3.8절",
+    "level": "원칙",
+    "text": "데이터 생애주기 전반에 윤리적 법적 기준을 준수하고, 데이터 무결성과 신뢰성을 확보하여 공공의 이익을 보호하여야 한다.",
+    "property": null,
+    "group": null,
+    "criteria": "연결 항목 4개의 판정 점수 평균이 100%면 충족, 50% 이상이면 부분, 그 미만이면 미흡. 연결 항목이 전부 확인 대기면 확인 대기",
+    "remedy": "아래 연결 항목을 조치하면 함께 오른다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "연결 항목 4개 중 충족 1 · 부분 2 · 미흡 0 · 확인 대기 1 (점수 평균 50%)"
+    ],
+    "related": [
+     {
+      "id": "C-12",
+      "name": "개인정보 보호조치 적용",
+      "status": "pending"
+     },
+     {
+      "id": "C-13",
+      "name": "라이선스 표시와 메타데이터 제공",
+      "status": "partial"
+     },
+     {
+      "id": "M-03",
+      "name": "관련법령",
+      "status": "partial"
+     },
+     {
+      "id": "R-18",
+      "name": "전자서명·해시값 제공",
+      "status": "met"
+     }
+    ],
+    "route": null,
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "P-15",
+    "area": "A3",
+    "name": "원칙 15",
+    "method": "AUTO-GRAPH",
+    "basis": "FAIR 원칙 15 · 3.9절",
+    "level": "원칙",
+    "text": "데이터를 주제 영역별로 분류하고, 표준코드·식별자 등 의미정보를 연계하여 관리하여야 한다.",
+    "property": null,
+    "group": null,
+    "criteria": "주제 분류(dcat:theme)와 연계키(K) 배정이 둘 다 있으면 충족, 하나만 있으면 부분",
+    "remedy": "STEP 4 에서 F1 주제영역을 고르고 연계키(K)를 배정한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 3 · 부분 0 · 미흡 0"
+    ],
+    "related": [],
+    "route": {
+     "key": "class4",
+     "step": 4,
+     "label": "분류 매트릭스",
+     "focus": null
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "met",
+    "score": 1.0
+   },
+   {
+    "id": "C-01",
+    "area": "A4",
+    "name": "개방형 표준 포맷 제공",
+    "method": "AUTO-PROFILE",
+    "basis": "부록 3 공통 · 형식 및 구조",
+    "level": "필수",
+    "text": "데이터를 특정 소프트웨어에 종속되지 않는 개방형 표준 포맷으로 제공하고 있는가?",
+    "property": null,
+    "group": "형식 및 구조",
+    "criteria": "원천 파일 형식이 가이드라인 2.1.1 의 권장 오픈 포맷(CSV·JSON·XML·Parquet 등. 탭 구분 텍스트 TSV 도 같은 부류로 본다)이면 충족, 비권장 포맷(XLS·XLSX·HWP 등)이면 미흡, 두 목록에 없는 형식이면 부분. 스트림은 해당 없음",
+    "remedy": "CSV·JSON·Parquet 같은 개방형 포맷으로 변환한 파일을 STEP 1 에서 원천으로 등록한다",
+    "difficulty": 3,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "unmet",
+      "detail": ".xlsx — 비권장 포맷(벤더 종속)"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": ".csv — 권장 오픈 포맷"
+     }
+    ],
+    "evidence": [
+     "데이터셋 2건 중 충족 1 · 부분 0 · 미흡 1"
+    ],
+    "related": [],
+    "route": {
+     "key": null,
+     "step": 1,
+     "label": "STEP 1",
+     "focus": null
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "C-02",
+    "area": "A4",
+    "name": "기계 처리가 가능한 구조화",
+    "method": "AUTO-PROFILE",
+    "basis": "부록 3 공통 · 형식 및 구조",
+    "level": "필수",
+    "text": "데이터를 기계 이해 및 자동 처리가 가능하도록 구조화된 형태로 제공하고 있는가?",
+    "property": null,
+    "group": "형식 및 구조",
+    "criteria": "프로파일러가 표와 컬럼을 읽어 냈고 헤더 위에 제목 줄 같은 군더더기가 없으면 충족. 읽기는 했지만 헤더 앞 줄이 있거나 이름 없는 컬럼이 있으면 부분, 표로 읽지 못하면 미흡",
+    "remedy": "첫 줄이 컬럼 이름이고 한 줄이 한 건인 표 형태로 파일을 정리해 다시 등록한다",
+    "difficulty": 3,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "partial",
+      "detail": "표 1개 · 컬럼 7개를 읽었으나 [도로목록] 헤더 앞에 1줄"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "표 1개 · 컬럼 7개 — 첫 줄이 컬럼 이름인 표 구조"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "met",
+      "detail": "스트림 스키마 3필드 등록"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 2 · 부분 1 · 미흡 0"
+    ],
+    "related": [],
+    "route": {
+     "key": null,
+     "step": 1,
+     "label": "STEP 1",
+     "focus": null
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "C-03",
+    "area": "A4",
+    "name": "데이터 구조(스키마) 정의",
+    "method": "AUTO-GRAPH",
+    "basis": "부록 3 공통 · 형식 및 구조",
+    "level": "필수",
+    "text": "데이터 구조(스키마)는 필드(키)·자료형·관계·중첩 규칙등을 포함하여 명확히 정의되어 있는가?",
+    "property": null,
+    "group": "형식 및 구조",
+    "criteria": "컬럼 이름·자료형·필수 여부가 CSVW 스키마로 정본 그래프에 있으면 충족. 스트림은 등록한 스키마 필드가 있으면 충족",
+    "remedy": "STEP 3 의 추가 클래스에서 csvw:Table 을 선택한다. 프로파일한 컬럼 구조가 스키마로 정본에 들어간다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "unmet",
+      "detail": "정본 그래프에 데이터 스키마(csvw:tableSchema) 없음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 데이터 스키마(csvw:tableSchema) 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "met",
+      "detail": "스트림 스키마 3필드 등록 (이름·자료형)"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "extra_classes"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "C-04",
+    "area": "A4",
+    "name": "표준 스키마 메타데이터 제공",
+    "method": "AUTO-GRAPH",
+    "basis": "부록 3 공통 · 형식 및 구조",
+    "level": "필수",
+    "text": "메타데이터를 표준 스키마(예: DCAT)또는 기관·국가 적용 프로파일에 따라 기계 이해 가능한 형태로 제공하고 있는가?",
+    "property": null,
+    "group": "형식 및 구조",
+    "criteria": "STEP 7 에서 DCAT 메타데이터를 Turtle 과 JSON-LD 로 산출했고 자가검증을 통과했으면 충족. JSON-LD 가 없으면 부분",
+    "remedy": "STEP 6 검증을 통과시킨 뒤 STEP 7 에서 변환을 실행한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "Turtle·JSON-LD 산출 · 파생 자가검증 통과"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "Turtle·JSON-LD 산출 · 파생 자가검증 통과"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "met",
+      "detail": "Turtle·JSON-LD 산출 · 파생 자가검증 통과"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 3 · 부분 0 · 미흡 0"
+    ],
+    "related": [],
+    "route": {
+     "key": null,
+     "step": 7,
+     "label": "STEP 7",
+     "focus": null
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "met",
+    "score": 1.0
+   },
+   {
+    "id": "C-05",
+    "area": "A4",
+    "name": "메타데이터 필수 항목 누락 없음",
+    "method": "AUTO-DERIVED",
+    "basis": "부록 3 공통 · 형식 및 구조",
+    "level": "필수",
+    "text": "메타데이터 작성 기준에서 정의한 필수 항목을 누락 없이 제공하고 있는가?",
+    "property": null,
+    "group": "형식 및 구조",
+    "criteria": "연결 항목 22개의 판정 점수 평균이 100%면 충족, 50% 이상이면 부분, 그 미만이면 미흡. 연결 항목이 전부 확인 대기면 확인 대기",
+    "remedy": "아래 연결 항목을 조치하면 함께 오른다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "연결 항목 22개 중 충족 8 · 부분 14 · 미흡 0 · 확인 대기 0 (점수 평균 68%)"
+    ],
+    "related": [
+     {
+      "id": "M-01",
+      "name": "데이터명",
+      "status": "met"
+     },
+     {
+      "id": "M-02",
+      "name": "데이터 설명",
+      "status": "partial"
+     },
+     {
+      "id": "M-03",
+      "name": "관련법령",
+      "status": "partial"
+     },
+     {
+      "id": "M-04",
+      "name": "소관기관 (운영부서명)",
+      "status": "partial"
+     },
+     {
+      "id": "M-05",
+      "name": "제공기관",
+      "status": "met"
+     },
+     {
+      "id": "M-06",
+      "name": "제공시스템",
+      "status": "partial"
+     },
+     {
+      "id": "M-07",
+      "name": "갱신주기",
+      "status": "partial"
+     },
+     {
+      "id": "M-08",
+      "name": "업무/주제분류체계",
+      "status": "met"
+     },
+     {
+      "id": "M-09",
+      "name": "키워드",
+      "status": "partial"
+     },
+     {
+      "id": "M-10",
+      "name": "고유식별자",
+      "status": "met"
+     },
+     {
+      "id": "M-11",
+      "name": "담당자연락처",
+      "status": "partial"
+     },
+     {
+      "id": "M-12",
+      "name": "언어",
+      "status": "met"
+     },
+     {
+      "id": "M-13",
+      "name": "배포본",
+      "status": "met"
+     },
+     {
+      "id": "M-14",
+      "name": "접속 URL",
+      "status": "partial"
+     },
+     {
+      "id": "M-15",
+      "name": "데이터용량",
+      "status": "met"
+     },
+     {
+      "id": "M-16",
+      "name": "데이터셋 유형",
+      "status": "met"
+     },
+     {
+      "id": "M-17",
+      "name": "버전",
+      "status": "partial"
+     },
+     {
+      "id": "M-18",
+      "name": "등록일시",
+      "status": "partial"
+     },
+     {
+      "id": "M-19",
+      "name": "수정일시",
+      "status": "partial"
+     },
+     {
+      "id": "M-20",
+      "name": "버전 노트",
+      "status": "partial"
+     },
+     {
+      "id": "M-21",
+      "name": "라이선스",
+      "status": "partial"
+     },
+     {
+      "id": "M-22",
+      "name": "저작권",
+      "status": "partial"
+     }
+    ],
+    "route": null,
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "C-06",
+    "area": "A4",
+    "name": "데이터 사전 제공",
+    "method": "HUMAN-ATTEST",
+    "basis": "부록 3 공통 · 의미 및 표준",
+    "level": "필수",
+    "text": "변수(항목)별 정의·단위·산정기준·코드값 의미를 포함하는 데이터 사전(또는 이에 준하는 문서)을 제공하고 있는가?",
+    "property": null,
+    "group": "의미 및 표준",
+    "criteria": "담당자가 증빙과 함께 확인한다. 컬럼 이름과 자료형은 자동으로 보여 주지만 정의·단위·산정기준·코드값 의미는 문서로 확인해야 한다",
+    "remedy": "항목별 정의·단위·산정기준·코드값 의미를 담은 데이터 사전을 만들고 제공 위치를 증빙으로 남긴다",
+    "difficulty": 2,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "pending",
+      "detail": "컬럼 7개 — 이름·자료형·필수 여부가 CSVW 스키마로 정본에 없음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "pending",
+      "detail": "컬럼 7개 — 이름·자료형·필수 여부가 CSVW 스키마로 정본에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "pending",
+      "detail": "스트림 스키마 3필드 (이름·자료형만 등록됨)"
+     }
+    ],
+    "evidence": [
+     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+    ],
+    "related": [],
+    "route": null,
+    "attestable": true,
+    "allow_na": true,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
+   },
+   {
+    "id": "C-07",
+    "area": "A4",
+    "name": "날짜·시간·코드 표기 형식 일관",
+    "method": "AUTO-PROFILE",
+    "basis": "부록 3 공통 · 의미 및 표준",
+    "level": "필수",
+    "text": "날짜·시간·코드 등 주요 값의 표기 형식은 표준 포맷에 따라 일관되게 적용되고 있는가?",
+    "property": null,
+    "group": "의미 및 표준",
+    "criteria": "날짜·시각 컬럼이 전부 ISO 8601 형식이면 충족, 일부만 맞으면 부분. 날짜·시각 컬럼이 없으면 해당 없음. 코드값 표기는 자동으로 보지 않는다",
+    "remedy": "원천의 날짜·시각 값을 YYYY-MM-DD 또는 YYYY-MM-DDThh:mm:ss 형식으로 바꿔 다시 등록한다",
+    "difficulty": 3,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "날짜·시각 컬럼 1개 전부 ISO 8601"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "비표준 날짜·시각 컬럼 1/1개 (발생일시) — 형식 YYYY-MM-DD HH:MM:SS, YYYYMMDD"
+     }
+    ],
+    "evidence": [
+     "데이터셋 2건 중 충족 1 · 부분 0 · 미흡 1"
+    ],
+    "related": [],
+    "route": {
+     "key": null,
+     "step": 1,
+     "label": "STEP 1",
+     "focus": null
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "C-08",
+    "area": "A4",
+    "name": "동일 개념에 동일 용어 사용",
+    "method": "HUMAN-ATTEST",
+    "basis": "부록 3 공통 · 의미 및 표준",
+    "level": "필수",
+    "text": "동일한 개념은 동일한 라벨·용어로 일관되게 사용하고 있는가?",
+    "property": null,
+    "group": "의미 및 표준",
+    "criteria": "담당자가 증빙과 함께 확인한다",
+    "remedy": "같은 개념을 가리키는 컬럼 이름·코드값·라벨이 데이터셋 사이에서 같은지 점검하고 결과를 증빙으로 남긴다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+    ],
+    "related": [],
+    "route": null,
+    "attestable": true,
+    "allow_na": true,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
+   },
+   {
+    "id": "C-09",
+    "area": "A4",
+    "name": "결측값·특수값 표기 통일",
+    "method": "AUTO-PROFILE",
+    "basis": "부록 3 공통 · 품질 및 이력",
+    "level": "필수",
+    "text": "결측값 및 특수값 표기 규칙을 통일하여 일관되게 적용하고 있는가?",
+    "property": null,
+    "group": "품질 및 이력",
+    "criteria": "프로파일에서 찾은 결측 표기가 1종 이하면 충족, 2종 이상 섞여 있으면 미흡",
+    "remedy": "원천의 결측 표기를 한 가지(빈 값 또는 NULL)로 통일해 다시 등록한다",
+    "difficulty": 3,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "결측 표기 0종 (결측 없음)"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "결측 표기 3종 혼재: (빈 셀), -, null"
+     }
+    ],
+    "evidence": [
+     "데이터셋 2건 중 충족 1 · 부분 0 · 미흡 1"
+    ],
+    "related": [],
+    "route": {
+     "key": null,
+     "step": 1,
+     "label": "STEP 1",
+     "focus": null
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "C-10",
+    "area": "A4",
+    "name": "품질평가 수행 여부와 결과 명시",
+    "method": "AUTO-GRAPH",
+    "basis": "부록 3 공통 · 품질 및 이력",
+    "level": "필수",
+    "text": "데이터 품질평가의 수행 여부 및 결과 내용을 메타데이터에 명시하고 있는가?",
+    "property": null,
+    "group": "품질 및 이력",
+    "criteria": "정본 그래프에 dqv:hasQualityAnnotation 이 있으면 충족",
+    "remedy": "STEP 3 의 품질 검증 정보에 품질평가를 했는지와 그 결과를 적는다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "quality_annotation"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "C-11",
+    "area": "A4",
+    "name": "합성 데이터·자동 주석 구분 표기",
+    "method": "HUMAN-ATTEST",
+    "basis": "부록 3 공통 · 품질 및 이력",
+    "level": "필수",
+    "text": "인공적으로 생성된 합성 데이터나 기계가 자동으로 단 주석이 포함된 경우 이를 명확히 구분하여 표기했는가?",
+    "property": null,
+    "group": "품질 및 이력",
+    "criteria": "담당자가 증빙과 함께 확인한다. 합성 데이터나 자동 주석이 없으면 해당 없음으로 기록한다",
+    "remedy": "합성 데이터나 기계가 단 주석이 들어 있는지 확인하고, 있다면 어디에 어떻게 표기했는지 증빙으로 남긴다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+    ],
+    "related": [],
+    "route": null,
+    "attestable": true,
+    "allow_na": true,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
+   },
+   {
+    "id": "C-12",
+    "area": "A4",
+    "name": "개인정보 보호조치 적용",
+    "method": "HUMAN-ATTEST",
+    "basis": "부록 3 공통 · 관리 및 보안",
+    "level": "필수",
+    "text": "개인정보(또는 민감정보)가 포함된 경우, 관련 법령·지침에 따라 비식별/가명처리 등 보호조치를 적용하고 있는가?",
+    "property": null,
+    "group": "관리 및 보안",
+    "criteria": "컬럼 이름과 값 패턴으로 개인정보 의심 컬럼을 찾는다. 찾지 못하면 해당 없음, 찾으면 담당자가 보호조치를 증빙과 함께 확인한다",
+    "remedy": "의심 컬럼에 적용한 비식별·가명처리 조치를 확인하고 증빙을 남긴다",
+    "difficulty": 2,
+    "datasets": [
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "pending",
+      "detail": "개인정보 의심 컬럼: 차량번호(차량번호)"
+     }
+    ],
+    "evidence": [
+     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+    ],
+    "related": [],
+    "route": null,
+    "attestable": true,
+    "allow_na": true,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
+   },
+   {
+    "id": "C-13",
+    "area": "A4",
+    "name": "라이선스 표시와 메타데이터 제공",
+    "method": "AUTO-GRAPH",
+    "basis": "부록 3 공통 · 관리 및 보안",
+    "level": "필수",
+    "text": "이용허락 범위(재사용, 재배포, 상업적 이용, 2차 저작물 작성 등)를 라이선스로 명확히 표시하고, 해당 라이선스 정보를 메타데이터로 제공하고 있는가?",
+    "property": null,
+    "group": "관리 및 보안",
+    "criteria": "정본 그래프에 dcterms:license 가 있으면 충족. 제공 조건(dcterms:accessRights)만 있으면 부분",
+    "remedy": "STEP 4 의 F4 유통·이용조건에서 공공누리 유형을 지정한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "partial",
+      "detail": "일부만 있음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "partial",
+      "detail": "일부만 있음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 2 · 미흡 0"
+    ],
+    "related": [],
+    "route": {
+     "key": "license",
+     "step": 4,
+     "label": "F4 유통·이용조건",
+     "focus": "F4"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "C-14",
+    "area": "A4",
+    "name": "책임 주체와 연락 창구 명시",
+    "method": "AUTO-GRAPH",
+    "basis": "부록 3 공통 · 관리 유지",
+    "level": "필수",
+    "text": "품질·보안·윤리·업데이트에 대한 책임 주체(역할 기준)를 명확히 하고 이용자 문의/오류 신고 연락 창구를 명시하고 운영하는가?",
+    "property": null,
+    "group": "관리 유지",
+    "criteria": "책임 기관(소관기관 또는 제공기관)과 담당 연락처(이름 + 이메일 또는 전화)가 메타데이터에 모두 있으면 충족, 일부만 있으면 부분. 창구를 실제로 운영하는지는 자동으로 보지 않는다",
+    "remedy": "STEP 3 에서 소관기관, 담당 부서·담당자, 담당 이메일을 입력한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "partial",
+      "detail": "일부만 있음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "partial",
+      "detail": "일부만 있음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 2 · 미흡 0"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "contact_name"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "C-15",
+    "area": "A4",
+    "name": "오류 신고·피드백 체계 운영",
+    "method": "HUMAN-ATTEST",
+    "basis": "부록 3 공통 · 관리 유지",
+    "level": "필수",
+    "text": "이용자 오류 신고 및 개선 요청을 접수·처리할 수 있는 절차를 마련하고, 피드백 체계를 운영하고 있는가?",
+    "property": null,
+    "group": "관리 유지",
+    "criteria": "담당자가 증빙과 함께 확인한다",
+    "remedy": "오류 신고와 개선 요청을 받는 창구, 처리 절차를 확인하고 그 위치를 증빙으로 남긴다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+    ],
+    "related": [],
+    "route": null,
+    "attestable": true,
+    "allow_na": true,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
+   },
+   {
+    "id": "R-01",
+    "area": "A5",
+    "name": "데이터 검증 기준 제공",
+    "method": "HUMAN-ATTEST",
+    "basis": "부록 3 공통 · 형식 및 구조",
+    "level": "권장",
+    "text": "데이터 검증 기준(예: 허용값, 필수값, 형식, 관계 제약 등)을 제공하고 있는가?",
+    "property": null,
+    "group": "형식 및 구조",
+    "criteria": "담당자가 증빙과 함께 확인한다. 자료형과 필수 여부는 CSVW 스키마로 자동 산출되지만 허용값·관계 제약은 문서로 확인해야 한다",
+    "remedy": "허용값·필수값·형식·관계 제약을 적은 검증 기준 문서의 제공 위치를 증빙으로 남긴다",
+    "difficulty": 2,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "pending",
+      "detail": "컬럼 7개 — 이름·자료형·필수 여부가 CSVW 스키마로 정본에 없음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "pending",
+      "detail": "컬럼 7개 — 이름·자료형·필수 여부가 CSVW 스키마로 정본에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "pending",
+      "detail": "스트림 스키마 3필드 (이름·자료형만 등록됨)"
+     }
+    ],
+    "evidence": [
+     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+    ],
+    "related": [],
+    "route": null,
+    "attestable": true,
+    "allow_na": true,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
+   },
+   {
+    "id": "R-02",
+    "area": "A5",
+    "name": "대용량 데이터의 압축·적합 포맷 제공",
+    "method": "AUTO-PROFILE",
+    "basis": "부록 3 공통 · 형식 및 구조",
+    "level": "권장",
+    "text": "대용량 데이터는 압축 제공 또는 대용량 처리에 적합한 포맷(예: Parquet 등)으로 제공하여 이용자가 용이하게 다운로드·활용할 수 있는가?",
+    "property": null,
+    "group": "형식 및 구조",
+    "criteria": "원천 파일이 100MB 이상일 때만 본다(이 스튜디오의 기준). Parquet 이면 충족, 아니면 미흡. 100MB 미만이면 해당 없음",
+    "remedy": "대용량 파일은 Parquet 으로 변환하거나 압축해 제공한다",
+    "difficulty": 3,
+    "datasets": [],
+    "evidence": [
+     "해당 없음: 100MB 미만이라 대용량이 아님"
+    ],
+    "related": [],
+    "route": {
+     "key": null,
+     "step": 1,
+     "label": "STEP 1",
+     "focus": null
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "na",
+    "score": null
+   },
+   {
+    "id": "R-03",
+    "area": "A5",
+    "name": "적용 표준과 기준 문서화",
+    "method": "AUTO-GRAPH",
+    "basis": "부록 3 공통 · 의미 및 표준",
+    "level": "권장",
+    "text": "적용한 표준 포맷 및 적용 기준(예: 날짜·시간 형식, 코드 체계, 누락 값 표기 등)을 문서화하여 제공하고 있는가?",
+    "property": null,
+    "group": "의미 및 표준",
+    "criteria": "정본 그래프에 dcterms:conformsTo 가 있으면 충족",
+    "remedy": "STEP 3 의 준수 표준에 적용한 표준을 적는다 (예: ISO 8601, 행정표준코드, EPSG:5186)",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "conforms_to"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "R-04",
+    "area": "A5",
+    "name": "도메인 표준 용어체계와의 정합성 점검",
+    "method": "HUMAN-ATTEST",
+    "basis": "부록 3 공통 · 의미 및 표준",
+    "level": "권장",
+    "text": "도메인 표준 용어체계 또는 온톨로지가 존재하는 경우, 해당 표준과의 정합성 점검 기준(매핑·검증 절차 포함)을 마련·적용하고 있는가?",
+    "property": null,
+    "group": "의미 및 표준",
+    "criteria": "담당자가 증빙과 함께 확인한다. 해당 도메인에 표준 용어체계나 온톨로지가 없으면 해당 없음으로 기록한다",
+    "remedy": "도메인 표준 용어체계와의 매핑·검증 절차를 확인하고 증빙을 남긴다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+    ],
+    "related": [],
+    "route": null,
+    "attestable": true,
+    "allow_na": true,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
+   },
+   {
+    "id": "R-05",
+    "area": "A5",
+    "name": "결측값·특수값의 정의와 처리 원칙 제공",
+    "method": "AUTO-GRAPH",
+    "basis": "부록 3 공통 · 품질 및 이력",
+    "level": "권장",
+    "text": "결측값 및 특수값의 정의, 발생 사유, 처리 원칙(예: 제외, 대체, 별도 코드 처리 등) 등의 정보를 제공하고 있는가?",
+    "property": null,
+    "group": "품질 및 이력",
+    "criteria": "정본 그래프에 rai:dataCollectionMissingData 가 있으면 충족",
+    "remedy": "STEP 3 의 결측치 정보에 결측값의 정의, 발생 사유, 처리 원칙을 적는다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "rai_missing_data"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "R-06",
+    "area": "A5",
+    "name": "원천·수집경로·가공 이력 제공",
+    "method": "AUTO-GRAPH",
+    "basis": "부록 3 공통 · 품질 및 이력",
+    "level": "권장",
+    "text": "데이터의 원천·수집경로·가공/전처리(정제·비식별) 이력을 기록·관리하고 공개 가능한 범위에서 정보를 제공하는가?",
+    "property": null,
+    "group": "품질 및 이력",
+    "criteria": "출처·가공 이력(dcterms:provenance)이 적혀 있거나 다른 데이터셋에서 파생된 관계(prov:wasDerivedFrom)가 확정되어 있으면 충족. 카탈로그 작성 이력(prov:wasGeneratedBy)만 있으면 부분",
+    "remedy": "STEP 3 의 출처·가공 이력에 원천 시스템, 수집 방식, 정제·비식별 처리 내용을 적는다 (다른 데이터셋에서 만든 데이터라면 STEP 5 에서 파생 관계를 확정한다)",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "출처·가공 이력(dcterms:provenance) 기재됨"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "partial",
+      "detail": "카탈로그 작성 이력만 있음 — 원천·수집경로·가공 이력 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "partial",
+      "detail": "카탈로그 작성 이력만 있음 — 원천·수집경로·가공 이력 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 2 · 미흡 0"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "provenance"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "R-07",
+    "area": "A5",
+    "name": "정제·변환 소스 코드 공개",
+    "method": "HUMAN-ATTEST",
+    "basis": "부록 3 공통 · 품질 및 이력",
+    "level": "권장",
+    "text": "데이터 정제 및 변환에 사용된 소스 코드는 라이선스를 명시하여, 공개 가능한 범위 내 오픈소스 형태로 제공하고 있는가?",
+    "property": null,
+    "group": "품질 및 이력",
+    "criteria": "담당자가 증빙과 함께 확인한다. 정제·변환 코드가 없거나 공개할 수 없으면 해당 없음으로 기록한다",
+    "remedy": "정제·변환에 쓴 코드의 저장소 위치와 라이선스를 증빙으로 남긴다",
+    "difficulty": 3,
+    "datasets": [],
+    "evidence": [
+     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+    ],
+    "related": [],
+    "route": null,
+    "attestable": true,
+    "allow_na": true,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
+   },
+   {
+    "id": "R-08",
+    "area": "A5",
+    "name": "데이터·메타데이터·핵심 문서의 동일 경로 제공",
+    "method": "HUMAN-ATTEST",
+    "basis": "부록 3 공통 · 품질 및 이력",
+    "level": "권장",
+    "text": "데이터, 메타데이터 및 핵심 문서(스키마/데이터사전·코드북/접근 안내)는 이용자가 동일한 배포 경로에서 함께 확인할 수 있도록 제공하고 있는가?",
+    "property": null,
+    "group": "품질 및 이력",
+    "criteria": "담당자가 증빙과 함께 확인한다",
+    "remedy": "데이터, 메타데이터, 스키마·데이터 사전·접근 안내를 한 경로에서 볼 수 있는지 확인하고 그 주소를 증빙으로 남긴다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+    ],
+    "related": [],
+    "route": null,
+    "attestable": true,
+    "allow_na": true,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
+   },
+   {
+    "id": "R-09",
+    "area": "A5",
+    "name": "변경 시 메타데이터·문서 동시 현행화",
+    "method": "HUMAN-ATTEST",
+    "basis": "부록 3 공통 · 품질 및 이력",
+    "level": "권장",
+    "text": "데이터 또는 문서가 변경되는 경우, 관련 메타데이터 및 핵심 문서를 동시에 개정·현행화하고 있는가?",
+    "property": null,
+    "group": "품질 및 이력",
+    "criteria": "담당자가 증빙과 함께 확인한다",
+    "remedy": "데이터가 바뀔 때 메타데이터와 문서를 함께 고치는 절차를 확인하고 증빙을 남긴다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+    ],
+    "related": [],
+    "route": null,
+    "attestable": true,
+    "allow_na": true,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
+   },
+   {
+    "id": "R-10",
+    "area": "A5",
+    "name": "데이터 카드 제공",
+    "method": "HUMAN-ATTEST",
+    "basis": "부록 3 공통 · 품질 및 이력",
+    "level": "권장",
+    "text": "데이터 특성(용도·품질·리스크 등)을 요약한 데이터 카드(또는 이에 준하는 설명 문서)를 함께 제공하고 있는가?",
+    "property": null,
+    "group": "품질 및 이력",
+    "criteria": "담당자가 증빙과 함께 확인한다",
+    "remedy": "부록 4 양식에 따라 데이터 카드를 작성하고 제공 위치를 증빙으로 남긴다",
+    "difficulty": 2,
+    "datasets": [],
+    "evidence": [
+     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+    ],
+    "related": [],
+    "route": null,
+    "attestable": true,
+    "allow_na": true,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
+   },
+   {
+    "id": "R-11",
+    "area": "A5",
+    "name": "재식별 위험 평가와 문서화",
+    "method": "HUMAN-ATTEST",
+    "basis": "부록 3 공통 · 관리 및 보안",
+    "level": "권장",
+    "text": "재식별 위험에 대한 평가·검토를 수행하고, 그 결과 및 조치 사항을 문서화하여 관리하고 있는가?",
+    "property": null,
+    "group": "관리 및 보안",
+    "criteria": "개인정보 의심 컬럼을 찾지 못하면 해당 없음, 찾으면 담당자가 재식별 위험 평가 결과를 증빙과 함께 확인한다",
+    "remedy": "재식별 위험 평가 결과와 조치 사항을 적은 문서의 위치를 증빙으로 남긴다",
+    "difficulty": 3,
+    "datasets": [
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "pending",
+      "detail": "개인정보 의심 컬럼: 차량번호(차량번호)"
+     }
+    ],
+    "evidence": [
+     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+    ],
+    "related": [],
+    "route": null,
+    "attestable": true,
+    "allow_na": true,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
+   },
+   {
+    "id": "R-12",
+    "area": "A5",
+    "name": "영구 식별자(PID) 부여",
+    "method": "AUTO-GRAPH",
+    "basis": "부록 3 공통 · 관리 및 보안",
+    "level": "권장",
+    "text": "데이터에 영구 식별자(PID 또는 이에 준하는 지속 식별자)를 부여하여 관리하고 있는가?",
+    "property": null,
+    "group": "관리 및 보안",
+    "criteria": "민팅 대장에 발행 ID(DST-000001 형식)가 등록되어 있으면 충족. 초안 ID 만 있으면 미흡",
+    "remedy": "STEP 6 에서 관리자가 발행 ID 를 발급한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "DST-000001 발급됨"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "DST-000002 발급됨"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "met",
+      "detail": "SVC-000001 발급됨"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 3 · 부분 0 · 미흡 0"
+    ],
+    "related": [],
+    "route": {
+     "key": "mint",
+     "step": 6,
+     "label": "ID 발급 (민팅 대장)",
+     "focus": "mint"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "met",
+    "score": 1.0
+   },
+   {
+    "id": "R-13",
+    "area": "A5",
+    "name": "웹 표준 API 제공",
+    "method": "AUTO-GRAPH",
+    "basis": "부록 3 공통 · 데이터 제공",
+    "level": "권장",
+    "text": "데이터는 이용자의 자동 수집 및 연계를 지원할 수 있도록 웹 기반 표준 API(예: RESTful API) 형태로 제공하고 있는가?",
+    "property": null,
+    "group": "데이터 제공",
+    "criteria": "http(s) API 엔드포인트(dcat:endpointURL)가 정본 그래프에 있으면 충족. http(s) 가 아닌 엔드포인트(예: 메시지 브로커 주소)만 있으면 부분, 없으면 미흡. 파일형 데이터셋은 배포본의 dcat:accessService 로 적는다",
+    "remedy": "API 로 제공하고 있다면 STEP 3 의 API 엔드포인트 URL 에 주소를 입력한다",
+    "difficulty": 2,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "API 엔드포인트 https://api.example.go.kr/road/v1"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "API 엔드포인트 미선언"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "partial",
+      "detail": "엔드포인트 kafka://broker:9092/cctv.vehicle.det.v1 — 웹(http) 기반 API 가 아님"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 1 · 미흡 1"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "endpoint_url"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "R-14",
+    "area": "A5",
+    "name": "API 외 추가 제공 경로",
+    "method": "AUTO-GRAPH",
+    "basis": "부록 3 공통 · 데이터 제공",
+    "level": "권장",
+    "text": "데이터가 API로 제공되는 경우, 이용 편의 및 장애 대응을 위해 파일 다운로드 등 최소 1개 이상의 추가 제공 경로를 함께 제공하고 있는가?",
+    "property": null,
+    "group": "데이터 제공",
+    "criteria": "API 엔드포인트가 선언된 데이터셋에 파일 접속 URL(dcat:accessURL)도 있으면 충족, 없으면 미흡. API 엔드포인트가 없으면 해당 없음",
+    "remedy": "STEP 3 의 접속 URL 에 파일을 내려받을 수 있는 주소를 입력한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "API 엔드포인트와 파일 접속 URL 이 함께 있음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 1건 중 충족 1 · 부분 0 · 미흡 0"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "access_url"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "met",
+    "score": 1.0
+   },
+   {
+    "id": "R-15",
+    "area": "A5",
+    "name": "API 응답의 메타데이터 연계",
+    "method": "HUMAN-ATTEST",
+    "basis": "부록 3 공통 · 데이터 제공",
+    "level": "권장",
+    "text": "API 제공 시 데이터 응답에는 필요한 메타데이터를 함께 포함하거나, 메타데이터를 확인할 수 있는 표준화된 참조 링크를 함께 제공하도록 설계되어 있는가?",
+    "property": null,
+    "group": "데이터 제공",
+    "criteria": "API 엔드포인트가 선언되어 있지 않으면 해당 없음. 있으면 담당자가 증빙과 함께 확인한다",
+    "remedy": "API 응답에 메타데이터가 들어 있는지, 또는 메타데이터 참조 링크가 있는지 확인하고 증빙을 남긴다",
+    "difficulty": 3,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "pending",
+      "detail": "API 엔드포인트 https://api.example.go.kr/road/v1"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "pending",
+      "detail": "API 엔드포인트 kafka://broker:9092/cctv.vehicle.det.v1"
+     }
+    ],
+    "evidence": [
+     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+    ],
+    "related": [],
+    "route": null,
+    "attestable": true,
+    "allow_na": true,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
+   },
+   {
+    "id": "R-16",
+    "area": "A5",
+    "name": "필터링·분할 조회 기능",
+    "method": "HUMAN-ATTEST",
+    "basis": "부록 3 공통 · 데이터 제공",
+    "level": "권장",
+    "text": "대용량 데이터 처리 및 자동 수집을 위해 필터링, 조건 검색, 분할 조회(페이지네이션) 등 효율적인 조회 기능을 제공하고 있는가?",
+    "property": null,
+    "group": "데이터 제공",
+    "criteria": "API 엔드포인트가 선언되어 있지 않으면 해당 없음. 있으면 담당자가 증빙과 함께 확인한다",
+    "remedy": "API 가 필터링·조건 검색·페이지네이션을 지원하는지 확인하고 API 문서 위치를 증빙으로 남긴다",
+    "difficulty": 3,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "pending",
+      "detail": "API 엔드포인트 https://api.example.go.kr/road/v1"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "pending",
+      "detail": "API 엔드포인트 kafka://broker:9092/cctv.vehicle.det.v1"
+     }
+    ],
+    "evidence": [
+     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+    ],
+    "related": [],
+    "route": null,
+    "attestable": true,
+    "allow_na": true,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
+   },
+   {
+    "id": "R-17",
+    "area": "A5",
+    "name": "버전별 변경 이력 제공",
+    "method": "AUTO-GRAPH",
+    "basis": "부록 3 공통 · 관리 유지",
+    "level": "권장",
+    "text": "데이터 변경 사항은 버전별로 추적 가능하도록 변경 이력 정보를 제공하는가?",
+    "property": null,
+    "group": "관리 유지",
+    "criteria": "버전(owl:versionInfo)과 버전 노트(adms:versionNotes)가 둘 다 있으면 충족, 버전·버전 노트·수정일시 중 일부만 있으면 부분",
+    "remedy": "STEP 3 에서 버전과 버전 노트를 입력한다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "정본 그래프에 없음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
+    ],
+    "related": [],
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "version_notes"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "partial",
+    "score": 0.5
+   },
+   {
+    "id": "R-18",
+    "area": "A5",
+    "name": "전자서명·해시값 제공",
+    "method": "AUTO-GRAPH",
+    "basis": "부록 3 공통 · 관리 유지",
+    "level": "권장",
+    "text": "데이터의 변조 방지 및 신뢰성 확인을 위한 전자서명이나 해시(Hash)값 제공 등 기술적 검증 방식 운영하는가?",
+    "property": null,
+    "group": "관리 유지",
+    "criteria": "배포본에 해시값(spdx:checksum)이 있으면 충족. 업로드할 때 계산한 SHA-256 을 배포본에 자동으로 적는다. 스트림은 해당 없음",
+    "remedy": "STEP 3 에서 데이터셋 유형(미디어타입)을 승인하면 해시값이 배포본에 기록된다",
+    "difficulty": 1,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "met",
+      "detail": "정본 그래프에 있음"
+     }
+    ],
+    "evidence": [
+     "데이터셋 2건 중 충족 2 · 부분 0 · 미흡 0"
+    ],
+    "related": [],
+    "route": {
+     "key": "mediaType",
+     "step": 3,
+     "label": "mediaType 드롭다운",
+     "focus": "media_type"
+    },
+    "attestable": false,
+    "allow_na": false,
+    "attestation": null,
+    "status": "met",
+    "score": 1.0
+   },
+   {
+    "id": "U-01",
+    "area": "A6",
+    "name": "수치 데이터의 산출 규칙 제공",
+    "method": "HUMAN-ATTEST",
+    "basis": "부록 3 유형별 · 수치",
+    "level": "권장",
+    "text": "산식/집계 단위/기준시점 등 산출 규칙을 제공하는가?",
+    "property": null,
+    "group": "수치",
+    "criteria": "수치 컬럼이 없으면 해당 없음. 있으면 담당자가 산식·집계 단위·기준시점 제공 여부를 증빙과 함께 확인한다",
+    "remedy": "수치 항목의 산식, 집계 단위, 기준시점을 적은 문서의 위치를 증빙으로 남긴다",
+    "difficulty": 2,
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "pending",
+      "detail": "수치 컬럼 4개: 시군구코드, 경도, 위도, 연장(m)"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "pending",
+      "detail": "수치 컬럼 1개: 사망자수"
+     }
+    ],
+    "evidence": [
+     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+    ],
+    "related": [],
+    "route": null,
+    "attestable": true,
+    "allow_na": true,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
+   },
+   {
+    "id": "U-02",
+    "area": "A6",
+    "name": "민감 정보 마스킹과 재식별 위험성 평가",
+    "method": "HUMAN-ATTEST",
+    "basis": "부록 3 유형별 · 개인정보 보호",
+    "level": "필수",
+    "text": "얼굴, 차량번호, 목소리 등 민감 정보의 마스킹/익명화 처리를 완료하고, 재식별 위험성 평가를 거쳤는가?",
+    "property": null,
+    "group": "개인정보 보호",
+    "criteria": "개인정보 의심 컬럼을 찾지 못하면 해당 없음, 찾으면 담당자가 마스킹·익명화와 재식별 위험성 평가를 증빙과 함께 확인한다",
+    "remedy": "의심 컬럼의 마스킹·익명화 처리와 재식별 위험성 평가 결과를 확인하고 증빙을 남긴다",
+    "difficulty": 3,
+    "datasets": [
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "pending",
+      "detail": "개인정보 의심 컬럼: 차량번호(차량번호)"
+     }
+    ],
+    "evidence": [
+     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+    ],
+    "related": [],
+    "route": null,
+    "attestable": true,
+    "allow_na": true,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
+   },
+   {
+    "id": "U-03",
+    "area": "A6",
+    "name": "비식별 가공 범위와 주의사항 안내",
+    "method": "HUMAN-ATTEST",
+    "basis": "부록 3 유형별 · 개인정보 보호",
+    "level": "권장",
+    "text": "비식별·가공으로 인해 제공 정보의 공백/왜곡 가능성이 발생하는 항목에 대해, 가공 범위·원칙·주의사항을 이용자에게 명확히 안내하는가?",
+    "property": null,
+    "group": "개인정보 보호",
+    "criteria": "개인정보 의심 컬럼을 찾지 못하면 해당 없음, 찾으면 담당자가 가공 범위·원칙·주의사항 안내 여부를 증빙과 함께 확인한다",
+    "remedy": "비식별·가공으로 생기는 정보 공백이나 왜곡 가능성을 이용자에게 안내한 위치를 증빙으로 남긴다",
+    "difficulty": 2,
+    "datasets": [
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "pending",
+      "detail": "개인정보 의심 컬럼: 차량번호(차량번호)"
+     }
+    ],
+    "evidence": [
+     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+    ],
+    "related": [],
+    "route": null,
+    "attestable": true,
+    "allow_na": true,
+    "attestation": null,
+    "status": "pending",
+    "score": 0.0
    }
   ],
-  "started_at": "2026-10-06T09:29:18.248425Z",
-  "ended_at": "2026-10-06T09:29:18.365192Z",
-  "activity": "ACT-K-0454"
+  "started_at": "2026-10-06T11:45:32.740017Z",
+  "ended_at": "2026-10-06T11:45:33.081974Z",
+  "activity": "ACT-K-0458"
  },
  "stale": null,
+ "attestations": {},
+ "pending_attestations": [],
  "ruleset": {
-  "version": "fde-rules-0.1",
-  "guideline": "공공데이터의 인공지능 친화적 관리 가이드라인 v1.1 (행정안전부·NIA)",
-  "note": "가이드라인 80항목 전체가 아니라, 목업에 근거가 드러난 항목과 저장된 메타데이터·프로파일로 자동 판정할 수 있는 항목만 구현한 초기 규칙 세트다. basis 가 '제품 규칙'인 항목은 가이드라인 원문과 대조해 확정해야 한다. 항목은 이 파일에 추가하면 진단에 반영된다.",
+  "version": "fde-rules-1.0",
+  "guideline": "공공데이터의 인공지능 친화적 관리 가이드라인 v1.1 (행정안전부·NIA, 2026.07)",
+  "note": "가이드라인 v1.1 에서 표 9~11 의 메타데이터 필수 22항목, 표 9·12 의 권장·선택 7항목, 15개 원칙, 부록 3 체크리스트의 공통 필수 15 · 공통 권장 18 · 유형별(수치·개인정보 보호) 3항목을 원문 문구 그대로 옮긴 80항목이다. 가이드라인 본문에 '80항목'이라는 표현은 없으며, 이 구성은 목업의 영역 구분을 원문에 대조한 것이다. 항목 문구는 원문이고, 판정 기준과 조치 방법은 이 스튜디오가 정한 것이다. 다음은 넣지 않았다: 부록 3 유형별의 이미지/영상 2항목, 표 13~16 의 데이터 타입별 메타데이터(수치 4 · 이미지 4 · 음성 3 · 영상 5). 15개 원칙은 가이드라인에 판정 기준이 없어, 관련된 세부 항목의 판정을 종합하거나(12개) 분류 결과(원칙 12·15) 또는 담당자 확인(원칙 10)으로 판정한다.",
   "guideline_total": 80,
-  "implemented_total": 33,
+  "implemented_total": 80,
   "methods": [
    {
     "id": "AUTO-GRAPH",
-    "name": "카탈로그 그래프 SPARQL/SHACL 질의 자동 판정"
+    "name": "정본 그래프 질의와 검증·변환 실행 결과로 자동 판정"
    },
    {
     "id": "AUTO-PROFILE",
-    "name": "프로파일 통계 자동 판정"
+    "name": "원천 파일의 프로파일 통계로 자동 판정"
+   },
+   {
+    "id": "AUTO-DERIVED",
+    "name": "연결된 세부 항목의 판정을 종합해 자동 판정"
    },
    {
     "id": "HUMAN-ATTEST",
-    "name": "증빙 첨부 + 담당자 확인 (확인도 prov:Activity 로 기록)"
+    "name": "담당자가 증빙과 함께 확인 (확인도 prov:Activity 로 기록)"
    }
   ],
   "areas": [
    {
     "id": "A1",
-    "name": "메타데이터 필수 항목",
+    "name": "메타데이터 필수 항목 (표 9~11)",
     "guideline_items": 22
    },
    {
     "id": "A2",
-    "name": "메타데이터 권장·선택 항목",
+    "name": "메타데이터 권장·선택 항목 (표 9·12)",
     "guideline_items": 7
    },
    {
@@ -505,12 +4460,12 @@
    },
    {
     "id": "A4",
-    "name": "체크리스트 공통 필수",
+    "name": "체크리스트 공통 필수 (부록 3)",
     "guideline_items": 15
    },
    {
     "id": "A5",
-    "name": "체크리스트 공통 권장",
+    "name": "체크리스트 공통 권장 (부록 3)",
     "guideline_items": 18
    },
    {
@@ -518,6 +4473,12 @@
     "name": "체크리스트 유형별 (수치·개인정보)",
     "guideline_items": 3
    }
-  ]
+  ],
+  "method_counts": {
+   "AUTO-GRAPH": 44,
+   "AUTO-PROFILE": 5,
+   "AUTO-DERIVED": 13,
+   "HUMAN-ATTEST": 18
+  }
  }
 }

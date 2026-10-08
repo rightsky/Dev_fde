@@ -573,6 +573,7 @@ function FormTab({ m, fields }: { m: FormModel; fields: MetaField[] }) {
               </>
             }
           >
+            <p className="small muted mb-8">{LEVEL_NOTE[level]}</p>
             <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
               {group.map((f) => (
                 <FieldRow key={f.name} m={m} field={f} />
@@ -585,8 +586,19 @@ function FormTab({ m, fields }: { m: FormModel; fields: MetaField[] }) {
   );
 }
 
-function LevelBadge({ level }: { level: MetaField["level"] }) {
-  return <Badge tone={level === "필수" ? "dark" : level === "권장" ? "info" : "muted"}>{level}</Badge>;
+// 등급은 가이드라인 표 8 의 우선순위다. 위의 승인 필드와 달리 비워도 확정·발행을 막지 않는다.
+const LEVEL_NOTE: Record<MetaField["level"], string> = {
+  필수: "가이드라인 표 9~11 이 필수로 정한 항목입니다. 비워 두어도 확정과 발행은 할 수 있지만, STEP 8 진단에서 해당 항목이 미흡으로 판정됩니다.",
+  권장: "가이드라인이 작성을 권장하는 항목과 이 스튜디오의 권장 항목입니다. 채우면 STEP 8 진단 점수가 오릅니다.",
+  선택: "데이터 특성에 따라 적는 항목입니다. 가이드라인 표 12 의 선택 항목도 STEP 8 진단에서 판정합니다.",
+};
+
+function LevelBadge({ level, guide }: { level: MetaField["level"]; guide?: string }) {
+  return (
+    <Badge tone={level === "필수" ? "dark" : level === "권장" ? "info" : "muted"} title={guide ? `가이드라인 ${guide}` : "이 스튜디오의 항목 (가이드라인 표 9~12 에는 없음)"}>
+      {level}
+    </Badge>
+  );
 }
 
 function AutoBadge() {
@@ -653,7 +665,8 @@ function FieldRow({ m, field }: { m: FormModel; field: MetaField }) {
       <label className="label" htmlFor={id}>
         {field.label}
         <span className="kbd">{field.property}</span>
-        <LevelBadge level={field.level} />
+        <LevelBadge level={field.level} guide={field.guide} />
+        {field.guide && <span className="tiny muted">{field.guide}</span>}
         {m.auto.includes(field.name) && !dirty && <AutoBadge />}
         {dirty && <Badge tone="warn">미저장</Badge>}
       </label>
@@ -702,6 +715,23 @@ function FieldHint({ m, field, value }: { m: FormModel; field: MetaField; value:
   return hint ? <span className="hint">{hint}</span> : null;
 }
 
+// 입력 예시 (가이드라인 표 9~12 의 예시 열에서 가져왔다)
+const PLACEHOLDER: Record<string, string> = {
+  creator: "예: 데이터전략과",
+  language: "예: ko",
+  contact_name: "예: 데이터전략과 홍길동",
+  contact_email: "예: data@example.go.kr",
+  contact_phone: "예: 044-201-3114",
+  version: "예: 2025.01.v1",
+  spatial: "예: 대한민국 서울특별시 (25개 자치구)",
+  version_notes: "예: 데이터셋 최초 공개 / 결측치 처리 방식 변경 / 측정지역 코드화 및 적용",
+  rights: "예: 상업적·비상업적 이용 모두 허용",
+  rai_data_biases: "예: 도시 지역(서울·수도권)에 측정소가 집중되어 있어 농촌 지역의 대표성이 낮음",
+  quality_annotation: "예: 월 1회 수동 검수 완료 (환경전문가 검토)",
+  rai_known_limitations: "예: 일부 측정소는 장비 유지보수 기간 동안 측정값 누락",
+  rai_missing_data: "예: 결측 사유: 센서 점검(2.1%), 통신 오류(1.1%)",
+};
+
 function FieldControl({ m, field, id, value }: { m: FormModel; field: MetaField; id: string; value: FieldValue }) {
   const disabled = !m.editable;
   const text = Array.isArray(value) ? "" : value;
@@ -710,7 +740,18 @@ function FieldControl({ m, field, id, value }: { m: FormModel; field: MetaField;
     case "tags":
       return <TagInput id={id} name={field.name} value={Array.isArray(value) ? value : []} disabled={disabled} onChange={(v) => m.setField(field.name, v)} />;
     case "textarea":
-      return <textarea id={id} className="textarea" data-focus={field.name} rows={3} value={text} disabled={disabled} onChange={(e) => onText(e.target.value)} />;
+      return (
+        <textarea
+          id={id}
+          className="textarea"
+          data-focus={field.name}
+          rows={3}
+          placeholder={PLACEHOLDER[field.name]}
+          value={text}
+          disabled={disabled}
+          onChange={(e) => onText(e.target.value)}
+        />
+      );
     case "org":
       return <OrgControl id={id} name={field.name} value={text} disabled={disabled} orgsQ={m.orgsQ} onChange={onText} />;
     case "media_type":
@@ -764,7 +805,7 @@ function FieldControl({ m, field, id, value }: { m: FormModel; field: MetaField;
             data-focus={field.name}
             type={field.type === "date" ? "date" : "text"}
             inputMode={field.type === "url" ? "url" : undefined}
-            placeholder={field.type === "duration" ? "예: PT5M, P1D" : field.type === "url" ? "예: https://…" : undefined}
+            placeholder={field.type === "duration" ? "예: PT5M, P1D" : field.type === "url" ? "예: https://…" : PLACEHOLDER[field.name]}
             list={listId}
             value={text}
             disabled={disabled}

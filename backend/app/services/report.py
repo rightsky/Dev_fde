@@ -17,15 +17,20 @@ def render_report(process: Process, dr: DiagnosisRun) -> str:
         pct = "—" if a["pct"] is None else f"{a['pct']}%"
         rows.append(f"<tr><td>{e(a['name'])}</td><td class=n>{a['items']}</td><td class=n>{a['score']:g}</td>"
                     f"<td class=n>{pct}</td><td class=n>{a['auto']}</td><td class=n>{a['manual']}</td>"
-                    f"<td class=n>{a['implemented']} / {a['guideline_items']}</td></tr>")
+                    f"<td class=n>{a['guideline_items']}</td></tr>")
     items = []
     for it in dr.items:
         label, color = _STATUS[it["status"]]
         ds = "".join(f"<li>{e(d['name'])} — {e(d['detail'])}</li>" for d in it["datasets"] if d["status"] != "met")
         ev = "<br>".join(e(x) for x in it["evidence"])
-        items.append(f"<tr><td>{e(it['id'])}</td><td>{e(it['name'])}<div class=s>{e(it['basis'])}</div></td>"
+        level = f" · {e(it['level'])}" if it.get("level") and it["level"] != "원칙" else ""
+        text = f"<div>{e(it['text'])}</div>" if it.get("text") else ""
+        crit = f"<div class=s>판정 기준: {e(it['criteria'])}</div>" if it.get("criteria") else ""
+        rel = ("<div class=s>연결 항목: " + ", ".join(f"{e(c['id'])} {_STATUS[c['status']][0]}" for c in it["related"]) + "</div>"
+               if it.get("related") else "")
+        items.append(f"<tr><td>{e(it['id'])}</td><td><b>{e(it['name'])}</b>{text}<div class=s>{e(it['basis'])}{level}</div>{crit}</td>"
                      f"<td>{e(it['method'])}</td><td style='color:{color};font-weight:700'>{label}</td>"
-                     f"<td>{ev}{'<ul>' + ds + '</ul>' if ds else ''}</td></tr>")
+                     f"<td>{ev}{'<ul>' + ds + '</ul>' if ds else ''}{rel}</td></tr>")
     road = "".join(f"<tr><td class=n>{r['rank']}</td><td>{e(r['name'])}<div class=s>{e(r['action'])}</div></td>"
                    f"<td class=n>+{r['gain']:g}</td><td>{e(r['difficulty'])}</td><td class=s>{e(r['basis'])}</td></tr>"
                    for r in s["roadmap"])
@@ -46,12 +51,14 @@ ul{{margin:4px 0 0 16px;padding:0}} .box{{background:#F5F6F8;border:1px solid #E
 <div class=box><b>{e(process.name)}</b> · 조합 「{e(process.combo_title or '')}」 · 데이터셋 {s['dataset_count']}건 · {'발행' if s['mode'] == 'publish' else '초안'} 모드</div>
 <h2>총점</h2>
 <div class=box><span class=score>{dr.score:g}</span> / {dr.max_score:g}점 ({pct}%) ·
-충족 {s['counts']['met']} · 부분 {s['counts']['partial']} · 미흡 {s['counts']['unmet']} · 확인 대기 {s['counts']['pending']} · 해당 없음 {s['counts']['na']}
+가이드라인 {s['guideline_total']}항목 중 충족 {s['counts']['met']} · 부분 {s['counts']['partial']} · 미흡 {s['counts']['unmet']} · 확인 대기 {s['counts']['pending']} · 해당 없음 {s['counts']['na']} (만점에서 제외)
 <div class=s style="margin-top:6px">{e(s['note'])}</div></div>
 <h2>영역별 충족률</h2>
-<table><tr><th>영역</th><th>판정 항목</th><th>점수</th><th>충족률</th><th>자동</th><th>수기</th><th>구현 / 가이드라인 항목 수</th></tr>{''.join(rows)}</table>
+<table><tr><th>영역</th><th>판정 항목</th><th>점수</th><th>충족률</th><th>자동</th><th>담당자 확인</th><th>가이드라인 항목 수</th></tr>{''.join(rows)}</table>
+<div class=s>판정 항목은 가이드라인 항목 가운데 이 조합에 적용되는 항목 수입니다 (해당 없음 제외).</div>
 <h2>조치 우선순위</h2>
 <table><tr><th>순위</th><th>조치</th><th>가산</th><th>난이도</th><th>근거</th></tr>{road or '<tr><td colspan=5>조치할 항목이 없습니다</td></tr>'}</table>
 <h2>항목별 판정</h2>
-<table><tr><th>ID</th><th>항목 · 근거</th><th>판정 방식</th><th>판정</th><th>증거</th></tr>{''.join(items)}</table>
+<div class=s style="margin-bottom:6px">항목 문구는 가이드라인 원문이고, 판정 기준은 FDE Data Studio 가 정한 것입니다.</div>
+<table><tr><th>ID</th><th>항목 (원문) · 근거 · 판정 기준</th><th>판정 방식</th><th>판정</th><th>증거</th></tr>{''.join(items)}</table>
 </body></html>"""

@@ -40,7 +40,7 @@
 | PATCH | `/api/processes/{pid}` | ProcessPatch {name?, current_step?, pub_mode?} | Update Process |
 | DELETE | `/api/processes/{pid}` |  | Purge Process |
 | GET | `/api/processes/{pid}/activities` | ?limit | Process Activities |
-| PUT | `/api/processes/{pid}/attestations/{item_id}` | AttestIn {status, note?, evidence?} | Attest |
+| PUT | `/api/processes/{pid}/attestations/{item_id}` | AttestIn {status: met·partial·unmet·na, note?, evidence?} | 담당자 확인 기록 (HUMAN-ATTEST 항목만. 미흡 외에는 evidence 필수) |
 | PUT | `/api/processes/{pid}/combo` | ComboIn {dataset_ids, source?} | Set Combo |
 | POST | `/api/processes/{pid}/combo/confirm` | ComboConfirmIn {title, description?} | Confirm Combo |
 | POST | `/api/processes/{pid}/combo/unconfirm` |  | Unconfirm Combo |

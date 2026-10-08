@@ -151,6 +151,50 @@ def test_05_metadata_approval(client):
     assert pv["validation"]["passed"] is True
 
 
+def test_05b_guideline_metadata_fields(client):
+    """가이드라인 표 9~12 항목을 도로목록 1건에만 채운다 (교통사고·스트림은 최소 입력으로 둔다)."""
+    did = S["d_road"]
+    assert client.patch(f"/api/datasets/{did}/meta", json={"values": {"contact_phone": "전화없음"}}).status_code == 422
+    assert client.patch(f"/api/datasets/{did}/meta", json={"values": {"landing_page": "data.example.go.kr"}}).status_code == 422
+    r = client.patch(f"/api/datasets/{did}/meta", json={"values": {
+        "creator": "도로정책과", "references": ["도로법 제23조", "https://www.law.go.kr/법령/도로법 제23조"],
+        "landing_page": "https://data.example.go.kr/dataset/{road}", "provenance": "국가교통DB 에서 월 1회 내려받아 중복 구간을 제거",
+        "access_url": "https://data.example.go.kr/file/road.xlsx", "endpoint_url": "https://api.example.go.kr/road/v1",
+        "accrual_periodicity": "P1M", "contact_name": "도로정책과 담당자", "contact_email": "road@example.go.kr",
+        "contact_phone": "044-201-3114", "version": "2026.01.v1", "issued": "2026-01-15", "modified": "2026-08-01",
+        "version_notes": "최초 공개", "rights": "출처를 표시하면 상업적 이용과 변경을 허용한다",
+        "quality_annotation": "월 1회 수동 검수 완료", "rai_missing_data": "차로수 결측 2% — 조사 누락, 대체하지 않음",
+        "spatial": "대한민국"}})
+    assert r.status_code == 200, r.text
+    assert r.json()["meta_confirmed_at"] is not None, "권장·선택 필드를 채워도 확정은 유지된다"
+    pv = client.get(f"/api/datasets/{did}/preview").json()
+    g = Graph().parse(data=pv["turtle"], format="turtle")
+    ds = URIRef(pv["iri"])
+    OWL = Namespace("http://www.w3.org/2002/07/owl#")
+    ADMS = Namespace("http://www.w3.org/ns/adms#")
+    DQV = Namespace("http://www.w3.org/ns/dqv#")
+    VCARD = Namespace("http://www.w3.org/2006/vcard/ns#")
+    FOAF = Namespace("http://xmlns.com/foaf/0.1/")
+    RAI = Namespace("http://mlcommons.org/croissant/RAI/")
+    assert str(g.value(ds, OWL.versionInfo)) == "2026.01.v1" and str(g.value(ds, ADMS.versionNotes)) == "최초 공개"
+    assert (g.value(ds, DCTERMS.creator), RDF.type, FOAF.Agent) in g
+    # 주소에 Turtle 로 쓸 수 없는 문자가 있어도 정본을 만들 수 있다 (퍼센트 인코딩, 한글은 그대로)
+    assert str(g.value(ds, DCAT.landingPage)) == "https://data.example.go.kr/dataset/%7Broad%7D"
+    assert URIRef("https://www.law.go.kr/법령/도로법%20제23조") in set(g.objects(ds, DCTERMS.references))
+    assert (g.value(ds, DCTERMS.provenance), RDF.type, DCTERMS.ProvenanceStatement) in g
+    assert str(g.value(ds, DCTERMS.language)) == "http://id.loc.gov/vocabulary/iso639-1/ko"
+    assert (g.value(ds, DCTERMS.rights), RDF.type, DCTERMS.RightsStatement) in g
+    assert (g.value(ds, DQV.hasQualityAnnotation), RDF.type, DQV.QualityAnnotation) in g
+    assert g.value(ds, RAI.dataCollectionMissingData) is not None
+    assert str(g.value(g.value(ds, DCAT.contactPoint), VCARD.hasTelephone)) == "tel:044-201-3114"
+    dist = g.value(ds, DCAT.distribution)
+    svc = g.value(dist, DCAT.accessService)
+    assert (svc, RDF.type, DCAT.DataService) in g and str(g.value(svc, DCAT.endpointURL)) == "https://api.example.go.kr/road/v1"
+    # 파일형 데이터셋의 API 접근 서비스는 스트림 셰이프(StreamServiceShape)의 대상이 아니다
+    assert pv["validation"]["passed"] is True, [x for x in pv["validation"]["results"] if x["severity"] == "Violation"]
+    assert not [x for x in pv["validation"]["results"] if x["shape"] == "StreamServiceShape"]
+
+
 def test_06_classification(client):
     sug = client.get(f"/api/datasets/{S['d_road']}/classification/suggestions").json()["suggestions"]
     by = {(s["axis"], s["code"]) for s in sug}
@@ -320,25 +364,88 @@ def test_11_diagnosis_and_attestation(client):
     assert r.status_code == 200, r.text
     run = r.json()["run"]
     items = {i["id"]: i for i in run["items"]}
-    assert items["M-03"]["status"] == "met" and items["M-04"]["status"] == "met"
-    assert items["C-01"]["status"] == "met", items["C-01"]
-    assert items["C-02"]["status"] == "partial", "사고 CSV 는 결측 표기가 혼재한다"
-    assert items["P-06"]["status"] == "partial", "사고 CSV 의 발생일시가 ISO 8601 이 아니다"
-    assert items["O-06"]["status"] == "unmet" and items["O-06"]["route"]["focus"] == "rai_data_biases"
-    assert items["T-01"]["status"] == "pending", "개인정보 의심 컬럼(차량번호)이 있어 담당자 확인이 필요하다"
-    assert items["C-04"]["status"] == "pending"
-    assert items["R-04"]["status"] == "partial"
-    assert run["max_score"] == len([i for i in run["items"] if i["status"] != "na"])
-    assert run["summary"]["roadmap"][0]["difficulty"] == "낮음"
-    before = run["score"]
+    sm = run["summary"]
+    # 가이드라인 80항목 전체를 판정한다
+    assert len(items) == 80 and sm["guideline_total"] == sm["implemented_total"] == 80
+    assert [a["implemented"] for a in sm["areas"]] == [a["guideline_items"] for a in sm["areas"]] == [22, 7, 15, 15, 18, 3]
+    assert all(i["text"] and i["criteria"] and i["level"] for i in items.values())
+    assert items["M-01"]["text"] == "데이터셋의 공식 명칭" and items["M-01"]["property"] == "dct:title"
+    assert items["P-01"]["text"].startswith("데이터는 개방형 방식으로 제공되어야 하며")
 
-    assert client.put(f"/api/processes/{pid}/attestations/M-01", json={"status": "met", "evidence": "x"}).status_code == 422
-    assert client.put(f"/api/processes/{pid}/attestations/C-04", json={"status": "met"}).status_code == 422
-    assert client.put(f"/api/processes/{pid}/attestations/C-04", json={"status": "met", "evidence": "공유폴더/데이터카드_v1.docx"}).status_code == 200
+    # 메타데이터 (표 9~12): 도로목록만 채웠으므로 대부분 부분 충족이다
+    assert items["M-01"]["status"] == "met" and items["M-05"]["status"] == "met" and items["M-10"]["status"] == "met"
+    assert items["M-04"]["status"] == "partial" and items["M-04"]["route"]["focus"] == "creator"
+    assert {d["status"] for d in items["M-13"]["datasets"]} == {"met"} and len(items["M-13"]["datasets"]) == 2, "스트림은 배포본 항목에서 빠진다"
+    m14 = {d["id"]: d for d in items["M-14"]["datasets"]}
+    assert m14[S["d_road"]]["status"] == "met" and m14[S["d_acc"]]["status"] == "unmet"
+    assert m14[S["d_stream"]]["status"] == "met" and m14[S["d_stream"]]["focus"] == "endpoint_url"
+    assert items["M-21"]["status"] == "partial", "공공누리(license)는 도로목록뿐이고 나머지는 제공 조건(accessRights)만 있다"
+    assert items["O-04"]["status"] == "unmet" and items["O-04"]["route"]["focus"] == "rai_data_biases"
+    assert items["O-03"]["status"] == "met" and items["O-05"]["status"] == "partial"
+
+    # 체크리스트 (부록 3)
+    c01 = {d["id"]: d["status"] for d in items["C-01"]["datasets"]}
+    assert c01 == {S["d_road"]: "unmet", S["d_acc"]: "met"}, "XLSX 는 비권장 포맷, CSV 는 권장 오픈 포맷"
+    assert items["C-04"]["status"] == "met"
+    assert items["C-07"]["status"] in ("partial", "unmet"), "사고 CSV 의 발생일시가 ISO 8601 이 아니다"
+    assert items["C-09"]["status"] == "partial", "사고 CSV 는 결측 표기가 혼재한다"
+    assert items["C-12"]["status"] == "pending", "개인정보 의심 컬럼(차량번호)이 있어 담당자 확인이 필요하다"
+    assert items["R-10"]["status"] == "pending" and items["R-10"]["attestable"]
+    assert items["R-12"]["status"] == "met" and items["R-18"]["status"] == "met"
+    r06 = {d["id"]: d["status"] for d in items["R-06"]["datasets"]}
+    assert r06 == {S["d_road"]: "met", S["d_acc"]: "partial", S["d_stream"]: "partial"}, "출처·가공 이력은 도로목록에만 적었다"
+    assert items["R-13"]["status"] == "partial" and items["R-14"]["status"] == "met"
+    r13 = {d["id"]: d["status"] for d in items["R-13"]["datasets"]}
+    assert r13 == {S["d_road"]: "met", S["d_acc"]: "unmet", S["d_stream"]: "partial"}, "kafka:// 는 웹 기반 API 가 아니다"
+    assert len(items["R-14"]["datasets"]) == 1, "API 엔드포인트가 없는 데이터셋은 해당 없음"
+    assert items["R-02"]["status"] == "na" and items["R-02"]["score"] is None
+    assert items["R-15"]["status"] == "pending" and items["U-01"]["status"] == "pending"
+
+    # 종합 항목: 연결 항목의 판정을 종합한다
+    assert items["C-05"]["method"] == "AUTO-DERIVED" and len(items["C-05"]["related"]) == 22
+    assert items["C-05"]["status"] == "partial"
+    assert [c["id"] for c in items["P-03"]["related"]] == ["C-04", "C-05"] and items["P-03"]["status"] == "partial"
+    assert items["P-11"]["status"] == "pending", "연결 항목이 전부 확인 대기면 확인 대기"
+    assert items["P-12"]["status"] == "met" and items["P-15"]["status"] == "met"
+
+    assert run["max_score"] == len([i for i in run["items"] if i["status"] != "na"])
+    assert sum(m["total"] for m in sm["methods"]) == 80
+    road = sm["roadmap"]
+    assert road[0]["difficulty"] == "낮음" and all(x["method"] != "AUTO-DERIVED" for x in road)
+    before, max_before = run["score"], run["max_score"]
+
+    att = f"/api/processes/{pid}/attestations"
+    assert client.put(f"{att}/M-01", json={"status": "met", "evidence": "x"}).status_code == 422, "자동 판정 항목"
+    assert client.put(f"{att}/P-01", json={"status": "met", "evidence": "x"}).status_code == 422, "종합 항목"
+    assert client.put(f"{att}/R-10", json={"status": "met"}).status_code == 422, "증빙 필수"
+    assert client.put(f"{att}/P-10", json={"status": "na"}).status_code == 422, "해당 없음에도 사유가 필요하다"
+    assert client.put(f"{att}/R-10", json={"status": "met", "evidence": "공유폴더/데이터카드_v1.docx"}).status_code == 200
+    assert client.put(f"{att}/P-10", json={"status": "na", "evidence": "AI 에이전트·MCP 로 제공하지 않는 데이터"}).status_code == 200
+    assert client.put(f"{att}/C-15", json={"status": "met", "evidence": "기관 누리집 오류 신고 게시판"}).status_code == 200
     run = client.post(f"/api/processes/{pid}/diagnosis-runs").json()["run"]
-    assert run["score"] == before + 1 and {i["id"]: i for i in run["items"]}["C-04"]["status"] == "met"
+    items = {i["id"]: i for i in run["items"]}
+    assert items["R-10"]["status"] == "met" and items["P-10"]["status"] == "na" and items["P-10"]["score"] is None
+    assert items["C-15"]["status"] == "met" and items["P-11"]["status"] == "met", "연결 항목이 충족되면 원칙도 충족된다"
+    assert run["max_score"] == max_before - 1 and run["score"] == before + 3
     rep = client.get(f"/api/diagnosis-runs/{run['id']}/report")
-    assert rep.status_code == 200 and "가이드라인 준수 진단 보고서" in rep.text
+    assert rep.status_code == 200 and "가이드라인 준수 진단 보고서" in rep.text and "데이터셋의 공식 명칭" in rep.text
+    latest = client.get(f"/api/processes/{pid}/diagnosis-runs/latest").json()
+    assert latest["ruleset"]["implemented_total"] == 80 and latest["ruleset"]["method_counts"]["HUMAN-ATTEST"] == 18
+
+    # 담당자 확인은 그때의 조합을 보고 한 것이므로, 그 뒤에 조합 구성이 바뀌면 다시 확인받는다
+    from app.db import SessionLocal
+    from app.services import activity
+
+    with SessionLocal() as db:
+        activity.log(db, "combo_change", "조합 변경 — (테스트)", process_id=pid)
+        db.commit()
+    items = {i["id"]: i for i in client.post(f"/api/processes/{pid}/diagnosis-runs").json()["run"]["items"]}
+    assert items["R-10"]["status"] == "pending" and items["R-10"]["attestation"]["outdated"] is True
+    assert "다시 확인 필요" in items["R-10"]["evidence"][0] and items["P-10"]["status"] == "pending"
+    assert client.put(f"{att}/R-10", json={"status": "met", "evidence": "공유폴더/데이터카드_v2.docx"}).status_code == 200
+    assert client.delete(f"{att}/C-15").status_code == 200 and client.delete(f"{att}/C-15").status_code == 404
+    items = {i["id"]: i for i in client.post(f"/api/processes/{pid}/diagnosis-runs").json()["run"]["items"]}
+    assert items["R-10"]["status"] == "met" and items["C-15"]["status"] == "pending" and items["C-15"]["attestation"] is None
 
     r = client.post(f"/api/processes/{pid}/complete")
     assert r.status_code == 200 and r.json()["process"]["status"] == "completed"
