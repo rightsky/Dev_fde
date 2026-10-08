@@ -198,6 +198,10 @@ export const api = {
   confirmMeta: (did: number) => post<T.Dataset>(`/datasets/${did}/meta/confirm`),
   unconfirmMeta: (did: number) => post<T.Dataset>(`/datasets/${did}/meta/unconfirm`),
   preview: (did: number) => get<T.Preview>(`/datasets/${did}/preview`),
+  dictionary: (did: number) => get<T.DictPayload>(`/datasets/${did}/dictionary`),
+  putDictionary: (did: number, entries: { table: string; column: string; description: string; unit: string; codes: string }[]) =>
+    put<T.DictPayload>(`/datasets/${did}/dictionary`, { entries }),
+  cardPreview: (did: number) => get<T.CardPreview>(`/datasets/${did}/card`),
 
   // STEP 4
   classSuggestions: (did: number) =>
@@ -268,5 +272,5 @@ export const downloads = {
   runZip: (runId: number) => `/serialization-runs/${runId}/download`,
   validationReport: (runId: number, datasetId: number) => `/validation-runs/${runId}/report?dataset_id=${datasetId}`,
   diagnosisReport: (runId: number) => `/diagnosis-runs/${runId}/report`,
-  catalogRaw: (rid: string, format: "ttl" | "jsonld" | "txt" | "schema") => `/catalog/${encodeURIComponent(rid)}/raw?format=${format}`,
+  catalogRaw: (rid: string, format: "ttl" | "jsonld" | "txt" | "schema" | "croissant" | "card" | "dict") => `/catalog/${encodeURIComponent(rid)}/raw?format=${format}`,
 };

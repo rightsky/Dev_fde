@@ -19,7 +19,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..models import Activity, Attestation, DiagnosisRun, Process, ProcessDataset, Relation, User, utcnow
-from . import activity, canonical, minting, serialize, validation
+from . import activity, canonical, documents, minting, serialize, validation
 from .reference import fix_route, guideline_rules
 
 # 가이드라인 2.1.1 「데이터별 권장 오픈 포맷」 표 (이 스튜디오가 받는 형식 범위에서)
@@ -160,6 +160,32 @@ def _b_schema_hint(ctx: _Ctx, pd: ProcessDataset):
     return "attest", f"컬럼 {n}개 — 이름·자료형·필수 여부가 CSVW 스키마로 정본에 " + ("있음" if has else "없음")
 
 
+def _artifact(ctx: _Ctx, pd: ProcessDataset, fmt: str):
+    return next((a for a in ctx.sr.artifacts if a.dataset_id == pd.id and a.fmt == fmt), None) if ctx.sr else None
+
+
+def _grade(done: int, total: int, threshold: float) -> Any:
+    ratio = done / total if total else 0
+    return True if ratio >= threshold else ("partial" if ratio >= 0.5 else False)
+
+
+def _b_data_dictionary(ctx: _Ctx, pd: ProcessDataset):
+    done, total = documents.dictionary_coverage(pd)
+    if not total:
+        return None
+    if not _artifact(ctx, pd, "dict"):
+        return False, f"STEP 7 데이터 사전 미산출 (정의 작성 {done}/{total}개)"
+    return _grade(done, total, 1.0), f"데이터 사전 산출 · 정의 작성 {done}/{total}개"
+
+
+def _b_data_card(ctx: _Ctx, pd: ProcessDataset):
+    art = _artifact(ctx, pd, "card")
+    done, total = documents.card_coverage(documents.card_items(ctx.canon[pd.id], pd, ctx.vr))
+    if not art:
+        return False, f"STEP 7 데이터 카드 미산출 (필수 칸 {done}/{total}개 작성 가능)"
+    return _grade(done, total, 0.9), f"데이터 카드 {art.filename} · 필수 칸 {done}/{total}개 작성 ({round(done / total * 100)}%)"
+
+
 def _b_machine_readable(ctx: _Ctx, pd: ProcessDataset):
     if not ctx.sr:
         return False, "STEP 7 변환 미실행"
@@ -248,7 +274,8 @@ _BUILTINS = {"minted": _b_minted, "periodicity": _b_periodicity, "related": _b_r
              "open_format": _b_open_format, "structured": _b_structured, "schema_defined": _b_schema_defined,
              "schema_hint": _b_schema_hint, "machine_readable": _b_machine_readable, "iso8601": _b_iso8601,
              "missing_markers": _b_missing_markers, "large_format": _b_large_format, "web_api": _b_web_api, "api_alt": _b_api_alt,
-             "api_hint": _b_api_hint, "numeric_hint": _b_numeric_hint, "pii": _b_pii}
+             "api_hint": _b_api_hint, "numeric_hint": _b_numeric_hint, "pii": _b_pii,
+             "data_dictionary": _b_data_dictionary, "data_card": _b_data_card}
 # 판정기가 '해당 없음'을 돌려줄 때 화면에 적을 사유
 _NA_REASON = {"related": "조합에 데이터셋이 1건뿐임", "iso8601": "날짜·시각 컬럼 없음", "large_format": "100MB 미만이라 대용량이 아님",
               "api_alt": "API 엔드포인트 미선언", "api_hint": "API 엔드포인트 미선언", "numeric_hint": "수치 컬럼 없음",

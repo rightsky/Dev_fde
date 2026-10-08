@@ -1,6 +1,6 @@
 """STEP 7 직렬화·포맷 변환 + 파생 자가검증.
 
-검증을 통과한 데이터셋만 대상이다. 정본 그래프 1개에서 4개 포맷을 만들고, 만든 직후 실제 파서로 다시 읽어
+검증을 통과한 데이터셋만 대상이다. 정본 그래프 1개에서 RDF·JSON 4개 포맷과 문서 3개(데이터 카드·데이터 사전·Croissant)를 만들고, 만든 직후 실제 파서로 다시 읽어
 정본과 같은지 확인한다. 자가검증에 실패한 데이터셋의 산출물은 저장하지 않는다.
 """
 from __future__ import annotations
@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..models import Artifact, Process, ProcessDataset, SerializationRun, User, ValidationRun, utcnow
-from . import activity, canonical, validation
+from . import activity, canonical, documents, validation
 
 FORMATS: list[dict[str, str]] = [
     {"key": "ttl", "label": "Turtle (RDF 정본)", "tag": "TTL", "suffix": ".ttl", "media_type": "text/turtle",
@@ -31,6 +31,12 @@ FORMATS: list[dict[str, str]] = [
      "use": "sLLM RAG 입력 · 벡터DB 적재용 코퍼스"},
     {"key": "schema", "label": "순수 JSON + 스키마", "tag": "스키마", "suffix": "_schema.json", "media_type": "application/json",
      "use": "제약 디코딩용 스키마 · 스키마 레지스트리"},
+    {"key": "croissant", "label": "Croissant 1.0 (ML 데이터셋 메타데이터)", "tag": "Croissant", "suffix": "_croissant.json",
+     "media_type": "application/ld+json", "use": "AI 학습 도구 연계 · 표 13 수치 메타데이터(RecordSet·Field) · RAI 항목"},
+    {"key": "card", "label": "데이터 카드 (부록 4)", "tag": "데이터 카드", "suffix": "_데이터카드.md", "media_type": "text/markdown",
+     "use": "가이드라인 부록 4 양식 · 이용자 배포용 설명 문서"},
+    {"key": "dict", "label": "데이터 사전", "tag": "데이터 사전", "suffix": "_데이터사전.csv", "media_type": "text/csv",
+     "use": "컬럼별 정의·단위·코드값 · 엑셀로 열람"},
 ]
 FORMAT_KEYS = [f["key"] for f in FORMATS]
 _AUTO_PREFIX = re.compile(r"@prefix ns\d+:")
@@ -182,12 +188,17 @@ def render_schema(canon: canonical.Canonical) -> str:
     return json.dumps(schema, ensure_ascii=False, indent=2) + "\n"
 
 
-def render_all(canon: canonical.Canonical, mode: str) -> dict[str, str]:
+def render_all(canon: canonical.Canonical, mode: str, pd: ProcessDataset, vr: ValidationRun | None = None) -> dict[str, str]:
+    name = (pd.meta or {}).get("title") or pd.asset.name
+    base = file_base(canon.resource_id, name)
+    files = [base + f["suffix"] for f in FORMATS if f["key"] != "card"]
     return {"ttl": render_ttl(canon, mode), "jsonld": render_jsonld(canon), "txt": render_txt(canon),
-            "schema": render_schema(canon)}
+            "schema": render_schema(canon), "croissant": documents.render_croissant(canon, pd),
+            "card": documents.render_card(canon, pd, vr, files), "dict": documents.render_dictionary(canon, pd)}
 
 
-def self_verify(canon: canonical.Canonical, contents: dict[str, str], validated_checksum: str | None) -> dict[str, Any]:
+def self_verify(canon: canonical.Canonical, contents: dict[str, str], validated_checksum: str | None,
+                pd: ProcessDataset | None = None) -> dict[str, Any]:
     """산출물을 실제 파서로 다시 읽어 정본과 대조한다."""
     checks: list[dict[str, Any]] = []
     g_ttl: Graph | None = None
@@ -224,6 +235,8 @@ def self_verify(canon: canonical.Canonical, contents: dict[str, str], validated_
         checks.append({"name": "⑥ JSON 인스턴스 스키마 적합", "ok": True, "detail": f"필수 {len(schema['required'])}필드"})
     except Exception as exc:  # noqa: BLE001
         checks.append({"name": "⑥ JSON 인스턴스 스키마 적합", "ok": False, "detail": str(exc)[:200]})
+    if pd is not None:
+        checks.append(documents.verify(canon, pd, contents))
     return {"passed": all(c["ok"] for c in checks), "checks": checks}
 
 
@@ -243,8 +256,8 @@ def run(db: Session, process: Process, user: User, vr: ValidationRun, formats: l
             continue
         canon = canonical.build(db, pd, vr.mode)
         try:
-            contents = render_all(canon, vr.mode)
-            sv = self_verify(canon, contents, res.checksum)
+            contents = render_all(canon, vr.mode, pd, vr)
+            sv = self_verify(canon, contents, res.checksum, pd)
         except Exception as exc:  # noqa: BLE001 - 렌더러 결함은 산출물 폐기로 처리
             contents, sv = {}, {"passed": False, "checks": [{"name": "렌더러 예외", "ok": False, "detail": str(exc)[:300]}]}
         name = (pd.meta or {}).get("title") or pd.asset.name

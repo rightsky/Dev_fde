@@ -57,7 +57,7 @@ export function Step7() {
       <StepHeader
         n={7}
         title="직렬화 · 발행 포맷 변환"
-        sub="검증을 통과한 데이터셋의 정본 그래프를 4개 포맷으로 변환하고, 산출물을 실제 파서로 다시 읽어 정본과 대조합니다."
+        sub="검증을 통과한 데이터셋의 정본 그래프를 RDF·JSON 4개 포맷과 문서 3개(Croissant·데이터 카드·데이터 사전)로 변환하고, 산출물을 실제 파서로 다시 읽어 정본과 대조합니다."
       />
       <ReadOnlyNote />
       <QueryState q={q}>
@@ -356,7 +356,7 @@ function PreviewModal({ artifact: a, tag, onClose }: { artifact: Artifact; tag: 
   const dl = useDownload();
   // 산출물은 저장 뒤 바뀌지 않는다
   const q = useQuery({ queryKey: ["process", pid, "artifact", a.id], queryFn: () => api.artifact(a.id), staleTime: Infinity });
-  const isText = a.fmt === "txt";
+  const isText = a.fmt === "txt" || a.fmt === "card";
   return (
     <Modal
       wide
@@ -390,8 +390,75 @@ function PreviewModal({ artifact: a, tag, onClose }: { artifact: Artifact; tag: 
         <dt>세트 체크섬</dt>
         <dd className="mono">{a.set_checksum}</dd>
       </dl>
-      <QueryState q={q}>{q.data && <CodeBlock text={q.data.content} wrap={isText} light={isText} />}</QueryState>
+      <QueryState q={q}>
+        {q.data && (a.fmt === "dict" ? <CsvTable text={q.data.content} /> : <CodeBlock text={q.data.content} wrap={isText} light={isText} />)}
+      </QueryState>
     </Modal>
+  );
+}
+
+/** 데이터 사전(CSV)을 표로 보여 준다. 따옴표로 감싼 칸(쉼표·줄바꿈 포함)을 처리한다. */
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+  const src = text.replace(/^\uFEFF/, "");
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (quoted) {
+      if (ch === '"' && src[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else if (ch === '"') quoted = false;
+      else cell += ch;
+    } else if (ch === '"') quoted = true;
+    else if (ch === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && src[i + 1] === "\n") i++;
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else cell += ch;
+  }
+  if (cell || row.length) {
+    row.push(cell);
+    rows.push(row);
+  }
+  return rows;
+}
+
+function CsvTable({ text }: { text: string }) {
+  const [head, ...body] = parseCsv(text);
+  if (!head) return null;
+  return (
+    <div className="table-wrap" style={{ maxHeight: "60vh" }}>
+      <table className="table">
+        <thead>
+          <tr>
+            {head.map((h) => (
+              <th key={h} style={{ whiteSpace: "nowrap" }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {body.map((r, i) => (
+            <tr key={i}>
+              {r.map((c, j) => (
+                <td key={j} className="small" style={c.length > 16 ? { minWidth: 200 } : { whiteSpace: "nowrap" }}>
+                  {c}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

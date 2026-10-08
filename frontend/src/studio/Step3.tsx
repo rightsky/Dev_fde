@@ -5,13 +5,13 @@ import type { CSSProperties, FormEvent, KeyboardEvent, ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { api } from "../api";
-import type { Dataset, MetaField, Org, Preview, Reference, Severity } from "../types";
+import type { CardItem, Dataset, DictRow, MetaField, Org, Preview, Reference, Severity } from "../types";
 import { Badge, Banner, Button, Card, CodeBlock, ConfirmButton, Empty, QueryState, Tabs, cx, errText, fmtDateTime, fmtNum, shortHash, useToast } from "../ui";
 import { useStudio } from "./context";
 import { DatasetList, Gate0List, ProfileTable, ReadOnlyNote, ReadinessBadge, StepHeader, ValidationRows } from "./shared";
 
 // ───────────── 타입 · 상수
-type TabKey = "class" | "form" | "prov" | "profile";
+type TabKey = "class" | "form" | "card" | "dict" | "prov" | "profile";
 type PreviewFmt = "ttl" | "jsonld" | "txt";
 /** 폼에서 다루는 값. 태그형은 string[], 나머지는 문자열(기관은 id 를 문자열로)이다. */
 type FieldValue = string | string[];
@@ -20,12 +20,15 @@ type OrgsQuery = UseQueryResult<Org[]>;
 
 const EMPTY_DRAFT: Draft = {};
 const CLASS_FOCUS = "extra_classes";
+const DICT_FOCUS = "dictionary";
 const LEVELS: MetaField["level"][] = ["필수", "권장", "선택"];
 const TABS: { key: TabKey; label: string }[] = [
   { key: "class", label: "① 클래스" },
   { key: "form", label: "② 프러퍼티 폼" },
-  { key: "prov", label: "③ 프로버넌스" },
-  { key: "profile", label: "④ 원천 프로파일" },
+  { key: "dict", label: "③ 데이터 사전" },
+  { key: "card", label: "④ 데이터 카드" },
+  { key: "prov", label: "⑤ 프로버넌스" },
+  { key: "profile", label: "⑥ 원천 프로파일" },
 ];
 /** 수정 경로의 focus 이름 → 폼 필드 이름 (다른 이름은 필드 이름과 같다) */
 const FOCUS_ALIAS: Record<string, string> = { publisher: "publisher_org_id" };
@@ -166,11 +169,12 @@ export function Step3() {
   const requestFocus = useCallback(
     (raw: string) => {
       const name = FOCUS_ALIAS[raw] ?? raw;
-      if (name !== CLASS_FOCUS && !fieldNames.has(name)) return;
-      setTab(name === CLASS_FOCUS ? "class" : "form");
+      if (name !== CLASS_FOCUS && name !== DICT_FOCUS && !fieldNames.has(name)) return;
+      const group = reference.meta_fields.find((f) => f.name === name)?.group;
+      setTab(name === CLASS_FOCUS ? "class" : name === DICT_FOCUS ? "dict" : group === "card" ? "card" : "form");
       setFocusReq((r) => ({ name, n: (r?.n ?? 0) + 1 }));
     },
-    [fieldNames],
+    [fieldNames, reference.meta_fields],
   );
 
   useEffect(() => {
@@ -378,11 +382,13 @@ export function Step3() {
           <Tabs tabs={TABS} value={tab} onChange={setTab} />
 
           {tab === "class" && <ClassTab key={dataset.id} pid={pid} dataset={dataset} reference={reference} editable={editable} busy={busy} onToggle={toggleClass} />}
-          {tab === "form" && <FormTab key={dataset.id} m={model} fields={fields} />}
+          {tab === "form" && <FormTab key={dataset.id} m={model} fields={fields.filter((f) => f.group !== "card")} />}
+          {tab === "dict" && <DictTab key={dataset.id} pid={pid} did={dataset.id} editable={editable} onSaved={refresh} />}
+          {tab === "card" && <CardTab key={dataset.id} pid={pid} m={model} fields={fields.filter((f) => f.group === "card")} dirtyCount={dirtyCount} />}
           {tab === "prov" && <ProvTab key={dataset.id} pid={pid} dataset={dataset} publisher={publisher} />}
           {tab === "profile" && <ProfileTab key={dataset.id} pid={pid} did={dataset.id} />}
 
-          {(tab === "form" || dirtyCount > 0) && (
+          {(tab === "form" || tab === "card" || dirtyCount > 0) && (
             <SaveBar
               dirty={dirty}
               invalidCount={dirty.filter((f) => formatError(f, draft[f.name]) != null).length}
@@ -1007,7 +1013,199 @@ function SaveBar(props: {
   );
 }
 
-// ───────────── ③ 프로버넌스
+// ───────────── ③ 데이터 사전
+type DictDraft = Record<string, { description: string; unit: string; codes: string }>;
+const dictKey = (r: { table: string; column: string }) => `${r.table}\u0000${r.column}`;
+
+function DictTab({ pid, did, editable, onSaved }: { pid: number; did: number; editable: boolean; onSaved: () => Promise<void> }) {
+  const q = useQuery({ queryKey: ["process", pid, "dataset", did, "dictionary"], queryFn: () => api.dictionary(did) });
+  const toast = useToast();
+  const [draft, setDraft] = useState<DictDraft>({});
+  const [busy, setBusy] = useState(false);
+  const rows = q.data?.rows ?? [];
+  const value = (r: DictRow) => draft[dictKey(r)] ?? { description: r.description, unit: r.unit, codes: r.codes };
+  const changed = rows.filter((r) => {
+    const d = draft[dictKey(r)];
+    return d && (d.description.trim() !== r.description || d.unit.trim() !== r.unit || d.codes.trim() !== r.codes);
+  });
+  const set = (r: DictRow, k: "description" | "unit" | "codes", v: string) => setDraft((s) => ({ ...s, [dictKey(r)]: { ...value(r), [k]: v } }));
+  const save = async () => {
+    setBusy(true);
+    try {
+      await api.putDictionary(
+        did,
+        changed.map((r) => ({ table: r.table, column: r.column, ...value(r) })),
+      );
+      await onSaved();
+      setDraft({});
+      toast.ok(`컬럼 ${changed.length}개의 정의를 저장했습니다 — 정본 그래프의 컬럼 구조에 반영했습니다`);
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const tables = [...new Set(rows.map((r) => r.table))];
+  return (
+    <QueryState q={q}>
+      {q.data && (
+        <div className="col gap-12" data-focus={DICT_FOCUS} style={{ borderRadius: "var(--r-lg)" }}>
+          <Card
+            title={
+              <>
+                데이터 사전{" "}
+                <Badge tone={q.data.total > 0 && q.data.described === q.data.total ? "ok" : "warn"}>
+                  정의 {q.data.described}/{q.data.total}
+                </Badge>
+              </>
+            }
+          >
+            <p className="small muted">
+              컬럼 이름·자료형·결측률·예시값은 원천 프로파일에서 자동으로 채웁니다. 정의·단위·코드값 의미만 적으면 됩니다. 적은 내용은 정본 그래프의 컬럼 구조(CSVW)에 들어가고, STEP 7 에서
+              데이터 사전(CSV)·데이터 카드·Croissant 로 함께 나갑니다. 모든 컬럼에 정의가 있어야 STEP 8 의 데이터 사전 항목(C-06)이 충족됩니다.
+            </p>
+          </Card>
+          {rows.length === 0 && <Empty>원천 프로파일에 컬럼이 없습니다.</Empty>}
+          {tables.map((t) => (
+            <Card key={t} title={<>표 「{t}」</>}>
+              <div className="col gap-8">
+                {rows
+                  .filter((r) => r.table === t)
+                  .map((r) => {
+                    const v = value(r);
+                    const dirty = changed.includes(r);
+                    return (
+                      <div key={dictKey(r)} className="card tight flat" style={{ display: "grid", gridTemplateColumns: "minmax(160px, 220px) minmax(0, 1fr)", gap: 12 }}>
+                        <div className="small">
+                          <div className="bold mono" style={{ fontSize: 13 }}>
+                            {r.column}
+                          </div>
+                          <div className="row wrap gap-4 mt-4">
+                            <Badge>{r.type_label}</Badge>
+                            {r.key && <Badge tone="info">{r.key}</Badge>}
+                            {r.pii && <Badge tone="err">개인정보 의심</Badge>}
+                            {dirty && <Badge tone="warn">미저장</Badge>}
+                          </div>
+                          {r.null_rate != null && (
+                            <div className="muted mt-4">
+                              결측 {(r.null_rate * 100).toFixed(1)}% · 고유값 {fmtNum(r.distinct ?? 0)}
+                            </div>
+                          )}
+                          {r.samples.length > 0 && (
+                            <div className="muted ellipsis" title={r.samples.join(" / ")}>
+                              예: {r.samples.join(" / ")}
+                            </div>
+                          )}
+                        </div>
+                        <div className="col gap-4" style={{ minWidth: 0 }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 120px", gap: 8 }}>
+                            <textarea
+                              className="textarea"
+                              rows={2}
+                              aria-label={`${r.column} 정의`}
+                              value={v.description}
+                              disabled={!editable || busy}
+                              placeholder="정의: 이 컬럼이 무엇인지 (산정기준 포함)"
+                              onChange={(e) => set(r, "description", e.target.value)}
+                            />
+                            <input className="input" style={{ alignSelf: "start" }} aria-label={`${r.column} 단위`} value={v.unit} disabled={!editable || busy} placeholder="단위 (예: m)" onChange={(e) => set(r, "unit", e.target.value)} />
+                          </div>
+                          <input
+                            className="input"
+                            aria-label={`${r.column} 코드값 의미`}
+                            value={v.codes}
+                            disabled={!editable || busy}
+                            placeholder="코드값 의미 (해당 시, 예: 1=국도, 2=지방도)"
+                            onChange={(e) => set(r, "codes", e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </Card>
+          ))}
+          <div className="card tight row between wrap" style={changed.length > 0 ? { position: "sticky", bottom: 8, zIndex: 2, borderColor: "var(--primary)" } : undefined}>
+            <span className="small">{changed.length > 0 ? <b>변경 {changed.length}개 컬럼</b> : <span className="muted">변경 사항 없음</span>}</span>
+            <div className="row">
+              <Button size="sm" disabled={changed.length === 0 || busy} onClick={() => setDraft({})}>
+                되돌리기
+              </Button>
+              <Button variant="primary" busy={busy} disabled={!editable || changed.length === 0} onClick={save}>
+                데이터 사전 저장{changed.length > 0 ? ` (${changed.length})` : ""}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </QueryState>
+  );
+}
+
+// ───────────── ④ 데이터 카드
+const SOURCE_TONE: Record<CardItem["source"], "ok" | "info" | "warn" | "muted"> = { 자동: "ok", 입력: "info", "작성 필요": "warn", "해당 시": "muted" };
+
+function CardTab({ pid, m, fields, dirtyCount }: { pid: number; m: FormModel; fields: MetaField[]; dirtyCount: number }) {
+  const did = m.dataset.id;
+  const q = useQuery({ queryKey: ["process", pid, "dataset", did, "card"], queryFn: () => api.cardPreview(did) });
+  const byItem = new Map(fields.map((f) => [f.card_item, f]));
+  const pct = q.data && q.data.total > 0 ? Math.round((q.data.filled / q.data.total) * 100) : 0;
+  return (
+    <QueryState q={q}>
+      {q.data && (
+        <div className="col gap-12">
+          <Card
+            title={
+              <>
+                데이터 카드 (부록 4){" "}
+                <Badge tone={pct >= 90 ? "ok" : pct >= 50 ? "warn" : "err"}>
+                  필수 칸 {q.data.filled}/{q.data.total} · {pct}%
+                </Badge>
+              </>
+            }
+          >
+            <p className="small muted">
+              가이드라인 부록 4 양식 38칸을 지금 메타데이터·분류·프로파일로 채운 결과입니다. "자동"은 시스템이, "입력"은 프러퍼티 폼·데이터 사전에서 채운 칸입니다. "작성 필요" 가운데 이 탭에서만 쓰는 칸은 아래 입력란에 적습니다. 필수 칸을 90% 이상 채우고
+              STEP 7 에서 변환하면 STEP 8 의 데이터 카드 항목(R-10)이 충족됩니다.
+              {dirtyCount > 0 && <span className="t-warn"> 저장하지 않은 변경은 아래 표에 아직 반영되지 않았습니다.</span>}
+            </p>
+          </Card>
+          {q.data.sections.map((sec, n) => (
+            <Card key={sec.section} title={`${n + 1}. ${sec.section}`}>
+              <div className="col gap-8">
+                {sec.items.map((it) => {
+                  const f = byItem.get(it.item);
+                  return (
+                    <div key={it.item} className="card tight flat">
+                      <div className="row between top wrap">
+                        <span className="bold">{it.item}</span>
+                        <Badge tone={SOURCE_TONE[it.source]}>{it.source}</Badge>
+                      </div>
+                      {f ? (
+                        <div className="mt-4">
+                          <FieldControl m={m} field={f} id={fieldDomId(f.name)} value={m.valueOf(f)} />
+                          {m.isDirty(f.name) && <span className="hint t-warn">미저장</span>}
+                          {it.source === "자동" && it.content && <div className="small muted mt-4">자동으로 채운 내용: {it.content}</div>}
+                        </div>
+                      ) : (
+                        <div className="small mt-4" style={{ whiteSpace: "pre-wrap" }}>
+                          {it.content || <span className="muted">{it.source === "해당 시" ? "해당할 때만 적습니다" : "프러퍼티 폼·데이터 사전·STEP 4 에서 채워집니다"}</span>}
+                          {it.note && <div className="muted">{it.note}</div>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </QueryState>
+  );
+}
+
+// ───────────── ⑤ 프로버넌스
 function ProvTab({ pid, dataset, publisher }: { pid: number; dataset: Dataset; publisher: Org | null }) {
   const q = useQuery({ queryKey: ["process", pid, "activities"], queryFn: () => api.processActivities(pid, 100) });
   const rows = (q.data ?? []).filter((a) => a.dataset_id === dataset.id);
@@ -1081,7 +1279,7 @@ function ProvTab({ pid, dataset, publisher }: { pid: number; dataset: Dataset; p
   );
 }
 
-// ───────────── ④ 원천 프로파일
+// ───────────── ⑥ 원천 프로파일
 function ProfileTab({ pid, did }: { pid: number; did: number }) {
   const q = useQuery({ queryKey: ["process", pid, "dataset", did], queryFn: () => api.dataset(did) });
   const asset = q.data?.asset;

@@ -190,6 +190,24 @@ def test_05b_guideline_metadata_fields(client):
     dist = g.value(ds, DCAT.distribution)
     svc = g.value(dist, DCAT.accessService)
     assert (svc, RDF.type, DCAT.DataService) in g and str(g.value(svc, DCAT.endpointURL)) == "https://api.example.go.kr/road/v1"
+    # 데이터 사전: 컬럼 정의를 적으면 csvw:Table 을 고르지 않아도 컬럼 구조가 정본에 들어간다
+    d = client.get(f"/api/datasets/{did}/dictionary").json()
+    assert d["total"] == 7 and d["described"] == 0 and {r["column"] for r in d["rows"]} >= {"LINK_ID", "도로명"}
+    assert client.put(f"/api/datasets/{did}/dictionary", json={"entries": [{"table": "도로목록", "column": "없는컬럼", "description": "x"}]}).status_code == 422
+    entries = [{"table": r["table"], "column": r["column"], "description": f"{r['column']} 설명",
+                **({"unit": "m"} if r["column"] == "연장(m)" else {})} for r in d["rows"]]
+    d = client.put(f"/api/datasets/{did}/dictionary", json={"entries": entries}).json()
+    assert d["described"] == d["total"] == 7
+    r = client.patch(f"/api/datasets/{did}/meta", json={"values": {"card_background": "도로 안전 정책 수립", "card_use_cases": "사고 위험 구간 예측"}})
+    assert r.status_code == 200, r.text
+    pv = client.get(f"/api/datasets/{did}/preview").json()
+    g = Graph().parse(data=pv["turtle"], format="turtle")
+    CSVW = Namespace("http://www.w3.org/ns/csvw#")
+    SDO = Namespace("https://schema.org/")
+    descs = {str(o) for c in g.subjects(RDF.type, CSVW.Column) for o in g.objects(c, DCTERMS.description)}
+    assert "LINK_ID 설명" in descs and len(descs) == 7
+    assert any(str(o) == "m" for o in g.objects(None, SDO.unitText))
+    assert str(g.value(ds, RAI.dataUseCases)) == "사고 위험 구간 예측" and g.value(ds, RAI.dataLimitations) is None
     # 파일형 데이터셋의 API 접근 서비스는 스트림 셰이프(StreamServiceShape)의 대상이 아니다
     assert pv["validation"]["passed"] is True, [x for x in pv["validation"]["results"] if x["severity"] == "Violation"]
     assert not [x for x in pv["validation"]["results"] if x["shape"] == "StreamServiceShape"]
@@ -285,9 +303,9 @@ def test_09_serialization_and_self_verify(client):
     r = client.post(f"/api/processes/{pid}/serialization-runs", json={})
     assert r.status_code == 200, r.text
     run = r.json()["run"]
-    assert run["ok_count"] == 3 and len(run["artifacts"]) == 12
+    assert run["ok_count"] == 3 and len(run["artifacts"]) == 21, "3건 × 7포맷"
     for sv in run["self_verify"]:
-        assert sv["passed"] and len(sv["checks"]) == 6, sv
+        assert sv["passed"] and len(sv["checks"]) == 7, sv
     arts = {(a["dataset_id"], a["fmt"]): a for a in run["artifacts"]}
     ttl = client.get(f"/api/artifacts/{arts[(S['d_acc'], 'ttl')]['id']}").json()["content"]
     jld = client.get(f"/api/artifacts/{arts[(S['d_acc'], 'jsonld')]['id']}").json()["content"]
@@ -302,6 +320,21 @@ def test_09_serialization_and_self_verify(client):
     assert "draft" in str(ds)
     txt = client.get(f"/api/artifacts/{arts[(S['d_acc'], 'txt')]['id']}").json()["content"]
     assert "「교통사고」는 " in txt and "「도로목록」과 K5 기준으로 결합된다 (도로링크ID = LINK_ID)" in txt and "ai-ready" in txt
+    # 문서 산출물: Croissant · 데이터 카드 · 데이터 사전
+    get = lambda did, fmt: client.get(f"/api/artifacts/{arts[(did, fmt)]['id']}").json()["content"]  # noqa: E731
+    cr = json.loads(get(S["d_road"], "croissant"))
+    assert "http://mlcommons.org/croissant/1.0" in cr["conformsTo"] and cr["distribution"][0]["sha256"]
+    fields = cr["recordSet"][0]["field"]
+    assert len(fields) == 7 and fields[0]["source"]["extract"]["column"] and any(f.get("description") == "LINK_ID 설명" for f in fields)
+    assert cr["rai:dataUseCases"] == "사고 위험 구간 예측"
+    card = get(S["d_road"], "card")
+    assert card.startswith("# 데이터 카드: 도로목록") and "## 6. 기술적 사양" in card and "도로 안전 정책 수립" in card
+    assert "(작성 필요)" in card, "채우지 않은 칸은 작성 필요로 표시한다"
+    dic = get(S["d_road"], "dict")
+    assert dic.startswith("\ufeff표,컬럼,자료형,정의") and len(dic.strip().splitlines()) == 8
+    acc_dic = get(S["d_acc"], "dict")
+    assert "(개인정보 의심 · 표시 안 함)" in acc_dic, "개인정보 의심 컬럼의 예시값은 내보내지 않는다"
+    assert "차량번호" in get(S["d_acc"], "card") and "(개인정보 의심 · 표시 안 함)" in get(S["d_acc"], "card")
     schema = json.loads(client.get(f"/api/artifacts/{arts[(S['d_stream'], 'schema')]['id']}").json()["content"])
     assert {"@id", "identifier", "title", "publisher", "temporalResolution", "eventTimeColumn"} <= set(schema["required"])
 
@@ -309,13 +342,24 @@ def test_09_serialization_and_self_verify(client):
     assert z.status_code == 200
     with zipfile.ZipFile(io.BytesIO(z.content)) as zf:
         names = zf.namelist()
-        assert "manifest.json" in names and len(names) == 13
+        assert "manifest.json" in names and len(names) == 22
         man = json.loads(zf.read("manifest.json"))
         assert all(f["sha256"] for f in man["files"])
     dl = client.get(f"/api/artifacts/{arts[(S['d_road'], 'ttl')]['id']}", params={"download": True})
     assert "attachment" in dl.headers["content-disposition"] and dl.headers["content-type"].startswith("text/turtle")
     st = r.json()["state"]
     assert gate(st, 7)["done"] and gate(st, 8)["can_enter"]
+
+
+def test_09b_croissant_is_valid_for_reference_library(client, tmp_path):
+    """MLCommons 의 Croissant 참조 라이브러리(mlcroissant)로 산출물을 읽어 본다. 라이브러리가 없으면 건너뛴다."""
+    mlc = pytest.importorskip("mlcroissant")
+    run = client.get(f"/api/processes/{S['pid']}/serialization-runs/latest").json()["run"]
+    for a in [a for a in run["artifacts"] if a["fmt"] == "croissant"]:
+        path = tmp_path / a["filename"]
+        path.write_text(client.get(f"/api/artifacts/{a['id']}").json()["content"], encoding="utf-8")
+        ds = mlc.Dataset(jsonld=str(path))  # 명세 위반이면 ValidationError
+        assert ds.metadata.name and ds.metadata.record_sets, a["filename"]
 
 
 def test_10_publish_requires_mint(client):
@@ -342,7 +386,7 @@ def test_10_publish_requires_mint(client):
     run = client.post(f"/api/processes/{pid}/validation-runs").json()["run"]
     assert run["pass_count"] == 3, [(d["name"], [x["message"] for x in d["results"] if x["severity"] == "Violation"]) for d in run["datasets"]]
     assert client.post(f"/api/processes/{pid}/publish").status_code == 409, "발행 모드 직렬화가 아직 없다"
-    sr = client.post(f"/api/processes/{pid}/serialization-runs", json={"formats": ["ttl", "jsonld", "txt", "schema"]}).json()["run"]
+    sr = client.post(f"/api/processes/{pid}/serialization-runs", json={}).json()["run"]
     assert sr["ok_count"] == 3
     r = client.post(f"/api/processes/{pid}/publish")
     assert r.status_code == 200, r.text
@@ -356,6 +400,11 @@ def test_10_publish_requires_mint(client):
     assert entry["version"] == 1 and entry["facets"]["readiness"] == "ai-ready"
     raw = client.get("/api/catalog/DST-000001/raw", params={"format": "jsonld"})
     assert raw.status_code == 200 and Graph().parse(data=raw.text, format="json-ld")
+    # 발행본과 같은 정본에서 만든 문서 산출물도 카탈로그에서 받는다
+    assert set(entry["documents"]) == {"croissant", "card", "dict"}
+    assert "DST-000001" in entry["documents"]["card"] and "draft" not in entry["documents"]["croissant"]
+    raw = client.get("/api/catalog/DST-000001/raw", params={"format": "croissant"})
+    assert raw.status_code == 200 and json.loads(raw.text)["identifier"] == "DST-000001"
 
 
 def test_11_diagnosis_and_attestation(client):
@@ -390,7 +439,12 @@ def test_11_diagnosis_and_attestation(client):
     assert items["C-07"]["status"] in ("partial", "unmet"), "사고 CSV 의 발생일시가 ISO 8601 이 아니다"
     assert items["C-09"]["status"] == "partial", "사고 CSV 는 결측 표기가 혼재한다"
     assert items["C-12"]["status"] == "pending", "개인정보 의심 컬럼(차량번호)이 있어 담당자 확인이 필요하다"
-    assert items["R-10"]["status"] == "pending" and items["R-10"]["attestable"]
+    assert items["R-10"]["method"] == "AUTO-GRAPH" and not items["R-10"]["attestable"]
+    r10 = {d["id"]: d["status"] for d in items["R-10"]["datasets"]}
+    assert set(r10) == {S["d_road"], S["d_acc"], S["d_stream"]} and items["R-10"]["status"] in ("partial", "unmet")
+    c06 = {d["id"]: d["status"] for d in items["C-06"]["datasets"]}
+    assert c06 == {S["d_road"]: "met", S["d_acc"]: "unmet", S["d_stream"]: "unmet"}, items["C-06"]["datasets"]
+    assert items["R-09"]["status"] == "pending" and items["R-09"]["attestable"]
     assert items["R-12"]["status"] == "met" and items["R-18"]["status"] == "met"
     r06 = {d["id"]: d["status"] for d in items["R-06"]["datasets"]}
     assert r06 == {S["d_road"]: "met", S["d_acc"]: "partial", S["d_stream"]: "partial"}, "출처·가공 이력은 도로목록에만 적었다"
@@ -417,20 +471,20 @@ def test_11_diagnosis_and_attestation(client):
     att = f"/api/processes/{pid}/attestations"
     assert client.put(f"{att}/M-01", json={"status": "met", "evidence": "x"}).status_code == 422, "자동 판정 항목"
     assert client.put(f"{att}/P-01", json={"status": "met", "evidence": "x"}).status_code == 422, "종합 항목"
-    assert client.put(f"{att}/R-10", json={"status": "met"}).status_code == 422, "증빙 필수"
+    assert client.put(f"{att}/R-09", json={"status": "met"}).status_code == 422, "증빙 필수"
     assert client.put(f"{att}/P-10", json={"status": "na"}).status_code == 422, "해당 없음에도 사유가 필요하다"
-    assert client.put(f"{att}/R-10", json={"status": "met", "evidence": "공유폴더/데이터카드_v1.docx"}).status_code == 200
+    assert client.put(f"{att}/R-09", json={"status": "met", "evidence": "공유폴더/데이터카드_v1.docx"}).status_code == 200
     assert client.put(f"{att}/P-10", json={"status": "na", "evidence": "AI 에이전트·MCP 로 제공하지 않는 데이터"}).status_code == 200
     assert client.put(f"{att}/C-15", json={"status": "met", "evidence": "기관 누리집 오류 신고 게시판"}).status_code == 200
     run = client.post(f"/api/processes/{pid}/diagnosis-runs").json()["run"]
     items = {i["id"]: i for i in run["items"]}
-    assert items["R-10"]["status"] == "met" and items["P-10"]["status"] == "na" and items["P-10"]["score"] is None
+    assert items["R-09"]["status"] == "met" and items["P-10"]["status"] == "na" and items["P-10"]["score"] is None
     assert items["C-15"]["status"] == "met" and items["P-11"]["status"] == "met", "연결 항목이 충족되면 원칙도 충족된다"
     assert run["max_score"] == max_before - 1 and run["score"] == before + 3
     rep = client.get(f"/api/diagnosis-runs/{run['id']}/report")
     assert rep.status_code == 200 and "가이드라인 준수 진단 보고서" in rep.text and "데이터셋의 공식 명칭" in rep.text
     latest = client.get(f"/api/processes/{pid}/diagnosis-runs/latest").json()
-    assert latest["ruleset"]["implemented_total"] == 80 and latest["ruleset"]["method_counts"]["HUMAN-ATTEST"] == 18
+    assert latest["ruleset"]["implemented_total"] == 80 and latest["ruleset"]["method_counts"]["HUMAN-ATTEST"] == 16
 
     # 담당자 확인은 그때의 조합을 보고 한 것이므로, 그 뒤에 조합 구성이 바뀌면 다시 확인받는다
     from app.db import SessionLocal
@@ -440,12 +494,12 @@ def test_11_diagnosis_and_attestation(client):
         activity.log(db, "combo_change", "조합 변경 — (테스트)", process_id=pid)
         db.commit()
     items = {i["id"]: i for i in client.post(f"/api/processes/{pid}/diagnosis-runs").json()["run"]["items"]}
-    assert items["R-10"]["status"] == "pending" and items["R-10"]["attestation"]["outdated"] is True
-    assert "다시 확인 필요" in items["R-10"]["evidence"][0] and items["P-10"]["status"] == "pending"
-    assert client.put(f"{att}/R-10", json={"status": "met", "evidence": "공유폴더/데이터카드_v2.docx"}).status_code == 200
+    assert items["R-09"]["status"] == "pending" and items["R-09"]["attestation"]["outdated"] is True
+    assert "다시 확인 필요" in items["R-09"]["evidence"][0] and items["P-10"]["status"] == "pending"
+    assert client.put(f"{att}/R-09", json={"status": "met", "evidence": "공유폴더/데이터카드_v2.docx"}).status_code == 200
     assert client.delete(f"{att}/C-15").status_code == 200 and client.delete(f"{att}/C-15").status_code == 404
     items = {i["id"]: i for i in client.post(f"/api/processes/{pid}/diagnosis-runs").json()["run"]["items"]}
-    assert items["R-10"]["status"] == "met" and items["C-15"]["status"] == "pending" and items["C-15"]["attestation"] is None
+    assert items["R-09"]["status"] == "met" and items["C-15"]["status"] == "pending" and items["C-15"]["attestation"] is None
 
     r = client.post(f"/api/processes/{pid}/complete")
     assert r.status_code == 200 and r.json()["process"]["status"] == "completed"

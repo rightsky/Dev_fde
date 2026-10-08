@@ -1,0 +1,145 @@
+{
+ "dataset_id": 2,
+ "rows": [
+  {
+   "table": "교통사고",
+   "column": "사고번호",
+   "type": "string",
+   "type_label": "문자열",
+   "description": "사고를 구분하는 고유 번호",
+   "unit": "",
+   "codes": "",
+   "required": true,
+   "null_rate": 0.0,
+   "distinct": 150,
+   "missing_markers": [],
+   "samples": [
+    "A000001",
+    "A000002",
+    "A000003"
+   ],
+   "pii": null,
+   "key": null
+  },
+  {
+   "table": "교통사고",
+   "column": "발생일시",
+   "type": "datetime",
+   "type_label": "날짜·시각",
+   "description": "",
+   "unit": "",
+   "codes": "",
+   "required": true,
+   "null_rate": 0.0,
+   "distinct": 128,
+   "missing_markers": [],
+   "samples": [
+    "20260704",
+    "20260707",
+    "20260710"
+   ],
+   "pii": null,
+   "key": "K7"
+  },
+  {
+   "table": "교통사고",
+   "column": "도로링크ID",
+   "type": "string",
+   "type_label": "문자열",
+   "description": "",
+   "unit": "",
+   "codes": "",
+   "required": true,
+   "null_rate": 0.0,
+   "distinct": 123,
+   "missing_markers": [],
+   "samples": [
+    "L00002",
+    "L00003",
+    "L00004"
+   ],
+   "pii": null,
+   "key": "K5"
+  },
+  {
+   "table": "교통사고",
+   "column": "사고주소",
+   "type": "string",
+   "type_label": "문자열",
+   "description": "",
+   "unit": "",
+   "codes": "",
+   "required": true,
+   "null_rate": 0.0,
+   "distinct": 150,
+   "missing_markers": [],
+   "samples": [
+    "서울특별시 종로구 세종대로 1",
+    "서울특별시 종로구 세종대로 2",
+    "서울특별시 종로구 세종대로 3"
+   ],
+   "pii": null,
+   "key": null
+  },
+  {
+   "table": "교통사고",
+   "column": "차량번호",
+   "type": "string",
+   "type_label": "문자열",
+   "description": "",
+   "unit": "",
+   "codes": "",
+   "required": true,
+   "null_rate": 0.0,
+   "distinct": 150,
+   "missing_markers": [],
+   "samples": [],
+   "pii": "차량번호",
+   "key": null
+  },
+  {
+   "table": "교통사고",
+   "column": "사망자수",
+   "type": "integer",
+   "type_label": "정수",
+   "description": "",
+   "unit": "명",
+   "codes": "",
+   "required": true,
+   "null_rate": 0.0,
+   "distinct": 3,
+   "missing_markers": [],
+   "samples": [
+    "1",
+    "2",
+    "0"
+   ],
+   "pii": null,
+   "key": null
+  },
+  {
+   "table": "교통사고",
+   "column": "비고",
+   "type": "string",
+   "type_label": "문자열",
+   "description": "조사관이 남긴 비고 (정상 · 확인 필요 등)",
+   "unit": "",
+   "codes": "",
+   "required": false,
+   "null_rate": 0.7533,
+   "distinct": 1,
+   "missing_markers": [
+    "-",
+    "null",
+    "(빈 셀)"
+   ],
+   "samples": [
+    "정상"
+   ],
+   "pii": null,
+   "key": null
+  }
+ ],
+ "described": 2,
+ "total": 7
+}
