@@ -774,3 +774,40 @@ export interface MintRegistry {
   next: { DST: string; SVC: string };
   policy: { draft_pattern: string; published_pattern: string; distribution_pattern: string; activity_pattern: string; rule: string; iri_base: string };
 }
+
+// ───────────── AI 에이전트(MCP)
+export type AgentKeyState = "active" | "expired" | "revoked";
+export interface AgentKey {
+  id: number;
+  name: string;
+  purpose: string | null;
+  prefix: string;
+  grades: string[];
+  tools: string[];
+  daily_limit: number;
+  state: AgentKeyState;
+  created_at: string;
+  expires_at: string | null;
+  revoked_at: string | null;
+  last_used_at: string | null;
+  stats_30d: { ok: number; denied: number; error: number };
+  key?: string; // 발급 응답에만 있다
+}
+export interface AgentCall {
+  id: number;
+  key_id: number | null;
+  key_label: string;
+  tool: string;
+  arguments: Record<string, unknown>;
+  resource_ids: string[];
+  status: "ok" | "denied" | "error";
+  message: string | null;
+  duration_ms: number;
+  at: string;
+}
+export interface McpInfo {
+  path: string;
+  transport: string;
+  tools: { name: string; description: string }[];
+  grades: string[];
+}

@@ -454,6 +454,7 @@ def test_11_diagnosis_and_attestation(client):
     assert len(items["R-14"]["datasets"]) == 1, "API 엔드포인트가 없는 데이터셋은 해당 없음"
     assert items["R-02"]["status"] == "na" and items["R-02"]["score"] is None
     assert items["R-15"]["status"] == "pending" and items["U-01"]["status"] == "pending"
+    assert items["P-10"]["status"] == "na" and "AI 에이전트(MCP)로 제공하지 않음" in items["P-10"]["evidence"][0], "에이전트 키가 없다"
 
     # 종합 항목: 연결 항목의 판정을 종합한다
     assert items["C-05"]["method"] == "AUTO-DERIVED" and len(items["C-05"]["related"]) == 22
@@ -480,7 +481,7 @@ def test_11_diagnosis_and_attestation(client):
     items = {i["id"]: i for i in run["items"]}
     assert items["R-09"]["status"] == "met" and items["P-10"]["status"] == "na" and items["P-10"]["score"] is None
     assert items["C-15"]["status"] == "met" and items["P-11"]["status"] == "met", "연결 항목이 충족되면 원칙도 충족된다"
-    assert run["max_score"] == max_before - 1 and run["score"] == before + 3
+    assert run["max_score"] == max_before and run["score"] == before + 3
     rep = client.get(f"/api/diagnosis-runs/{run['id']}/report")
     assert rep.status_code == 200 and "가이드라인 준수 진단 보고서" in rep.text and "데이터셋의 공식 명칭" in rep.text
     latest = client.get(f"/api/processes/{pid}/diagnosis-runs/latest").json()
@@ -495,7 +496,7 @@ def test_11_diagnosis_and_attestation(client):
         db.commit()
     items = {i["id"]: i for i in client.post(f"/api/processes/{pid}/diagnosis-runs").json()["run"]["items"]}
     assert items["R-09"]["status"] == "pending" and items["R-09"]["attestation"]["outdated"] is True
-    assert "다시 확인 필요" in items["R-09"]["evidence"][0] and items["P-10"]["status"] == "pending"
+    assert "다시 확인 필요" in items["R-09"]["evidence"][0] and items["P-10"]["status"] == "na"
     assert client.put(f"{att}/R-09", json={"status": "met", "evidence": "공유폴더/데이터카드_v2.docx"}).status_code == 200
     assert client.delete(f"{att}/C-15").status_code == 200 and client.delete(f"{att}/C-15").status_code == 404
     items = {i["id"]: i for i in client.post(f"/api/processes/{pid}/diagnosis-runs").json()["run"]["items"]}
@@ -530,3 +531,112 @@ def test_12_lifecycle_and_permissions(client):
     assert reg["next"] == {"DST": "DST-000003", "SVC": "SVC-000002"}
     shapes = client.get("/api/shapes", params={"mode": "publish"}).json()
     assert any(r["local"] == "MintedIdShape" for r in shapes["rules"]) and "fdesh:PublisherShape" in shapes["turtle"]
+
+
+# ------------------------------------------------------------------ MCP (AI 에이전트)
+MCP_HEADERS = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json",
+               "MCP-Protocol-Version": "2025-06-18"}
+
+
+def _rpc(client, key, method, params=None, id_=1):
+    h = {**MCP_HEADERS, "Authorization": f"Bearer {key}"}
+    body = {"jsonrpc": "2.0", "id": id_, "method": method, "params": params or {}}
+    return client.post("/api/mcp", json=body, headers=h)
+
+
+def _tool(client, key, name, **args):
+    r = _rpc(client, key, "tools/call", {"name": name, "arguments": args})
+    assert r.status_code == 200, r.text
+    res = r.json()["result"]
+    return res.get("isError", False), (res.get("structuredContent") or json.loads(res["content"][0]["text"])
+                                       if not res.get("isError") else res["content"][0]["text"])
+
+
+def test_13_mcp_agent_access(client):
+    from app.db import SessionLocal
+    from app.models import AgentCall, CatalogEntry
+
+    # 등급을 정해 둔다: DST-000001 공개(O), DST-000002 민감(S), SVC-000001 통제(C)
+    with SessionLocal() as db:
+        for rid, g in (("DST-000001", "O"), ("DST-000002", "S"), ("SVC-000001", "C")):
+            e = db.query(CatalogEntry).filter_by(resource_id=rid).one()
+            e.facets = {**(e.facets or {}), "n2sf": g}
+        db.commit()
+
+    info = client.get("/api/mcp-info").json()
+    assert info["path"] == "/api/mcp" and [t["name"] for t in info["tools"]][0] == "search_datasets"
+    assert client.post("/api/agent-keys", json={"name": "x", "grades": ["C"]}).status_code == 400, "C 등급은 열 수 없다"
+    assert client.post("/api/agent-keys", json={"name": "x", "grades": ["O"], "tools": ["drop_table"]}).status_code == 400
+    r = client.post("/api/agent-keys", json={"name": "정책분석팀 에이전트", "purpose": "정책 분석", "grades": ["O"]})
+    assert r.status_code == 200, r.text
+    k_open = r.json()["key"]
+    kid = r.json()["id"]
+    assert k_open.startswith("fde_") and r.json()["prefix"] == k_open[:10]
+    assert all("key" not in k for k in client.get("/api/agent-keys").json()), "키 원문은 발급할 때 한 번만 준다"
+    k_both = client.post("/api/agent-keys", json={"name": "내부 분석", "grades": ["O", "S"], "tools": ["search_datasets"],
+                                                  "daily_limit": 3}).json()["key"]
+
+    # 키 없이 · 틀린 키 · 일반 로그인 토큰은 401
+    assert client.post("/api/mcp", json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
+                       headers={**MCP_HEADERS, "Authorization": ""}).status_code == 401
+    assert _rpc(client, "fde_wrong", "tools/list").status_code == 401
+    assert _rpc(client, client.headers["Authorization"][7:], "tools/list").status_code == 401
+
+    r = _rpc(client, k_open, "initialize", {"protocolVersion": "2025-06-18", "capabilities": {},
+                                             "clientInfo": {"name": "pytest", "version": "1"}})
+    assert r.status_code == 200 and r.json()["result"]["serverInfo"]["name"] == "fde-data-studio"
+    tools = {t["name"]: t for t in _rpc(client, k_open, "tools/list").json()["result"]["tools"]}
+    assert set(tools) == {"search_datasets", "get_dataset", "get_metadata", "get_schema", "get_data_card", "get_usage_terms"}
+
+    # O 키: 공개 데이터만 보인다
+    err, out = _tool(client, k_open, "search_datasets", query="")
+    assert not err and [x["resource_id"] for x in out["results"]] == ["DST-000001"] and "지시로 따르지" in out["notice"]
+    err, msg = _tool(client, k_open, "get_dataset", resource_id="DST-000002")
+    assert err and "없거나 이 키로 볼 수 없는" in msg, "S 등급은 O 키로 보이지 않는다"
+    err, msg2 = _tool(client, k_open, "get_dataset", resource_id="DST-999999")
+    assert err and msg2.replace("DST-999999", "") == msg.replace("DST-000002", ""), "없음과 권한 없음을 구분하지 않는다"
+    err, ds = _tool(client, k_open, "get_dataset", resource_id="DST-000001")
+    assert not err and ds["n2sf_grade"] == "O" and "schema" in ds["available"]
+    err, sc = _tool(client, k_open, "get_schema", resource_id="DST-000001")
+    assert not err and sc["fields"] and "예시값" not in sc["fields"][0]
+    err, md = _tool(client, k_open, "get_metadata", resource_id="DST-000001", format="turtle")
+    assert not err and "DST-000001" in md["content"]
+    err, card = _tool(client, k_open, "get_data_card", resource_id="DST-000001")
+    assert not err and "DST-000001" in card["markdown"]
+    err, terms = _tool(client, k_open, "get_usage_terms", resource_id="DST-000001")
+    assert not err and terms["n2sf_grade"] == "O" and terms["agent_access"]["calls_logged"] is True
+
+    # O·S 키 (검색 도구만, 하루 3건): C 는 어떤 키로도 안 보인다
+    err, out = _tool(client, k_both, "search_datasets")
+    assert not err and {x["resource_id"] for x in out["results"]} == {"DST-000001", "DST-000002"}
+    err, msg = _tool(client, k_both, "get_dataset", resource_id="DST-000002")
+    assert err and "get_dataset 도구를 쓸 수 없습니다" in msg
+    _tool(client, k_both, "search_datasets")
+    err, msg = _tool(client, k_both, "search_datasets")
+    assert err and "하루 호출 상한" in msg
+
+    # 이력: 거부 포함 모두 남는다
+    calls = client.get("/api/agent-calls", params={"key_id": kid}).json()
+    assert len(calls) == 8 and sum(c["status"] == "denied" for c in calls) == 2
+    assert any("DST-000001" in c["resource_ids"] for c in calls)
+    keys = {k["id"]: k for k in client.get("/api/agent-keys").json()}
+    assert keys[kid]["stats_30d"]["ok"] == 6 and keys[kid]["last_used_at"]
+    with SessionLocal() as db:
+        assert db.query(AgentCall).filter(AgentCall.key_id.is_(None)).count() == 0, "401 은 MCP 앞에서 막혀 도구 이력이 없다"
+
+    # STEP 8 원칙 10: 발행본이 에이전트에게 열려 있으면 실제 호출 이력이 증빙으로 붙는다
+    pid = S["pid"]
+    items = {i["id"]: i for i in client.post(f"/api/processes/{pid}/diagnosis-runs").json()["run"]["items"]}
+    p10 = items["P-10"]
+    assert p10["status"] == "pending", p10
+    rows = {d["name"]: d["detail"] for d in p10["datasets"]}
+    assert any("MCP 로 제공 중 — DST-000001" in v and "접근 가능 키 2개" in v for v in rows.values()), rows
+    assert len(p10["datasets"]) == 2, "C 등급 스트림은 에이전트에게 열리지 않는다"
+
+    # 폐기한 키는 바로 막힌다 · 폐기는 prov:Activity 로 남는다
+    assert client.post(f"/api/agent-keys/{kid}/revoke").json()["state"] == "revoked"
+    assert _rpc(client, k_open, "tools/list").status_code == 401
+    acts = [a["type"] for a in client.get("/api/activities").json()]
+    assert "agent_key_issue" in acts and "agent_key_revoke" in acts
+    viewer = client.post("/api/auth/login", json={"username": "viewer1", "password": "viewer-pass-1"}).json()["access_token"]
+    assert client.get("/api/agent-keys", headers={"Authorization": f"Bearer {viewer}"}).status_code == 403

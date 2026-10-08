@@ -88,6 +88,17 @@ jobs:
           token=$(curl -fsS -X POST http://localhost:8080/api/auth/login -H 'Content-Type: application/json' \
             -d "{\"username\":\"admin\",\"password\":\"$pw\"}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
           curl -fsS -H "Authorization: Bearer $token" http://localhost:8080/api/reference > /dev/null
+          echo "$token" > /tmp/admin_token
+      - name: MCP 서버 (nginx 경유)
+        run: |
+          token=$(cat /tmp/admin_token)
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8080/api/mcp -H 'Content-Type: application/json' -d '{}')" = 401
+          key=$(curl -fsS -X POST http://localhost:8080/api/agent-keys -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+            -d '{"name":"ci","grades":["O"]}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["key"])')
+          curl -fsS -X POST http://localhost:8080/api/mcp -H "Authorization: Bearer $key" -H 'Content-Type: application/json' \
+            -H 'Accept: application/json, text/event-stream' -H 'MCP-Protocol-Version: 2025-06-18' \
+            -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python3 -c 'import json,sys; t=[x["name"] for x in json.load(sys.stdin)["result"]["tools"]]; print(t); assert "search_datasets" in t'
+          curl -fsS -H "Authorization: Bearer $token" http://localhost:8080/api/agent-calls > /dev/null
       - name: 백업 스크립트
         run: ./scripts/backup.sh
       - name: 복원 스크립트

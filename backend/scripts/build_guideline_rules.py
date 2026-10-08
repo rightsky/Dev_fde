@@ -222,9 +222,10 @@ spec = {
     "P-07": {**derived("R-06", "R-17", "M-18", "M-19"), "section": "3.1"},
     "P-08": {**derived("C-14", "M-04", "M-11"), "section": "3.2"},
     "P-09": {**derived("M-06", "M-14", "R-08"), "section": "3.3"},
-    "P-10": {**ATTEST, "section": "3.4", "difficulty": 2,
-             "criteria": "담당자가 증빙과 함께 확인한다. AI 에이전트·MCP 로 제공하지 않는 데이터면 해당 없음으로 기록할 수 있다",
-             "remedy": "AI 에이전트가 접근할 수 있는 범위와 권한, 호출 이력 기록, 보안 위험 검토 결과(3.4절 표 39·표 40)를 확인하고 증빙을 남긴다"},
+    "P-10": {**builtin("mcp_hint"), "method": H, "allow_na": True, "section": "3.4", "difficulty": 2,
+             "criteria": "발행본이 AI 에이전트(MCP)에게 열려 있으면 접근 키·호출 이력을 자동 증빙으로 붙이고 담당자가 확인한다. "
+                         "에이전트 키로 접근할 수 없는 데이터면 해당 없음",
+             "remedy": "관리 › AI 에이전트(MCP)에서 접근 등급·도구를 정해 키를 발급하고, 호출 이력과 보안 위험 검토 결과(3.4절 표 39·표 40)를 확인해 증빙을 남긴다"},
     "P-11": {**derived("C-15"), "section": "3.5"},
     "P-12": {**ask("?this fde:n2sfGrade ?g . ?this fde:governanceMode ?m",
                    "{ ?this fde:n2sfGrade ?g } UNION { ?this fde:governanceMode ?m }"),

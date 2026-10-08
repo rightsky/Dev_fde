@@ -405,3 +405,38 @@ class CatalogEntry(Base):
     published_label: Mapped[str] = mapped_column(String(100), default="")
     published_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     activity_id: Mapped[int | None] = mapped_column(ForeignKey("activity.id"), default=None)
+
+
+class AgentKey(Base):
+    """AI 에이전트(MCP) 접근 키. 키 원문은 발급할 때 한 번만 보여 주고 해시만 저장한다 (가이드라인 3.4.5 표 39)."""
+
+    __tablename__ = "agent_key"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))  # 사용처 (예: 정책분석팀 Claude)
+    purpose: Mapped[str | None] = mapped_column(Text, default=None)  # 이용 목적
+    prefix: Mapped[str] = mapped_column(String(16))  # 화면 표시용 앞자리
+    key_hash: Mapped[str] = mapped_column(String(64), unique=True)  # sha256
+    grades: Mapped[list[str]] = mapped_column(JSON, default=list)  # 접근 허용 N2SF 등급 (O · S). C 는 허용하지 않는다
+    tools: Mapped[list[str]] = mapped_column(JSON, default=list)  # 허용 도구 (비면 전체 조회 도구)
+    daily_limit: Mapped[int] = mapped_column(Integer, default=1000)  # 하루 호출 상한
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("app_user.id"), default=None)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    expires_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    revoked_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    last_used_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+
+
+class AgentCall(Base):
+    """AI 에이전트의 도구 호출 이력 (가이드라인 3.4.5 '이력 관리'). 거부된 호출도 남긴다."""
+
+    __tablename__ = "agent_call"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    key_id: Mapped[int | None] = mapped_column(ForeignKey("agent_key.id", ondelete="SET NULL"), default=None, index=True)
+    key_label: Mapped[str] = mapped_column(String(120), default="")
+    tool: Mapped[str] = mapped_column(String(60))
+    arguments: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    resource_ids: Mapped[list[str]] = mapped_column(JSON, default=list)  # 응답에 담긴 데이터셋
+    status: Mapped[str] = mapped_column(String(10))  # ok | denied | error
+    message: Mapped[str | None] = mapped_column(Text, default=None)
+    duration_ms: Mapped[int] = mapped_column(Integer, default=0)
+    at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, index=True)
