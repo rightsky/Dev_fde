@@ -8,7 +8,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
-from .db import Base, SessionLocal, engine
+from .db import SessionLocal, engine
+from .migrate import upgrade as migrate_db
 from .routers import catalog, core, studio
 from .seed import seed
 
@@ -17,7 +18,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    Base.metadata.create_all(engine)
+    migrate_db(engine)  # 테이블 생성·변경은 Alembic 이관 파일로만 한다
     with SessionLocal() as db:
         seed(db)
     if not get_settings().secret_key:
@@ -25,7 +26,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="FDE Data Studio API", version="0.3.0", lifespan=lifespan,
+app = FastAPI(title="FDE Data Studio API", version="0.4.0", lifespan=lifespan,
               docs_url="/api/docs", openapi_url="/api/openapi.json")
 
 _origins = [o.strip() for o in get_settings().cors_origins.split(",") if o.strip()]

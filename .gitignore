@@ -12,3 +12,5 @@ frontend/dist/
 .env
 *.log
 .DS_Store
+# 백업 파일 (DB 덤프·업로드 원본)
+backups/

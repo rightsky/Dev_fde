@@ -14,6 +14,8 @@ os.environ["FDE_SECRET_KEY"] = "test-secret-key-test-secret-key-0123456789"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
+from sqlalchemy import text  # noqa: E402
+
 from app.db import Base, engine  # noqa: E402
 from app.main import app  # noqa: E402
 
@@ -21,6 +23,8 @@ from app.main import app  # noqa: E402
 @pytest.fixture(scope="session")
 def client():
     Base.metadata.drop_all(engine)
+    with engine.begin() as c:  # 이관 기록도 지워야 기동할 때 테이블을 처음부터 만든다
+        c.execute(text("DROP TABLE IF EXISTS alembic_version"))
     with TestClient(app) as c:
         r = c.post("/api/auth/login", json={"username": "admin", "password": "test-password-1"})
         assert r.status_code == 200, r.text
