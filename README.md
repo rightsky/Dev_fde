@@ -38,6 +38,47 @@ FDE_DATABASE_URL=postgresql+psycopg://사용자@호스트/DB pytest   # PostgreS
 cd frontend && npm run build                           # 타입 검사 + 빌드
 ```
 
+## 운영
+
+### 백업과 복원
+
+DB(PostgreSQL)와 업로드한 원본 파일을 함께 백업합니다. 서비스가 떠 있는 상태에서 프로젝트 폴더에서 실행합니다.
+
+```powershell
+# Windows (PowerShell)
+powershell -ExecutionPolicy Bypass -File scripts\backup.ps1
+powershell -ExecutionPolicy Bypass -File scripts\restore.ps1 backups\20261008-203000
+```
+
+```bash
+# macOS · Linux
+./scripts/backup.sh
+./scripts/restore.sh backups/20261008-203000
+```
+
+- 백업은 `backups\날짜-시각` 폴더에 `fde.dump`(DB)와 `storage.tgz`(업로드 파일) 두 개로 저장됩니다. 이 폴더는 Git 에 올라가지 않습니다.
+- 복원은 지금 데이터를 지우고 백업 시점으로 되돌립니다. `yes` 를 입력해야 진행합니다.
+- 백업 폴더를 다른 디스크나 클라우드 저장소에 따로 복사해 두어야 PC 고장에 대비할 수 있습니다.
+
+### DB 스키마 이관 (Alembic)
+
+서버는 기동할 때 `alembic upgrade head` 를 실행해 테이블을 최신 구조로 맞춥니다. v0.3 이전에 만든 DB 에는 이관 기록이 없으므로 기준 판(`0001`)으로 표시한 뒤 이어서 올립니다. 데이터는 그대로 남습니다.
+
+모델(`app/models.py`)을 고치면 이관 파일을 함께 만들어야 합니다. 빠뜨리면 테스트(`test_migrations.py`)가 실패합니다.
+
+```bash
+cd backend
+alembic revision --autogenerate -m "무엇을 바꿨는지"
+```
+
+### 자동 테스트 (GitHub Actions)
+
+`main` 에 올리거나 PR 을 열 때마다 `.github/workflows/ci.yml` 이 실행됩니다. 결과는 저장소의 Actions 탭과 PR 화면 아래쪽에 표시됩니다.
+
+1. 백엔드 테스트 (SQLite · PostgreSQL 16)
+2. 프런트 타입 검사·빌드
+3. Docker 로 전체를 띄워 화면·API 응답, 관리자 로그인, 백업, 복원까지 확인
+
 ## 8단계가 실제로 하는 일
 
 | STEP | 화면 | 서버가 하는 일 |
@@ -59,8 +100,7 @@ cd frontend && npm run build                           # 타입 검사 + 빌드
 - **STEP 8 의 항목 문구는 가이드라인 원문이고, 판정 기준은 이 스튜디오가 정한 것입니다.** 가이드라인은 항목마다 "적정 · 미흡 · 해당없음"을 사람이 표기하게 할 뿐 기계 판정 기준을 정하지 않습니다. 어떤 조건이면 충족으로 보는지는 항목마다 화면의 "판정 기준"에 적혀 있고, `backend/app/data/guideline_rules.json` 에서 바꿀 수 있습니다. 아래 "STEP 8 진단 규칙" 절을 보십시오.
 - **스트림은 메타데이터만 다룹니다.** 브로커에 실제로 접속하지 않습니다.
 - **목업의 다음 부분은 만들지 않았습니다:** 검수 큐, AI 어시스턴트, 외부 소스 연계(공공데이터포털·MCP·데이터레이크), PMS, API·MCP 제공 관리, 배치 재검증.
-- **DB 스키마 이관 도구가 없습니다.** 기동할 때 없는 테이블만 만듭니다(`create_all`). 운영 전에 Alembic 같은 이관 체계를 붙여야 합니다.
-- **Docker 이미지 빌드는 개발 환경에서 검증하지 못했습니다.** 백엔드 테스트는 SQLite 와 PostgreSQL 16 에서, 화면은 개발 서버로 업로드부터 발행·진단까지 확인했습니다.
+- **Docker 기동은 GitHub 자동 테스트에서 확인합니다.** 개발 환경에서는 Docker 를 쓸 수 없어, 이미지 빌드·기동·로그인·백업·복원은 GitHub Actions 가 매번 실행해 확인합니다.
 - **판을 올리면 기존 검증·변환 결과는 "최신 아님"으로 표시됩니다.** 정본 그래프에 들어가는 내용이 늘어 체크섬이 바뀌기 때문입니다. STEP 6 재검증 → STEP 7 재변환 → STEP 8 재진단 순으로 다시 실행하면 됩니다.
 
 ## STEP 8 진단 규칙
@@ -138,7 +178,9 @@ cd frontend && npm run build                           # 타입 검사 + 빌드
 
 ```
 backend/app
-  main.py            앱 진입점 (기동 시 테이블 생성 + 기준 데이터 적재)
+  main.py            앱 진입점 (기동 시 DB 이관 + 기준 데이터 적재)
+  migrate.py         기동할 때 Alembic upgrade head (이관 기록 없는 v0.3 이전 DB 는 기준 판으로 표시)
+  migrations/        Alembic 이관 파일
   models.py          데이터 모델
   routers/           core(인증·기관·분류체계·원천) · studio(8단계) · catalog(카탈로그·대시보드)
   services/
