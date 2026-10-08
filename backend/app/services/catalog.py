@@ -65,6 +65,8 @@ def publish(db: Session, process: Process, user: User, vr: ValidationRun, sr: Se
             "classification": {k: rec[k] for k in ("theme", "dataType", "granularity", "aiPurpose", "governance") if k in rec},
             "license": rec.get("license") or rec.get("accessRights"),
             "n2sf": rec.get("n2sfGrade"),
+            "ai_terms": rec.get("aiUsageTerms", {}),
+            "ai_conditions": rec.get("aiUsageConditions"),
             "keys": rec.get("joinKeys", []),
             "keywords": rec.get("keywords", []),
             "media_type": (rec.get("distribution") or {}).get("mediaType"),

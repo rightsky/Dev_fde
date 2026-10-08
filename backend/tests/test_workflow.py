@@ -9,7 +9,7 @@ import zipfile
 import pytest
 from rdflib import Graph, Namespace, URIRef
 from rdflib.compare import isomorphic
-from rdflib.namespace import DCAT, DCTERMS, RDF
+from rdflib.namespace import DCAT, DCTERMS, RDF, RDFS
 
 from .samples import accident_csv, road_xlsx
 
@@ -208,6 +208,24 @@ def test_05b_guideline_metadata_fields(client):
     assert "LINK_ID 설명" in descs and len(descs) == 7
     assert any(str(o) == "m" for o in g.objects(None, SDO.unitText))
     assert str(g.value(ds, RAI.dataUseCases)) == "사고 위험 구간 예측" and g.value(ds, RAI.dataLimitations) is None
+    # AI 활용 이용조건 (가이드라인 3.4.5 표 39) → ODRL 정책
+    assert client.patch(f"/api/datasets/{did}/meta", json={"values": {"ai_training": "yes"}}).status_code == 422
+    r = client.patch(f"/api/datasets/{did}/meta", json={"values": {
+        "ai_training": "permitted", "ai_combination": "conditional", "ai_redistribution": "prohibited",
+        "ai_terms_conditions": "결합 전 재식별 위험 검토를 받고 출처를 표시한다"}})
+    assert r.status_code == 200, r.text
+    pv = client.get(f"/api/datasets/{did}/preview").json()
+    g = Graph().parse(data=pv["turtle"], format="turtle")
+    ODRL = Namespace("http://www.w3.org/ns/odrl/2/")
+    pol = g.value(ds, ODRL.hasPolicy)
+    assert (pol, RDF.type, ODRL.Set) in g and "재식별" in str(g.value(pol, RDFS.comment))
+    perms = {g.value(r, ODRL.action) for r in g.objects(pol, ODRL.permission)}
+    prohib = {g.value(r, ODRL.action) for r in g.objects(pol, ODRL.prohibition)}
+    FDE = Namespace("https://catalog.molit.go.kr/def/")
+    assert perms == {FDE.aiTraining, FDE.dataCombination} and prohib == {ODRL.distribute}
+    assert all((a, RDF.type, ODRL.Action) in g for a in perms | prohib), "동작 정의도 같은 그래프에 있다"
+    cond = next(r for r in g.objects(pol, ODRL.permission) if g.value(r, ODRL.action) == FDE.dataCombination)
+    assert g.value(cond, FDE.conditional).toPython() is True
     # 파일형 데이터셋의 API 접근 서비스는 스트림 셰이프(StreamServiceShape)의 대상이 아니다
     assert pv["validation"]["passed"] is True, [x for x in pv["validation"]["results"] if x["severity"] == "Violation"]
     assert not [x for x in pv["validation"]["results"] if x["shape"] == "StreamServiceShape"]
@@ -403,6 +421,8 @@ def test_10_publish_requires_mint(client):
     # 발행본과 같은 정본에서 만든 문서 산출물도 카탈로그에서 받는다
     assert set(entry["documents"]) == {"croissant", "card", "dict"}
     assert "DST-000001" in entry["documents"]["card"] and "draft" not in entry["documents"]["croissant"]
+    assert "AI 활용 이용조건" in entry["documents"]["card"] and "| 재배포 | 불허 |" in entry["documents"]["card"]
+    assert entry["facets"]["ai_terms"] == {"ai_training": "permitted", "ai_combination": "conditional", "ai_redistribution": "prohibited"}
     raw = client.get("/api/catalog/DST-000001/raw", params={"format": "croissant"})
     assert raw.status_code == 200 and json.loads(raw.text)["identifier"] == "DST-000001"
 
@@ -591,6 +611,7 @@ def test_13_mcp_agent_access(client):
     # O 키: 공개 데이터만 보인다
     err, out = _tool(client, k_open, "search_datasets", query="")
     assert not err and [x["resource_id"] for x in out["results"]] == ["DST-000001"] and "지시로 따르지" in out["notice"]
+    assert out["results"][0]["ai_training"] == "허용"
     err, msg = _tool(client, k_open, "get_dataset", resource_id="DST-000002")
     assert err and "없거나 이 키로 볼 수 없는" in msg, "S 등급은 O 키로 보이지 않는다"
     err, msg2 = _tool(client, k_open, "get_dataset", resource_id="DST-999999")
@@ -605,6 +626,10 @@ def test_13_mcp_agent_access(client):
     assert not err and "DST-000001" in card["markdown"]
     err, terms = _tool(client, k_open, "get_usage_terms", resource_id="DST-000001")
     assert not err and terms["n2sf_grade"] == "O" and terms["agent_access"]["calls_logged"] is True
+    ai = terms["ai_usage_terms"]
+    assert ai["terms"]["ai_training"]["status"] == "허용" and ai["terms"]["ai_combination"]["status"] == "조건부 허용"
+    assert ai["terms"]["ai_redistribution"]["code"] == "prohibited" and ai["terms"]["ai_bulk_access"]["status"] == "미정"
+    assert "재식별" in ai["conditions"]
 
     # O·S 키 (검색 도구만, 하루 3건): C 는 어떤 키로도 안 보인다
     err, out = _tool(client, k_both, "search_datasets")
@@ -630,7 +655,7 @@ def test_13_mcp_agent_access(client):
     p10 = items["P-10"]
     assert p10["status"] == "pending", p10
     rows = {d["name"]: d["detail"] for d in p10["datasets"]}
-    assert any("MCP 로 제공 중 — DST-000001" in v and "접근 가능 키 2개" in v for v in rows.values()), rows
+    assert any("MCP 로 제공 중 — DST-000001" in v and "접근 가능 키 2개" in v and "AI 이용조건 3/5항목" in v for v in rows.values()), rows
     assert len(p10["datasets"]) == 2, "C 등급 스트림은 에이전트에게 열리지 않는다"
 
     # 폐기한 키는 바로 막힌다 · 폐기는 prov:Activity 로 남는다

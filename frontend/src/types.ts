@@ -57,14 +57,16 @@ export interface MetaField {
   property: string;
   label: string;
   level: "필수" | "권장" | "선택";
-  type: "text" | "textarea" | "org" | "media_type" | "url" | "duration" | "late_policy" | "tags" | "periodicity" | "date";
+  type: "text" | "textarea" | "org" | "media_type" | "url" | "duration" | "late_policy" | "tags" | "periodicity" | "date" | "ai_term";
   scope: "all" | "dataset" | "stream";
   approval?: boolean;
   /** 가이드라인 근거 위치 (예: "표 9 데이터명"). 가이드라인에 없는 제품 필드는 비어 있다 */
   guide?: string;
-  /** "card": 부록 4 데이터 카드에만 있는 항목 (데이터 카드 탭에서 입력) */
-  group?: "card";
+  /** "card": 부록 4 데이터 카드에만 있는 항목, "ai": AI 활용 이용조건(3.4.5 표 39) — 둘 다 데이터 카드 탭에서 입력 */
+  group?: "card" | "ai";
   card_item?: string;
+  /** 항목의 뜻 (화면 도움말) */
+  help?: string;
 }
 
 // ───────────── STEP 3 데이터 사전 · 데이터 카드
@@ -729,6 +731,9 @@ export interface CatalogEntry {
     classification?: { theme?: string[]; dataType?: string[]; granularity?: string[]; aiPurpose?: string[]; governance?: string[] };
     license?: string | null;
     n2sf?: string | null;
+    /** AI 활용 이용조건 (3.4.5 표 39): 항목 이름 → permitted | conditional | prohibited. 없는 항목은 미정 */
+    ai_terms?: Record<string, string>;
+    ai_conditions?: string | null;
     keys?: { key: string; label: string; column?: string; table?: string }[];
     keywords?: string[];
     media_type?: string | null;

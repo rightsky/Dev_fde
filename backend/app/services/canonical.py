@@ -34,6 +34,7 @@ ADMS = Namespace("http://www.w3.org/ns/adms#")
 DQV = Namespace("http://www.w3.org/ns/dqv#")
 OA = Namespace("http://www.w3.org/ns/oa#")
 SDO = Namespace("https://schema.org/")
+ODRL = Namespace("http://www.w3.org/ns/odrl/2/")
 LANG_NS = "http://id.loc.gov/vocabulary/iso639-1/"
 IANA_MT = "https://www.iana.org/assignments/media-types/"
 
@@ -102,6 +103,25 @@ META_FIELDS: list[dict[str, Any]] = [
         ("card_code", "fde:codeAndLibraries", "코드 및 라이브러리 버전 (코드 위치, 의존성과 버전)", "기술적 사양", "코드 및 라이브러리 버전"),
     )
 ]
+# AI 활용 이용조건 (가이드라인 3.4.5 표 39 「이용조건 명시」: AI 학습, 데이터 결합, 자동화 접근, 대량 호출, 재배포 가능 여부).
+# 항목마다 허용 · 조건부 허용 · 불허 중 하나를 고르고, 정본에는 ODRL 정책(odrl:Set)으로 넣는다.
+# (이름, ODRL 동작, 화면 이름, 설명). 표준 ODRL 동작이 있으면 그것을, 없으면 fde: 동작(odrl:use 에 포함)을 쓴다.
+AI_TERMS: list[tuple[str, str, str, str]] = [
+    ("ai_training", "fde:aiTraining", "AI 학습 이용", "기계학습·생성형 AI 모델의 학습·미세조정·평가 데이터로 쓰는 것"),
+    ("ai_combination", "fde:dataCombination", "다른 데이터와 결합", "다른 데이터셋과 연계·결합해 새 데이터를 만드는 것 (재식별 위험 검토 대상)"),
+    ("ai_automated_access", "fde:automatedAccess", "자동화 접근", "AI 에이전트·프로그램이 사람 개입 없이 조회·수집하는 것 (MCP · API · 크롤링)"),
+    ("ai_bulk_access", "fde:bulkAccess", "대량 호출 · 일괄 내려받기", "짧은 시간에 많이 호출하거나 전체를 한 번에 내려받는 것"),
+    ("ai_redistribution", "odrl:distribute", "재배포", "원본이나 가공본을 제3자에게 다시 제공·공개하는 것"),
+]
+AI_TERM_STATUS = {"permitted": "허용", "conditional": "조건부 허용", "prohibited": "불허"}
+META_FIELDS += [
+    {"name": name, "property": action, "label": label, "level": "권장", "type": "ai_term", "scope": "all", "group": "ai",
+     "guide": "3.4.5 표 39 이용조건 명시", "help": desc}
+    for name, action, label, desc in AI_TERMS
+] + [
+    {"name": "ai_terms_conditions", "property": "odrl:Set / rdfs:comment", "label": "조건 · 제한 사항 (조건부 허용의 조건, 출처 표시, 호출 상한, 문의처 등)",
+     "level": "권장", "type": "textarea", "scope": "all", "group": "ai", "guide": "3.4.5 표 39 이용조건 명시"},
+]
 CARD_FIELDS = [f for f in META_FIELDS if f.get("group") == "card"]
 META_FIELD_NAMES = {f["name"] for f in META_FIELDS}
 _DURATION = re.compile(r"^P(?!$)(\d+Y)?(\d+M)?(\d+W)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+(\.\d+)?S)?)?$")
@@ -130,7 +150,7 @@ def new_graph() -> Graph:
     s = get_settings()
     for prefix, ns in (("dcat", DCAT), ("dcterms", DCTERMS), ("prov", PROV), ("foaf", FOAF), ("skos", SKOS),
                        ("xsd", XSD), ("rdfs", RDFS), ("spdx", SPDX), ("rai", RAI), ("csvw", CSVW), ("qb", QB),
-                       ("vcard", VCARD), ("owl", OWL), ("adms", ADMS), ("dqv", DQV), ("oa", OA), ("schema", SDO),
+                       ("vcard", VCARD), ("owl", OWL), ("adms", ADMS), ("dqv", DQV), ("oa", OA), ("schema", SDO), ("odrl", ODRL),
                        ("fde", Namespace(s.def_ns))):
         g.bind(prefix, ns, override=True, replace=True)
     return g
@@ -200,6 +220,50 @@ def _add_scheme_defs(g: Graph, db: Session) -> None:
         s = URIRef(minting.scheme_iri(axis.code))
         g.add((s, RDF.type, SKOS.ConceptScheme))
         g.add((s, SKOS.prefLabel, _lit(f"{axis.code} {axis.name}")))
+
+
+def ai_terms(meta: dict[str, Any]) -> dict[str, str]:
+    """고른 AI 이용조건만 {이름: permitted|conditional|prohibited}."""
+    return {name: str(meta[name]) for name, *_ in AI_TERMS if meta.get(name) in AI_TERM_STATUS}
+
+
+def _add_ai_terms(g: Graph, ds: URIRef, meta: dict[str, Any], record: dict[str, Any], FDE: Namespace) -> None:
+    """AI 이용조건을 ODRL 정책으로: 데이터셋 odrl:hasPolicy → odrl:Set → 허용은 odrl:permission, 불허는 odrl:prohibition.
+    조건부 허용은 허용 규칙에 fde:conditional true 를 달고, 조건 문장은 정책의 rdfs:comment 로 적는다."""
+    terms = ai_terms(meta)
+    note = str(meta.get("ai_terms_conditions") or "").strip()
+    if not terms and not note:
+        return
+    pol = URIRef(f"{ds}#ai-terms")
+    g.add((ds, ODRL.hasPolicy, pol))
+    g.add((pol, RDF.type, ODRL.Set))
+    g.add((pol, ODRL.uid, pol))
+    g.add((pol, RDFS.label, Literal("AI 활용 이용조건 (가이드라인 3.4.5 표 39)", lang="ko")))
+    if note:
+        g.add((pol, RDFS.comment, _lit(note)))
+    rec: dict[str, Any] = {}
+    for name, action, label, _desc in AI_TERMS:
+        status = terms.get(name)
+        if not status:
+            continue
+        prefix, local = action.split(":")
+        act = ODRL[local] if prefix == "odrl" else FDE[local]
+        g.add((act, RDF.type, ODRL.Action))
+        g.add((act, RDFS.label, Literal(label, lang="ko")))
+        if prefix != "odrl":
+            g.add((act, ODRL.includedIn, ODRL.use))  # ODRL 확장 동작은 상위 동작을 밝힌다
+        rule = URIRef(f"{ds}#ai-terms-{local}")
+        g.add((pol, ODRL.prohibition if status == "prohibited" else ODRL.permission, rule))
+        g.add((rule, RDF.type, ODRL.Prohibition if status == "prohibited" else ODRL.Permission))
+        g.add((rule, ODRL.action, act))
+        g.add((rule, ODRL.target, ds))
+        g.add((rule, FDE.aiTermStatus, Literal(status)))
+        if status == "conditional":
+            g.add((rule, FDE.conditional, Literal(True)))
+        rec[name] = status
+    record["aiUsageTerms"] = rec
+    if note:
+        record["aiUsageConditions"] = note
 
 
 def build(db: Session, pd: ProcessDataset, mode: str = "draft") -> Canonical:
@@ -314,6 +378,7 @@ def build(db: Session, pd: ProcessDataset, mode: str = "draft") -> Canonical:
             prefix, local = f["property"].split(":")
             g.add((ds, (RAI if prefix == "rai" else FDE)[local], _lit(meta[f["name"]])))
             record[_camel(f["name"])] = meta[f["name"]]
+    _add_ai_terms(g, ds, meta, record, FDE)
     if meta.get("rai_missing_data"):
         g.add((ds, RAI.dataCollectionMissingData, _lit(meta["rai_missing_data"])))
         record["missingData"] = meta["rai_missing_data"]

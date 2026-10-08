@@ -171,7 +171,7 @@ export function Step3() {
       const name = FOCUS_ALIAS[raw] ?? raw;
       if (name !== CLASS_FOCUS && name !== DICT_FOCUS && !fieldNames.has(name)) return;
       const group = reference.meta_fields.find((f) => f.name === name)?.group;
-      setTab(name === CLASS_FOCUS ? "class" : name === DICT_FOCUS ? "dict" : group === "card" ? "card" : "form");
+      setTab(name === CLASS_FOCUS ? "class" : name === DICT_FOCUS ? "dict" : group === "card" || group === "ai" ? "card" : "form");
       setFocusReq((r) => ({ name, n: (r?.n ?? 0) + 1 }));
     },
     [fieldNames, reference.meta_fields],
@@ -382,9 +382,9 @@ export function Step3() {
           <Tabs tabs={TABS} value={tab} onChange={setTab} />
 
           {tab === "class" && <ClassTab key={dataset.id} pid={pid} dataset={dataset} reference={reference} editable={editable} busy={busy} onToggle={toggleClass} />}
-          {tab === "form" && <FormTab key={dataset.id} m={model} fields={fields.filter((f) => f.group !== "card")} />}
+          {tab === "form" && <FormTab key={dataset.id} m={model} fields={fields.filter((f) => !f.group)} />}
           {tab === "dict" && <DictTab key={dataset.id} pid={pid} did={dataset.id} editable={editable} onSaved={refresh} />}
-          {tab === "card" && <CardTab key={dataset.id} pid={pid} m={model} fields={fields.filter((f) => f.group === "card")} dirtyCount={dirtyCount} />}
+          {tab === "card" && <CardTab key={dataset.id} pid={pid} m={model} fields={fields.filter((f) => f.group === "card")} aiFields={fields.filter((f) => f.group === "ai")} dirtyCount={dirtyCount} />}
           {tab === "prov" && <ProvTab key={dataset.id} pid={pid} dataset={dataset} publisher={publisher} />}
           {tab === "profile" && <ProfileTab key={dataset.id} pid={pid} did={dataset.id} />}
 
@@ -736,6 +736,7 @@ const PLACEHOLDER: Record<string, string> = {
   quality_annotation: "예: 월 1회 수동 검수 완료 (환경전문가 검토)",
   rai_known_limitations: "예: 일부 측정소는 장비 유지보수 기간 동안 측정값 누락",
   rai_missing_data: "예: 결측 사유: 센서 점검(2.1%), 통신 오류(1.1%)",
+  ai_terms_conditions: "예: AI 학습은 출처 표시 조건으로 허용 · 결합 전 재식별 위험 검토 필요 · 하루 1,000건 이내 호출",
 };
 
 function FieldControl({ m, field, id, value }: { m: FormModel; field: MetaField; id: string; value: FieldValue }) {
@@ -782,6 +783,18 @@ function FieldControl({ m, field, id, value }: { m: FormModel; field: MetaField;
           onChange={onText}
           emptyLabel="선택 안 함"
           options={m.reference.late_policies.map((p) => ({ value: p, label: p }))}
+        />
+      );
+    case "ai_term":
+      return (
+        <SelectControl
+          id={id}
+          name={field.name}
+          value={text}
+          disabled={disabled}
+          onChange={onText}
+          emptyLabel="미정"
+          options={AI_TERM_OPTIONS}
         />
       );
     case "periodicity":
@@ -1145,7 +1158,7 @@ function DictTab({ pid, did, editable, onSaved }: { pid: number; did: number; ed
 // ───────────── ④ 데이터 카드
 const SOURCE_TONE: Record<CardItem["source"], "ok" | "info" | "warn" | "muted"> = { 자동: "ok", 입력: "info", "작성 필요": "warn", "해당 시": "muted" };
 
-function CardTab({ pid, m, fields, dirtyCount }: { pid: number; m: FormModel; fields: MetaField[]; dirtyCount: number }) {
+function CardTab({ pid, m, fields, aiFields, dirtyCount }: { pid: number; m: FormModel; fields: MetaField[]; aiFields: MetaField[]; dirtyCount: number }) {
   const did = m.dataset.id;
   const q = useQuery({ queryKey: ["process", pid, "dataset", did, "card"], queryFn: () => api.cardPreview(did) });
   const byItem = new Map(fields.map((f) => [f.card_item, f]));
@@ -1199,9 +1212,73 @@ function CardTab({ pid, m, fields, dirtyCount }: { pid: number; m: FormModel; fi
               </div>
             </Card>
           ))}
+          <AiTermsCard m={m} fields={aiFields} />
         </div>
       )}
     </QueryState>
+  );
+}
+
+const AI_TERM_OPTIONS = [
+  { value: "permitted", label: "허용" },
+  { value: "conditional", label: "조건부 허용" },
+  { value: "prohibited", label: "불허" },
+];
+const AI_TERM_TONE: Record<string, "ok" | "warn" | "err" | "muted"> = { permitted: "ok", conditional: "warn", prohibited: "err", "": "muted" };
+
+/** AI 활용 이용조건 — 가이드라인 3.4.5 표 39 「이용조건 명시」. 정본에는 ODRL 정책으로 들어가고, MCP 의 get_usage_terms 가 에이전트에게 그대로 알린다. */
+function AiTermsCard({ m, fields }: { m: FormModel; fields: MetaField[] }) {
+  const terms = fields.filter((f) => f.type === "ai_term");
+  const note = fields.find((f) => f.type !== "ai_term");
+  const set = terms.filter((f) => String(m.valueOf(f)).trim() !== "").length;
+  if (terms.length === 0) return null;
+  return (
+    <Card
+      title={
+        <>
+          AI 활용 이용조건 (가이드라인 3.4.5 표 39){" "}
+          <Badge tone={set === terms.length ? "ok" : set > 0 ? "warn" : "err"}>
+            {set}/{terms.length}항목 명시
+          </Badge>
+        </>
+      }
+    >
+      <p className="small muted">
+        부록 4 양식 밖의 항목입니다. AI 학습 · 결합 · 자동화 접근 · 대량 호출 · 재배포를 허용하는지 밝혀 두면 정본에 ODRL 정책으로 들어가고, 데이터 카드 끝과 카탈로그, AI 에이전트(MCP)의 이용조건
+        응답에 그대로 실립니다. 고르지 않은 항목은 "미정"으로 표시되고, 에이전트에게는 그 용도로 쓰지 말라고 안내합니다.
+      </p>
+      <div className="col gap-8 mt-8">
+        {terms.map((f) => {
+          const v = String(m.valueOf(f));
+          return (
+            <div key={f.name} className="card tight flat">
+              <div className="row between top wrap">
+                <div>
+                  <span className="bold">{f.label}</span>
+                  {f.help && <div className="small muted">{f.help}</div>}
+                </div>
+                <div className="row">
+                  <Badge tone={AI_TERM_TONE[v] || "muted"}>{AI_TERM_OPTIONS.find((o) => o.value === v)?.label || "미정"}</Badge>
+                  <div style={{ width: 160 }}>
+                    <FieldControl m={m} field={f} id={fieldDomId(f.name)} value={m.valueOf(f)} />
+                  </div>
+                </div>
+              </div>
+              {m.isDirty(f.name) && <span className="hint t-warn">미저장</span>}
+            </div>
+          );
+        })}
+        {note && (
+          <div className="card tight flat">
+            <span className="bold">{note.label}</span>
+            <div className="mt-4">
+              <FieldControl m={m} field={note} id={fieldDomId(note.name)} value={m.valueOf(note)} />
+              {m.isDirty(note.name) && <span className="hint t-warn">미저장</span>}
+            </div>
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }
 
