@@ -18,8 +18,8 @@ from rdflib import URIRef
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ..models import Activity, Attestation, DiagnosisRun, Process, ProcessDataset, Relation, User, utcnow
-from . import activity, canonical, documents, minting, serialize, validation
+from ..models import Activity, Attestation, CatalogEntry, DiagnosisRun, Process, ProcessDataset, Relation, User, utcnow
+from . import activity, agent, canonical, documents, minting, serialize, validation
 from .reference import fix_route, guideline_rules
 
 # 가이드라인 2.1.1 「데이터별 권장 오픈 포맷」 표 (이 스튜디오가 받는 형식 범위에서)
@@ -270,15 +270,28 @@ def _b_pii(ctx: _Ctx, pd: ProcessDataset):
     return "attest", "개인정보 의심 컬럼: " + ", ".join(f"{c['name']}({c['pii']['kind']})" for c in cols[:6])
 
 
+def _b_mcp_hint(ctx: _Ctx, pd: ProcessDataset):
+    """원칙 10: 발행본이 AI 에이전트(MCP)에게 열려 있으면 실제 키·호출 이력을 증빙으로 붙인다."""
+    entry = ctx.db.scalar(select(CatalogEntry).where(CatalogEntry.asset_id == pd.asset_id, CatalogEntry.status == "published")
+                          .order_by(CatalogEntry.published_at.desc()).limit(1))
+    ex = agent.exposure(ctx.db, entry)
+    if not ex:
+        return None
+    return "attest", (f"MCP 로 제공 중 — {entry.resource_id} (N²SF {ex['grade']}) · 접근 가능 키 {ex['keys']}개 · "
+                      f"최근 30일 호출 {ex['calls']}건" + (f" (거부 {ex['denied']}건)" if ex["denied"] else "") + " · 호출 이력 기록 중")
+
+
 _BUILTINS = {"minted": _b_minted, "periodicity": _b_periodicity, "related": _b_related, "provenance": _b_provenance,
              "open_format": _b_open_format, "structured": _b_structured, "schema_defined": _b_schema_defined,
              "schema_hint": _b_schema_hint, "machine_readable": _b_machine_readable, "iso8601": _b_iso8601,
              "missing_markers": _b_missing_markers, "large_format": _b_large_format, "web_api": _b_web_api, "api_alt": _b_api_alt,
              "api_hint": _b_api_hint, "numeric_hint": _b_numeric_hint, "pii": _b_pii,
-             "data_dictionary": _b_data_dictionary, "data_card": _b_data_card}
+             "data_dictionary": _b_data_dictionary, "data_card": _b_data_card,
+             "mcp_hint": _b_mcp_hint}
 # 판정기가 '해당 없음'을 돌려줄 때 화면에 적을 사유
 _NA_REASON = {"related": "조합에 데이터셋이 1건뿐임", "iso8601": "날짜·시각 컬럼 없음", "large_format": "100MB 미만이라 대용량이 아님",
               "api_alt": "API 엔드포인트 미선언", "api_hint": "API 엔드포인트 미선언", "numeric_hint": "수치 컬럼 없음",
+              "mcp_hint": "AI 에이전트(MCP)로 제공하지 않음 (발행본에 접근할 수 있는 에이전트 키 없음)",
               "pii": "개인정보 의심 컬럼 미검출 (컬럼 이름·값 패턴 기준의 자동 탐지 결과)"}
 
 

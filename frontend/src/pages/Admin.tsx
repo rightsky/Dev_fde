@@ -1,9 +1,10 @@
-// 시스템 관리 — 사용자 · 기관 · 분류체계 · 민팅 대장 · 활동 로그 · 셰이프
+// 시스템 관리 — 사용자 · 기관 · 분류체계 · 민팅 대장 · 활동 로그 · 셰이프 · AI 에이전트(MCP)
 import { useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api";
+import { AgentsTab } from "./AdminAgents";
 import { useAuth, useReference } from "../auth";
 import type { Org, Role, TaxAxis, TaxCode, User } from "../types";
 import { Badge, Banner, Button, Card, CodeBlock, ConfirmButton, Empty, Field, Modal, QueryState, SeverityBadge, Tabs, cx, fmtDateTime, fmtNum, useToast } from "../ui";
@@ -15,6 +16,7 @@ const TABS = [
   { key: "mint", label: "민팅 대장" },
   { key: "activity", label: "활동 로그" },
   { key: "shapes", label: "셰이프" },
+  { key: "agents", label: "AI 에이전트(MCP)" },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 const isTab = (v: string | null): v is TabKey => TABS.some((t) => t.key === v);
@@ -62,7 +64,7 @@ export function AdminPage() {
   return (
     <div>
       <h1 className="page-title">시스템 관리</h1>
-      <p className="page-sub">계정과 권한, 기관 · 분류체계 같은 통제 어휘, 발행 ID 대장, 활동 이력, 검증 셰이프를 한곳에서 봅니다.</p>
+      <p className="page-sub">계정과 권한, 기관 · 분류체계 같은 통제 어휘, 발행 ID 대장, 활동 이력, 검증 셰이프, AI 에이전트(MCP) 접근을 한곳에서 봅니다.</p>
       {!isAdmin && (
         <div className="mb-8">
           <Banner tone="info">
@@ -77,6 +79,7 @@ export function AdminPage() {
       {tab === "mint" && <MintTab />}
       {tab === "activity" && <ActivityTab />}
       {tab === "shapes" && <ShapesTab />}
+      {tab === "agents" && (isAdmin ? <AgentsTab /> : <Banner tone="warn">관리자 권한이 필요합니다 — AI 에이전트 키와 호출 이력은 관리자만 봅니다.</Banner>)}
     </div>
   );
 }

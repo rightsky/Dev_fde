@@ -10,6 +10,9 @@ from app.db import Base, _make_engine
 from app.migrate import BASELINE, upgrade
 
 
+LATER_TABLES = {"agent_key", "agent_call"}  # 0002 (v0.5)
+
+
 def _engine(tmp_path: Path, name: str):
     return _make_engine(f"sqlite:///{tmp_path / name}")
 
@@ -26,7 +29,8 @@ def test_fresh_database_matches_models(tmp_path):
 def test_legacy_database_is_stamped_then_upgraded(tmp_path):
     """v0.3 까지 create_all 로 만든 DB 는 기준 판으로 표시되고 데이터가 그대로 남는다."""
     eng = _engine(tmp_path, "legacy.db")
-    Base.metadata.create_all(eng)
+    # v0.3 시점의 표만 만든다 (0002 이후에 생긴 표는 빼고)
+    Base.metadata.create_all(eng, tables=[t for t in Base.metadata.sorted_tables if t.name not in LATER_TABLES])
     with eng.begin() as c:
         c.execute(text("INSERT INTO organization (code, label, kind, active, created_at) VALUES ('X', '기관', 'gov', 1, '2026-01-01 00:00:00')"))
     upgrade(eng)

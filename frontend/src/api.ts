@@ -146,6 +146,14 @@ export const api = {
   updateUser: (id: number, body: Partial<{ name: string; role: T.Role; org_label: string; email: string; active: boolean; password: string }>) =>
     patch<T.User>(`/users/${id}`, body),
   activities: (params?: { process_id?: number; limit?: number }) => get<T.Activity[]>("/activities", params),
+
+  // AI 에이전트(MCP)
+  mcpInfo: () => get<T.McpInfo>("/mcp-info"),
+  agentKeys: () => get<T.AgentKey[]>("/agent-keys"),
+  createAgentKey: (body: { name: string; purpose?: string; grades: string[]; tools: string[]; daily_limit: number; expires_days: number | null }) =>
+    post<T.AgentKey>("/agent-keys", body),
+  revokeAgentKey: (id: number) => post<T.AgentKey>(`/agent-keys/${id}/revoke`),
+  agentCalls: (params?: { key_id?: number; status?: string; limit?: number }) => get<T.AgentCall[]>("/agent-calls", params),
   mintRegistry: () => get<T.MintRegistry>("/mint-registry"),
   dashboard: () => get<T.Dashboard>("/dashboard"),
 
