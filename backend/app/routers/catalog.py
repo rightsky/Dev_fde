@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import func, select
@@ -53,12 +54,24 @@ def _entry(db: Session, resource_id: str) -> CatalogEntry:
 
 @router.get("/catalog/{resource_id}")
 def get_entry(resource_id: str, db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
-    return catalog_out(_entry(db, resource_id), detail=True)
+    from ..services import catalog as catalog_svc
+
+    e = _entry(db, resource_id)
+    return {**catalog_out(e, detail=True), "documents": catalog_svc.documents_for(db, e)}
 
 
 @router.get("/catalog/{resource_id}/raw")
 def raw_entry(resource_id: str, format: str = "ttl", db: Session = Depends(get_db), _: User = Depends(current_user)) -> Response:
     e = _entry(db, resource_id)
+    from ..services import catalog as catalog_svc
+
+    if format in catalog_svc.DOC_FORMATS:
+        body = catalog_svc.documents_for(db, e).get(format)
+        if body is None:
+            raise HTTPException(404, "이 발행본에는 해당 문서 산출물이 없습니다 (이전 판에서 발행됨)")
+        mt, suffix = catalog_svc.DOC_FORMATS[format]
+        return Response(body.encode("utf-8"), media_type=f"{mt}; charset=utf-8",
+                        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(e.resource_id + '_' + suffix)}"})
     body, mt, ext = {"ttl": (e.turtle, "text/turtle", "ttl"), "jsonld": (e.jsonld, "application/ld+json", "jsonld"),
                      "txt": (e.text_summary or "", "text/plain", "txt"),
                      "schema": (e.schema_json or "", "application/json", "json")}.get(format, (e.turtle, "text/turtle", "ttl"))

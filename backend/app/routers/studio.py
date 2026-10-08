@@ -437,6 +437,70 @@ def patch_meta(did: int, body: MetaIn, db: Session = Depends(get_db), user: User
     return dataset_out(db, pd, _mode(pd.process))
 
 
+# ------------------------------------------------------------------ STEP 3 데이터 사전
+class DictEntry(BaseModel):
+    table: str
+    column: str
+    description: str | None = Field(default=None, max_length=2000)
+    unit: str | None = Field(default=None, max_length=200)
+    codes: str | None = Field(default=None, max_length=4000)
+
+
+class DictIn(BaseModel):
+    entries: list[DictEntry]
+
+
+def _dictionary_payload(pd: ProcessDataset) -> dict[str, Any]:
+    from ..services import documents
+
+    rows = documents.dictionary_rows(pd)
+    return {"dataset_id": pd.id, "rows": rows, "described": sum(1 for r in rows if r["description"]), "total": len(rows)}
+
+
+@router.get("/datasets/{did}/dictionary")
+def get_dictionary(did: int, db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
+    """데이터 사전: 컬럼마다 프로파일 통계와 사람이 적은 정의·단위·코드값."""
+    return _dictionary_payload(_dataset(db, did, editable=False))
+
+
+@router.put("/datasets/{did}/dictionary")
+def put_dictionary(did: int, body: DictIn, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    """보낸 컬럼의 정의·단위·코드값을 저장한다 (보내지 않은 컬럼은 그대로 둔다. 빈 값은 지운다)."""
+    pd = _dataset(db, did)
+    cols = {(t["name"], c["name"]) for t in (pd.asset.profile or {}).get("tables", []) for c in t.get("columns", [])}
+    bad = [f"{e.table}.{e.column}" for e in body.entries if (e.table, e.column) not in cols]
+    if bad:
+        raise HTTPException(422, f"원천에 없는 컬럼입니다: {', '.join(bad[:5])}")
+    meta = dict(pd.meta or {})
+    dic = {t: dict(c) for t, c in (meta.get("_dictionary") or {}).items()}
+    for e in body.entries:
+        ent = {k: (getattr(e, k) or "").strip() for k in ("description", "unit", "codes")}
+        ent = {k: v for k, v in ent.items() if v}
+        if ent:
+            dic.setdefault(e.table, {})[e.column] = ent
+        else:
+            dic.get(e.table, {}).pop(e.column, None)
+    meta["_dictionary"] = {t: c for t, c in dic.items() if c}
+    pd.meta = meta
+    pd.process.updated_at = utcnow()
+    activity.log(db, "dictionary_update", f"데이터 사전 저장 — {meta.get('title') or pd.asset.name} ({len(body.entries)}개 컬럼)",
+                 user=user, process_id=pd.process_id, dataset_id=pd.id)
+    db.commit()
+    return _dictionary_payload(pd)
+
+
+@router.get("/datasets/{did}/card")
+def card_preview(did: int, db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
+    """지금 정본으로 만든 데이터 카드 미리보기 (STEP 7 산출물과 같은 함수). 칸마다 채움 여부와 근거를 준다."""
+    from ..services import documents
+
+    pd = _dataset(db, did, editable=False)
+    c = canonical.build(db, pd, _mode(pd.process))
+    sections = documents.card_items(c, pd, validation.latest_run(db, pd.process_id))
+    filled, total = documents.card_coverage(sections)
+    return {"dataset_id": pd.id, "sections": sections, "filled": filled, "total": total}
+
+
 @router.post("/datasets/{did}/meta/confirm")
 def confirm_meta(did: int, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
     pd = _dataset(db, did)

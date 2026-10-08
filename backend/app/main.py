@@ -25,7 +25,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="FDE Data Studio API", version="0.2.0", lifespan=lifespan,
+app = FastAPI(title="FDE Data Studio API", version="0.3.0", lifespan=lifespan,
               docs_url="/api/docs", openapi_url="/api/openapi.json")
 
 _origins = [o.strip() for o in get_settings().cors_origins.split(",") if o.strip()]

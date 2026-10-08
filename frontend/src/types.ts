@@ -62,10 +62,54 @@ export interface MetaField {
   approval?: boolean;
   /** 가이드라인 근거 위치 (예: "표 9 데이터명"). 가이드라인에 없는 제품 필드는 비어 있다 */
   guide?: string;
+  /** "card": 부록 4 데이터 카드에만 있는 항목 (데이터 카드 탭에서 입력) */
+  group?: "card";
+  card_item?: string;
+}
+
+// ───────────── STEP 3 데이터 사전 · 데이터 카드
+export interface DictRow {
+  table: string;
+  column: string;
+  type: string;
+  type_label: string;
+  description: string;
+  unit: string;
+  codes: string;
+  required: boolean | null;
+  null_rate: number | null;
+  distinct: number | null;
+  missing_markers: string[];
+  samples: string[];
+  pii: string | null;
+  key: string | null;
+}
+
+export interface DictPayload {
+  dataset_id: number;
+  rows: DictRow[];
+  described: number;
+  total: number;
+}
+
+export interface CardItem {
+  item: string;
+  content: string;
+  source: "자동" | "입력" | "작성 필요" | "해당 시";
+  optional: boolean;
+  filled: boolean;
+  note?: string;
+}
+
+export interface CardPreview {
+  dataset_id: number;
+  sections: { section: string; items: CardItem[] }[];
+  filled: number;
+  total: number;
 }
 
 export interface FormatDef {
-  key: "ttl" | "jsonld" | "txt" | "schema";
+  key: "ttl" | "jsonld" | "txt" | "schema" | "croissant" | "card" | "dict";
   label: string;
   tag: string;
   suffix: string;
@@ -700,6 +744,8 @@ export interface CatalogEntry {
   jsonld?: string;
   text_summary?: string | null;
   schema_json?: string | null;
+  /** 같은 정본에서 만든 문서 산출물 (상세 조회에만 있음): croissant · card · dict */
+  documents?: Partial<Record<"croissant" | "card" | "dict", string>>;
 }
 
 export interface CatalogList {

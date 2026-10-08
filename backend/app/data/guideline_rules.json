@@ -1035,15 +1035,16 @@
    "text": "변수(항목)별 정의·단위·산정기준·코드값 의미를 포함하는 데이터 사전(또는 이에 준하는 문서)을 제공하고 있는가?",
    "basis": "부록 3 공통 · 의미 및 표준",
    "group": "의미 및 표준",
-   "method": "HUMAN-ATTEST",
+   "method": "AUTO-GRAPH",
    "resolver": {
     "type": "builtin",
-    "name": "schema_hint"
+    "name": "data_dictionary"
    },
-   "allow_na": true,
-   "difficulty": 2,
-   "criteria": "담당자가 증빙과 함께 확인한다. 컬럼 이름과 자료형은 자동으로 보여 주지만 정의·단위·산정기준·코드값 의미는 문서로 확인해야 한다",
-   "remedy": "항목별 정의·단위·산정기준·코드값 의미를 담은 데이터 사전을 만들고 제공 위치를 증빙으로 남긴다"
+   "route": "meta3",
+   "focus": "dictionary",
+   "difficulty": 1,
+   "criteria": "STEP 7 에서 데이터 사전을 산출했고 모든 컬럼에 정의가 적혀 있으면 충족, 절반 이상이면 부분, 그 미만이거나 산출하지 않았으면 미흡. 컬럼 이름·자료형·결측률은 자동으로 들어가고 정의·단위·코드값은 사람이 적는다",
+   "remedy": "STEP 3 의 데이터 사전 탭에서 컬럼마다 정의·단위·코드값 의미를 적은 뒤 STEP 6 검증과 STEP 7 변환을 다시 실행한다"
   },
   {
    "id": "C-07",
@@ -1384,14 +1385,16 @@
    "text": "데이터 특성(용도·품질·리스크 등)을 요약한 데이터 카드(또는 이에 준하는 설명 문서)를 함께 제공하고 있는가?",
    "basis": "부록 3 공통 · 품질 및 이력",
    "group": "품질 및 이력",
-   "method": "HUMAN-ATTEST",
+   "method": "AUTO-GRAPH",
    "resolver": {
-    "type": "attest"
+    "type": "builtin",
+    "name": "data_card"
    },
-   "allow_na": true,
+   "route": "meta3",
+   "focus": "card_background",
    "difficulty": 2,
-   "criteria": "담당자가 증빙과 함께 확인한다",
-   "remedy": "부록 4 양식에 따라 데이터 카드를 작성하고 제공 위치를 증빙으로 남긴다"
+   "criteria": "STEP 7 에서 부록 4 양식의 데이터 카드를 산출했고 필수 칸(해당 시 칸 제외)을 90% 이상 채웠으면 충족, 50% 이상이면 부분, 그 미만이거나 산출하지 않았으면 미흡",
+   "remedy": "STEP 3 의 데이터 카드 항목과 데이터 사전을 채운 뒤 STEP 6 검증과 STEP 7 변환을 다시 실행한다"
   },
   {
    "id": "R-11",

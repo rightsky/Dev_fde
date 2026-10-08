@@ -28,7 +28,7 @@ def test_resolvers_are_executable():
     rules = guideline_rules()["rules"]
     ids = {r["id"] for r in rules}
     ns = dict(canonical.new_graph().namespaces())
-    fields = {f["name"] for f in canonical.META_FIELDS} | {"extra_classes"}
+    fields = {f["name"] for f in canonical.META_FIELDS} | {"extra_classes", "dictionary"}
     routes = vocab()["fix_routes"]
     for r in rules:
         res = r["resolver"]

@@ -564,6 +564,149 @@
    "level": "선택",
    "type": "text",
    "scope": "all"
+  },
+  {
+   "name": "card_background",
+   "property": "fde:creationBackground",
+   "label": "구축 배경 (정책·행정 목적, 구축 필요성, 제공 범위 결정 근거)",
+   "level": "선택",
+   "type": "textarea",
+   "scope": "all",
+   "group": "card",
+   "guide": "부록 4 데이터셋 생성 · 구축 배경",
+   "card_item": "구축 배경"
+  },
+  {
+   "name": "card_preprocessing",
+   "property": "rai:dataPreprocessingProtocol",
+   "label": "정제·전처리 과정 (중복 제거, 오류 정정, 표준화, 이상치 처리)",
+   "level": "선택",
+   "type": "textarea",
+   "scope": "all",
+   "group": "card",
+   "guide": "부록 4 데이터셋 생성 · 정제·전처리 과정",
+   "card_item": "정제·전처리 과정"
+  },
+  {
+   "name": "card_annotation",
+   "property": "rai:dataAnnotationProtocol",
+   "label": "어노테이션 과정 (라벨 정의, 작업자, 가이드라인, 품질검수)",
+   "level": "선택",
+   "type": "textarea",
+   "scope": "all",
+   "group": "card",
+   "guide": "부록 4 데이터셋 생성 · 어노테이션 과정(해당 시)",
+   "card_item": "어노테이션 과정(해당 시)"
+  },
+  {
+   "name": "card_protection",
+   "property": "rai:personalSensitiveInformation",
+   "label": "비식별·보호 조치 (개인정보 포함 여부, 비식별 방식, 재식별 위험 완화)",
+   "level": "선택",
+   "type": "textarea",
+   "scope": "all",
+   "group": "card",
+   "guide": "부록 4 데이터셋 생성 · 비식별·보호 조치",
+   "card_item": "비식별·보호 조치"
+  },
+  {
+   "name": "card_splits",
+   "property": "fde:dataSplits",
+   "label": "분할 정보 (학습/검증/평가 분할 여부와 기준)",
+   "level": "선택",
+   "type": "textarea",
+   "scope": "all",
+   "group": "card",
+   "guide": "부록 4 데이터셋 구조 · 분할 정보(Splits)",
+   "card_item": "분할 정보(Splits)"
+  },
+  {
+   "name": "card_use_cases",
+   "property": "rai:dataUseCases",
+   "label": "권장 사용 범위 (정책분석·서비스 개선·AI 학습·평가 등)",
+   "level": "선택",
+   "type": "textarea",
+   "scope": "all",
+   "group": "card",
+   "guide": "부록 4 사용 시 고려사항 · 권장 사용 범위",
+   "card_item": "권장 사용 범위"
+  },
+  {
+   "name": "card_prohibited_uses",
+   "property": "fde:prohibitedUses",
+   "label": "비권장·금지 사용 (감시·차별·재식별 시도 등)",
+   "level": "선택",
+   "type": "textarea",
+   "scope": "all",
+   "group": "card",
+   "guide": "부록 4 사용 시 고려사항 · 비권장/금지 사용",
+   "card_item": "비권장/금지 사용"
+  },
+  {
+   "name": "card_social_impact",
+   "property": "rai:dataSocialImpact",
+   "label": "사회적 영향 (시민·취약계층·정책결정에 미칠 영향)",
+   "level": "선택",
+   "type": "textarea",
+   "scope": "all",
+   "group": "card",
+   "guide": "부록 4 사용 시 고려사항 · 사회적 영향",
+   "card_item": "사회적 영향"
+  },
+  {
+   "name": "card_risk_mitigation",
+   "property": "fde:riskMitigation",
+   "label": "리스크 완화 권고 (시간순 분할, 편향 점검, 품질 플래그 활용 등)",
+   "level": "선택",
+   "type": "textarea",
+   "scope": "all",
+   "group": "card",
+   "guide": "부록 4 사용 시 고려사항 · 리스크 완화 권고",
+   "card_item": "리스크 완화 권고"
+  },
+  {
+   "name": "card_reproducibility",
+   "property": "fde:reproducibility",
+   "label": "재현성 (같은 결과를 얻기 위한 전처리·생성 파이프라인)",
+   "level": "선택",
+   "type": "textarea",
+   "scope": "all",
+   "group": "card",
+   "guide": "부록 4 기술적 사양 · 재현성",
+   "card_item": "재현성"
+  },
+  {
+   "name": "card_environment",
+   "property": "fde:processingEnvironment",
+   "label": "환경 설정 (OS, 컨테이너·가상환경)",
+   "level": "선택",
+   "type": "textarea",
+   "scope": "all",
+   "group": "card",
+   "guide": "부록 4 기술적 사양 · 환경 설정",
+   "card_item": "환경 설정"
+  },
+  {
+   "name": "card_parameters",
+   "property": "fde:processingParameters",
+   "label": "매개변수·규칙 (집계 기준, 필터링 기준, 마스킹 임계값 등)",
+   "level": "선택",
+   "type": "textarea",
+   "scope": "all",
+   "group": "card",
+   "guide": "부록 4 기술적 사양 · 매개변수/규칙",
+   "card_item": "매개변수/규칙"
+  },
+  {
+   "name": "card_code",
+   "property": "fde:codeAndLibraries",
+   "label": "코드 및 라이브러리 버전 (코드 위치, 의존성과 버전)",
+   "level": "선택",
+   "type": "textarea",
+   "scope": "all",
+   "group": "card",
+   "guide": "부록 4 기술적 사양 · 코드 및 라이브러리 버전",
+   "card_item": "코드 및 라이브러리 버전"
   }
  ],
  "formats": [
@@ -598,6 +741,30 @@
    "suffix": "_schema.json",
    "media_type": "application/json",
    "use": "제약 디코딩용 스키마 · 스키마 레지스트리"
+  },
+  {
+   "key": "croissant",
+   "label": "Croissant 1.0 (ML 데이터셋 메타데이터)",
+   "tag": "Croissant",
+   "suffix": "_croissant.json",
+   "media_type": "application/ld+json",
+   "use": "AI 학습 도구 연계 · 표 13 수치 메타데이터(RecordSet·Field) · RAI 항목"
+  },
+  {
+   "key": "card",
+   "label": "데이터 카드 (부록 4)",
+   "tag": "데이터 카드",
+   "suffix": "_데이터카드.md",
+   "media_type": "text/markdown",
+   "use": "가이드라인 부록 4 양식 · 이용자 배포용 설명 문서"
+  },
+  {
+   "key": "dict",
+   "label": "데이터 사전",
+   "tag": "데이터 사전",
+   "suffix": "_데이터사전.csv",
+   "media_type": "text/csv",
+   "use": "컬럼별 정의·단위·코드값 · 엑셀로 열람"
   }
  ],
  "base_iri": "https://catalog.molit.go.kr",

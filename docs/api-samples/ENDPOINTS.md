@@ -28,6 +28,9 @@
 | POST | `/api/datasets/{did}/meta/confirm` |  | Confirm Meta |
 | POST | `/api/datasets/{did}/meta/unconfirm` |  | Unconfirm Meta |
 | GET | `/api/datasets/{did}/preview` |  | 정본 미리보기 + 즉시 검증. STEP 6 과 같은 엔진을 쓰되 실행 기록은 남기지 않는다. |
+| GET | `/api/datasets/{did}/dictionary` |  | 데이터 사전: 컬럼별 프로파일 통계 + 정의·단위·코드값. |
+| PUT | `/api/datasets/{did}/dictionary` | {entries: [{table, column, description?, unit?, codes?}]} | 보낸 컬럼의 정의·단위·코드값 저장 (빈 값은 삭제). |
+| GET | `/api/datasets/{did}/card` |  | 지금 정본으로 만든 데이터 카드(부록 4) 칸별 내용·근거·작성 비율. |
 | GET | `/api/diagnosis-runs/{run_id}/report` |  | 진단 보고서 (인쇄용 HTML — 브라우저 인쇄로 PDF 저장). |
 | GET | `/api/health` |  | Health |
 | GET | `/api/mint-registry` |  | Mint Registry |

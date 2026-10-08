@@ -98,3 +98,20 @@ def publish(db: Session, process: Process, user: User, vr: ValidationRun, sr: Se
     db.flush()
     act.text = f"카탈로그 발행 — {process.name} {len(out)}건 ({', '.join(e.resource_id for e in out[:5])})"
     return out
+
+
+DOC_FORMATS = {"croissant": ("application/ld+json", "croissant.json"), "card": ("text/markdown", "데이터카드.md"),
+               "dict": ("text/csv", "데이터사전.csv")}
+
+
+def documents_for(db: Session, entry: CatalogEntry) -> dict[str, str]:
+    """발행본과 같은 정본(체크섬)에서 만든 STEP 7 문서 산출물(Croissant·데이터 카드·데이터 사전)."""
+    from ..models import Artifact, ProcessDataset
+
+    rows = db.execute(select(Artifact.fmt, Artifact.content).join(ProcessDataset, ProcessDataset.id == Artifact.dataset_id)
+                      .where(ProcessDataset.asset_id == entry.asset_id, Artifact.set_checksum == entry.checksum,
+                             Artifact.fmt.in_(list(DOC_FORMATS))).order_by(Artifact.id.desc())).all()
+    out: dict[str, str] = {}
+    for fmt, content in rows:
+        out.setdefault(fmt, content)
+    return out

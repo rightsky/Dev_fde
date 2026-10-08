@@ -3,9 +3,9 @@
   "id": 3,
   "process_id": 1,
   "ruleset_version": "fde-rules-1.0",
-  "score": 35.0,
+  "score": 36.5,
   "max_score": 79.0,
-  "pct": 44,
+  "pct": 46,
   "summary": {
    "areas": [
     {
@@ -47,10 +47,10 @@
      "guideline_items": 15,
      "implemented": 15,
      "items": 15,
-     "score": 5.5,
-     "pct": 37,
-     "auto": 10,
-     "manual": 5
+     "score": 6.5,
+     "pct": 43,
+     "auto": 11,
+     "manual": 4
     },
     {
      "id": "A5",
@@ -58,10 +58,10 @@
      "guideline_items": 18,
      "implemented": 18,
      "items": 17,
-     "score": 5.5,
-     "pct": 32,
-     "auto": 8,
-     "manual": 9
+     "score": 6.0,
+     "pct": 35,
+     "auto": 9,
+     "manual": 8
     },
     {
      "id": "A6",
@@ -79,10 +79,10 @@
     {
      "id": "AUTO-GRAPH",
      "name": "정본 그래프 질의와 검증·변환 실행 결과로 자동 판정",
-     "items": 44,
-     "total": 44,
-     "met": 16,
-     "partial": 26,
+     "items": 46,
+     "total": 46,
+     "met": 17,
+     "partial": 27,
      "unmet": 2,
      "pending": 0
     },
@@ -109,12 +109,12 @@
     {
      "id": "HUMAN-ATTEST",
      "name": "담당자가 증빙과 함께 확인 (확인도 prov:Activity 로 기록)",
-     "items": 18,
-     "total": 18,
+     "items": 16,
+     "total": 16,
      "met": 0,
      "partial": 0,
      "unmet": 0,
-     "pending": 18
+     "pending": 16
     }
    ],
    "roadmap": [
@@ -154,19 +154,19 @@
     },
     {
      "rank": 3,
-     "item_id": "C-03",
-     "action": "STEP 3 의 추가 클래스에서 csvw:Table 을 선택한다. 프로파일한 컬럼 구조가 스키마로 정본에 들어간다",
-     "name": "데이터 구조(스키마) 정의",
+     "item_id": "C-06",
+     "action": "STEP 3 의 데이터 사전 탭에서 컬럼마다 정의·단위·코드값 의미를 적은 뒤 STEP 6 검증과 STEP 7 변환을 다시 실행한다",
+     "name": "데이터 사전 제공",
      "gain": 0.5,
      "difficulty": "낮음",
-     "basis": "부록 3 공통 · 형식 및 구조",
+     "basis": "부록 3 공통 · 의미 및 표준",
      "level": "필수",
      "method": "AUTO-GRAPH",
      "route": {
       "key": "meta3",
       "step": 3,
       "label": "프러퍼티 폼",
-      "focus": "extra_classes"
+      "focus": "dictionary"
      }
     },
     {
@@ -579,18 +579,6 @@
     },
     {
      "rank": 28,
-     "item_id": "C-06",
-     "action": "항목별 정의·단위·산정기준·코드값 의미를 담은 데이터 사전을 만들고 제공 위치를 증빙으로 남긴다",
-     "name": "데이터 사전 제공",
-     "gain": 1.0,
-     "difficulty": "중간",
-     "basis": "부록 3 공통 · 의미 및 표준",
-     "level": "필수",
-     "method": "HUMAN-ATTEST",
-     "route": null
-    },
-    {
-     "rank": 29,
      "item_id": "C-08",
      "action": "같은 개념을 가리키는 컬럼 이름·코드값·라벨이 데이터셋 사이에서 같은지 점검하고 결과를 증빙으로 남긴다",
      "name": "동일 개념에 동일 용어 사용",
@@ -602,7 +590,7 @@
      "route": null
     },
     {
-     "rank": 30,
+     "rank": 29,
      "item_id": "C-11",
      "action": "합성 데이터나 기계가 단 주석이 들어 있는지 확인하고, 있다면 어디에 어떻게 표기했는지 증빙으로 남긴다",
      "name": "합성 데이터·자동 주석 구분 표기",
@@ -614,7 +602,7 @@
      "route": null
     },
     {
-     "rank": 31,
+     "rank": 30,
      "item_id": "C-12",
      "action": "의심 컬럼에 적용한 비식별·가명처리 조치를 확인하고 증빙을 남긴다",
      "name": "개인정보 보호조치 적용",
@@ -626,7 +614,7 @@
      "route": null
     },
     {
-     "rank": 32,
+     "rank": 31,
      "item_id": "C-15",
      "action": "오류 신고와 개선 요청을 받는 창구, 처리 절차를 확인하고 그 위치를 증빙으로 남긴다",
      "name": "오류 신고·피드백 체계 운영",
@@ -638,7 +626,7 @@
      "route": null
     },
     {
-     "rank": 33,
+     "rank": 32,
      "item_id": "P-10",
      "action": "AI 에이전트가 접근할 수 있는 범위와 권한, 호출 이력 기록, 보안 위험 검토 결과(3.4절 표 39·표 40)를 확인하고 증빙을 남긴다",
      "name": "원칙 10",
@@ -650,7 +638,7 @@
      "route": null
     },
     {
-     "rank": 34,
+     "rank": 33,
      "item_id": "R-01",
      "action": "허용값·필수값·형식·관계 제약을 적은 검증 기준 문서의 제공 위치를 증빙으로 남긴다",
      "name": "데이터 검증 기준 제공",
@@ -662,7 +650,7 @@
      "route": null
     },
     {
-     "rank": 35,
+     "rank": 34,
      "item_id": "R-04",
      "action": "도메인 표준 용어체계와의 매핑·검증 절차를 확인하고 증빙을 남긴다",
      "name": "도메인 표준 용어체계와의 정합성 점검",
@@ -674,7 +662,7 @@
      "route": null
     },
     {
-     "rank": 36,
+     "rank": 35,
      "item_id": "R-08",
      "action": "데이터, 메타데이터, 스키마·데이터 사전·접근 안내를 한 경로에서 볼 수 있는지 확인하고 그 주소를 증빙으로 남긴다",
      "name": "데이터·메타데이터·핵심 문서의 동일 경로 제공",
@@ -686,7 +674,7 @@
      "route": null
     },
     {
-     "rank": 37,
+     "rank": 36,
      "item_id": "R-09",
      "action": "데이터가 바뀔 때 메타데이터와 문서를 함께 고치는 절차를 확인하고 증빙을 남긴다",
      "name": "변경 시 메타데이터·문서 동시 현행화",
@@ -698,19 +686,7 @@
      "route": null
     },
     {
-     "rank": 38,
-     "item_id": "R-10",
-     "action": "부록 4 양식에 따라 데이터 카드를 작성하고 제공 위치를 증빙으로 남긴다",
-     "name": "데이터 카드 제공",
-     "gain": 1.0,
-     "difficulty": "중간",
-     "basis": "부록 3 공통 · 품질 및 이력",
-     "level": "권장",
-     "method": "HUMAN-ATTEST",
-     "route": null
-    },
-    {
-     "rank": 39,
+     "rank": 37,
      "item_id": "U-01",
      "action": "수치 항목의 산식, 집계 단위, 기준시점을 적은 문서의 위치를 증빙으로 남긴다",
      "name": "수치 데이터의 산출 규칙 제공",
@@ -722,7 +698,7 @@
      "route": null
     },
     {
-     "rank": 40,
+     "rank": 38,
      "item_id": "U-03",
      "action": "비식별·가공으로 생기는 정보 공백이나 왜곡 가능성을 이용자에게 안내한 위치를 증빙으로 남긴다",
      "name": "비식별 가공 범위와 주의사항 안내",
@@ -734,7 +710,24 @@
      "route": null
     },
     {
-     "rank": 41,
+     "rank": 39,
+     "item_id": "R-10",
+     "action": "STEP 3 의 데이터 카드 항목과 데이터 사전을 채운 뒤 STEP 6 검증과 STEP 7 변환을 다시 실행한다",
+     "name": "데이터 카드 제공",
+     "gain": 0.5,
+     "difficulty": "중간",
+     "basis": "부록 3 공통 · 품질 및 이력",
+     "level": "권장",
+     "method": "AUTO-GRAPH",
+     "route": {
+      "key": "meta3",
+      "step": 3,
+      "label": "프러퍼티 폼",
+      "focus": "card_background"
+     }
+    },
+    {
+     "rank": 40,
      "item_id": "R-13",
      "action": "API 로 제공하고 있다면 STEP 3 의 API 엔드포인트 URL 에 주소를 입력한다",
      "name": "웹 표준 API 제공",
@@ -751,7 +744,7 @@
      }
     },
     {
-     "rank": 42,
+     "rank": 41,
      "item_id": "R-07",
      "action": "정제·변환에 쓴 코드의 저장소 위치와 라이선스를 증빙으로 남긴다",
      "name": "정제·변환 소스 코드 공개",
@@ -763,7 +756,7 @@
      "route": null
     },
     {
-     "rank": 43,
+     "rank": 42,
      "item_id": "R-11",
      "action": "재식별 위험 평가 결과와 조치 사항을 적은 문서의 위치를 증빙으로 남긴다",
      "name": "재식별 위험 평가와 문서화",
@@ -775,7 +768,7 @@
      "route": null
     },
     {
-     "rank": 44,
+     "rank": 43,
      "item_id": "R-15",
      "action": "API 응답에 메타데이터가 들어 있는지, 또는 메타데이터 참조 링크가 있는지 확인하고 증빙을 남긴다",
      "name": "API 응답의 메타데이터 연계",
@@ -787,7 +780,7 @@
      "route": null
     },
     {
-     "rank": 45,
+     "rank": 44,
      "item_id": "R-16",
      "action": "API 가 필터링·조건 검색·페이지네이션을 지원하는지 확인하고 API 문서 위치를 증빙으로 남긴다",
      "name": "필터링·분할 조회 기능",
@@ -799,7 +792,7 @@
      "route": null
     },
     {
-     "rank": 46,
+     "rank": 45,
      "item_id": "U-02",
      "action": "의심 컬럼의 마스킹·익명화 처리와 재식별 위험성 평가 결과를 확인하고 증빙을 남긴다",
      "name": "민감 정보 마스킹과 재식별 위험성 평가",
@@ -811,7 +804,7 @@
      "route": null
     },
     {
-     "rank": 47,
+     "rank": 46,
      "item_id": "C-01",
      "action": "CSV·JSON·Parquet 같은 개방형 포맷으로 변환한 파일을 STEP 1 에서 원천으로 등록한다",
      "name": "개방형 표준 포맷 제공",
@@ -828,7 +821,7 @@
      }
     },
     {
-     "rank": 48,
+     "rank": 47,
      "item_id": "C-02",
      "action": "첫 줄이 컬럼 이름이고 한 줄이 한 건인 표 형태로 파일을 정리해 다시 등록한다",
      "name": "기계 처리가 가능한 구조화",
@@ -845,7 +838,7 @@
      }
     },
     {
-     "rank": 49,
+     "rank": 48,
      "item_id": "C-07",
      "action": "원천의 날짜·시각 값을 YYYY-MM-DD 또는 YYYY-MM-DDThh:mm:ss 형식으로 바꿔 다시 등록한다",
      "name": "날짜·시간·코드 표기 형식 일관",
@@ -862,7 +855,7 @@
      }
     },
     {
-     "rank": 50,
+     "rank": 49,
      "item_id": "C-09",
      "action": "원천의 결측 표기를 한 가지(빈 값 또는 NULL)로 통일해 다시 등록한다",
      "name": "결측값·특수값 표기 통일",
@@ -886,16 +879,16 @@
    "implemented_total": 80,
    "scored_total": 79,
    "note": "가이드라인 v1.1 에서 표 9~11 의 메타데이터 필수 22항목, 표 9·12 의 권장·선택 7항목, 15개 원칙, 부록 3 체크리스트의 공통 필수 15 · 공통 권장 18 · 유형별(수치·개인정보 보호) 3항목을 원문 문구 그대로 옮긴 80항목이다. 가이드라인 본문에 '80항목'이라는 표현은 없으며, 이 구성은 목업의 영역 구분을 원문에 대조한 것이다. 항목 문구는 원문이고, 판정 기준과 조치 방법은 이 스튜디오가 정한 것이다. 다음은 넣지 않았다: 부록 3 유형별의 이미지/영상 2항목, 표 13~16 의 데이터 타입별 메타데이터(수치 4 · 이미지 4 · 음성 3 · 영상 5). 15개 원칙은 가이드라인에 판정 기준이 없어, 관련된 세부 항목의 판정을 종합하거나(12개) 분류 결과(원칙 12·15) 또는 담당자 확인(원칙 10)으로 판정한다.",
-   "validation_run_id": 5,
+   "validation_run_id": 7,
    "validation_stale": null,
    "counts": {
-    "met": 16,
-    "partial": 38,
+    "met": 17,
+    "partial": 39,
     "unmet": 6,
-    "pending": 19,
+    "pending": 17,
     "na": 1
    },
-   "potential_score": 49.5
+   "potential_score": 51.0
   },
   "items": [
    {
@@ -2312,7 +2305,7 @@
     "difficulty": 2,
     "datasets": [],
     "evidence": [
-     "연결 항목 3개 중 충족 0 · 부분 3 · 미흡 0 · 확인 대기 0 (점수 평균 50%)"
+     "연결 항목 3개 중 충족 1 · 부분 2 · 미흡 0 · 확인 대기 0 (점수 평균 67%)"
     ],
     "related": [
      {
@@ -2328,7 +2321,7 @@
      {
       "id": "C-03",
       "name": "데이터 구조(스키마) 정의",
-      "status": "partial"
+      "status": "met"
      }
     ],
     "route": null,
@@ -2425,18 +2418,18 @@
     "difficulty": 2,
     "datasets": [],
     "evidence": [
-     "연결 항목 5개 중 충족 0 · 부분 1 · 미흡 2 · 확인 대기 2 (점수 평균 10%)"
+     "연결 항목 5개 중 충족 0 · 부분 3 · 미흡 2 · 확인 대기 0 (점수 평균 30%)"
     ],
     "related": [
      {
       "id": "C-06",
       "name": "데이터 사전 제공",
-      "status": "pending"
+      "status": "partial"
      },
      {
       "id": "R-10",
       "name": "데이터 카드 제공",
-      "status": "pending"
+      "status": "partial"
      },
      {
       "id": "O-04",
@@ -3026,14 +3019,14 @@
      {
       "id": 1,
       "name": "도로목록",
-      "status": "unmet",
-      "detail": "정본 그래프에 데이터 스키마(csvw:tableSchema) 없음"
+      "status": "met",
+      "detail": "CSVW 스키마 — 컬럼 7개의 이름·자료형·필수 여부"
      },
      {
       "id": 2,
       "name": "교통사고",
-      "status": "unmet",
-      "detail": "정본 그래프에 데이터 스키마(csvw:tableSchema) 없음"
+      "status": "met",
+      "detail": "CSVW 스키마 — 컬럼 7개의 이름·자료형·필수 여부"
      },
      {
       "id": 3,
@@ -3043,7 +3036,7 @@
      }
     ],
     "evidence": [
-     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
+     "데이터셋 3건 중 충족 3 · 부분 0 · 미흡 0"
     ],
     "related": [],
     "route": {
@@ -3055,8 +3048,8 @@
     "attestable": false,
     "allow_na": false,
     "attestation": null,
-    "status": "partial",
-    "score": 0.5
+    "status": "met",
+    "score": 1.0
    },
    {
     "id": "C-04",
@@ -3247,45 +3240,50 @@
     "id": "C-06",
     "area": "A4",
     "name": "데이터 사전 제공",
-    "method": "HUMAN-ATTEST",
+    "method": "AUTO-GRAPH",
     "basis": "부록 3 공통 · 의미 및 표준",
     "level": "필수",
     "text": "변수(항목)별 정의·단위·산정기준·코드값 의미를 포함하는 데이터 사전(또는 이에 준하는 문서)을 제공하고 있는가?",
     "property": null,
     "group": "의미 및 표준",
-    "criteria": "담당자가 증빙과 함께 확인한다. 컬럼 이름과 자료형은 자동으로 보여 주지만 정의·단위·산정기준·코드값 의미는 문서로 확인해야 한다",
-    "remedy": "항목별 정의·단위·산정기준·코드값 의미를 담은 데이터 사전을 만들고 제공 위치를 증빙으로 남긴다",
-    "difficulty": 2,
+    "criteria": "STEP 7 에서 데이터 사전을 산출했고 모든 컬럼에 정의가 적혀 있으면 충족, 절반 이상이면 부분, 그 미만이거나 산출하지 않았으면 미흡. 컬럼 이름·자료형·결측률은 자동으로 들어가고 정의·단위·코드값은 사람이 적는다",
+    "remedy": "STEP 3 의 데이터 사전 탭에서 컬럼마다 정의·단위·코드값 의미를 적은 뒤 STEP 6 검증과 STEP 7 변환을 다시 실행한다",
+    "difficulty": 1,
     "datasets": [
      {
       "id": 1,
       "name": "도로목록",
-      "status": "pending",
-      "detail": "컬럼 7개 — 이름·자료형·필수 여부가 CSVW 스키마로 정본에 없음"
+      "status": "met",
+      "detail": "데이터 사전 산출 · 정의 작성 7/7개"
      },
      {
       "id": 2,
       "name": "교통사고",
-      "status": "pending",
-      "detail": "컬럼 7개 — 이름·자료형·필수 여부가 CSVW 스키마로 정본에 없음"
+      "status": "unmet",
+      "detail": "데이터 사전 산출 · 정의 작성 2/7개"
      },
      {
       "id": 3,
       "name": "cctv.vehicle.det.v1",
-      "status": "pending",
-      "detail": "스트림 스키마 3필드 (이름·자료형만 등록됨)"
+      "status": "unmet",
+      "detail": "데이터 사전 산출 · 정의 작성 0/3개"
      }
     ],
     "evidence": [
-     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+     "데이터셋 3건 중 충족 1 · 부분 0 · 미흡 2"
     ],
     "related": [],
-    "route": null,
-    "attestable": true,
-    "allow_na": true,
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "dictionary"
+    },
+    "attestable": false,
+    "allow_na": false,
     "attestation": null,
-    "status": "pending",
-    "score": 0.0
+    "status": "partial",
+    "score": 0.5
    },
    {
     "id": "C-07",
@@ -3645,13 +3643,13 @@
       "id": 1,
       "name": "도로목록",
       "status": "pending",
-      "detail": "컬럼 7개 — 이름·자료형·필수 여부가 CSVW 스키마로 정본에 없음"
+      "detail": "컬럼 7개 — 이름·자료형·필수 여부가 CSVW 스키마로 정본에 있음"
      },
      {
       "id": 2,
       "name": "교통사고",
       "status": "pending",
-      "detail": "컬럼 7개 — 이름·자료형·필수 여부가 CSVW 스키마로 정본에 없음"
+      "detail": "컬럼 7개 — 이름·자료형·필수 여부가 CSVW 스키마로 정본에 있음"
      },
      {
       "id": 3,
@@ -3952,26 +3950,50 @@
     "id": "R-10",
     "area": "A5",
     "name": "데이터 카드 제공",
-    "method": "HUMAN-ATTEST",
+    "method": "AUTO-GRAPH",
     "basis": "부록 3 공통 · 품질 및 이력",
     "level": "권장",
     "text": "데이터 특성(용도·품질·리스크 등)을 요약한 데이터 카드(또는 이에 준하는 설명 문서)를 함께 제공하고 있는가?",
     "property": null,
     "group": "품질 및 이력",
-    "criteria": "담당자가 증빙과 함께 확인한다",
-    "remedy": "부록 4 양식에 따라 데이터 카드를 작성하고 제공 위치를 증빙으로 남긴다",
+    "criteria": "STEP 7 에서 부록 4 양식의 데이터 카드를 산출했고 필수 칸(해당 시 칸 제외)을 90% 이상 채웠으면 충족, 50% 이상이면 부분, 그 미만이거나 산출하지 않았으면 미흡",
+    "remedy": "STEP 3 의 데이터 카드 항목과 데이터 사전을 채운 뒤 STEP 6 검증과 STEP 7 변환을 다시 실행한다",
     "difficulty": 2,
-    "datasets": [],
+    "datasets": [
+     {
+      "id": 1,
+      "name": "도로목록",
+      "status": "partial",
+      "detail": "데이터 카드 DST-000001_도로목록_데이터카드.md · 필수 칸 24/34개 작성 (71%)"
+     },
+     {
+      "id": 2,
+      "name": "교통사고",
+      "status": "partial",
+      "detail": "데이터 카드 DST-000002_교통사고_데이터카드.md · 필수 칸 17/34개 작성 (50%)"
+     },
+     {
+      "id": 3,
+      "name": "cctv.vehicle.det.v1",
+      "status": "unmet",
+      "detail": "데이터 카드 SVC-000001_cctv_vehicle_det_v1_데이터카드.md · 필수 칸 12/32개 작성 (38%)"
+     }
+    ],
     "evidence": [
-     "담당자 확인 대기 — 증빙을 첨부하고 확인하세요"
+     "데이터셋 3건 중 충족 0 · 부분 2 · 미흡 1"
     ],
     "related": [],
-    "route": null,
-    "attestable": true,
-    "allow_na": true,
+    "route": {
+     "key": "meta3",
+     "step": 3,
+     "label": "프러퍼티 폼",
+     "focus": "card_background"
+    },
+    "attestable": false,
+    "allow_na": false,
     "attestation": null,
-    "status": "pending",
-    "score": 0.0
+    "status": "partial",
+    "score": 0.5
    },
    {
     "id": "R-11",
@@ -4411,9 +4433,9 @@
     "score": 0.0
    }
   ],
-  "started_at": "2026-10-06T11:45:32.740017Z",
-  "ended_at": "2026-10-06T11:45:33.081974Z",
-  "activity": "ACT-K-0458"
+  "started_at": "2026-10-08T09:13:48.630578Z",
+  "ended_at": "2026-10-08T09:13:48.926085Z",
+  "activity": "ACT-K-0463"
  },
  "stale": null,
  "attestations": {},
@@ -4475,10 +4497,10 @@
    }
   ],
   "method_counts": {
-   "AUTO-GRAPH": 44,
+   "AUTO-GRAPH": 46,
    "AUTO-PROFILE": 5,
    "AUTO-DERIVED": 13,
-   "HUMAN-ATTEST": 18
+   "HUMAN-ATTEST": 16
   }
  }
 }

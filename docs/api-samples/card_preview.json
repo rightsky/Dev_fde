@@ -1,0 +1,306 @@
+{
+ "dataset_id": 2,
+ "sections": [
+  {
+   "section": "데이터셋 개요",
+   "items": [
+    {
+     "item": "데이터셋명/ID",
+     "content": "교통사고 / DST-000002",
+     "source": "자동",
+     "optional": false,
+     "filled": true
+    },
+    {
+     "item": "발행기관/담당부서/연락처",
+     "content": "경기도",
+     "source": "입력",
+     "optional": false,
+     "filled": true
+    },
+    {
+     "item": "데이터셋 요약",
+     "content": "테스트용 데이터셋 설명입니다.",
+     "source": "입력",
+     "optional": false,
+     "filled": true
+    },
+    {
+     "item": "지원 태스크(활용 목적)",
+     "content": "",
+     "source": "해당 시",
+     "optional": true,
+     "filled": false
+    },
+    {
+     "item": "언어 정보",
+     "content": "ko",
+     "source": "입력",
+     "optional": false,
+     "filled": true
+    },
+    {
+     "item": "대상 범위",
+     "content": "기간 2026-07-01 ~ 2026-07-28 · 대상 조합 「도로 사고 원인 분석 조합」",
+     "source": "입력",
+     "optional": false,
+     "filled": true
+    },
+    {
+     "item": "갱신 정책",
+     "content": "",
+     "source": "작성 필요",
+     "optional": false,
+     "filled": false
+    },
+    {
+     "item": "제공 형태",
+     "content": "파일 다운로드 (정형(CSV))",
+     "source": "자동",
+     "optional": false,
+     "filled": true
+    }
+   ]
+  },
+  {
+   "section": "데이터셋 구조",
+   "items": [
+    {
+     "item": "데이터 인스턴스(샘플)",
+     "content": "{\"사고번호\": \"A000001\", \"발생일시\": \"2026-07-02 08:01:00\", \"도로링크ID\": \"L00002\", \"사고주소\": \"서울특별시 종로구 세종대로 1\", \"차량번호\": \"(개인정보 의심 · 표시 안 함)\", \"사망자수\": \"1\", \"비고\": \"-\"}\n{\"사고번호\": \"A000002\", \"발생일시\": \"2026-07-03 08:02:00\", \"도로링크ID\": \"L00003\", \"사고주소\": \"서울특별시 종로구 세종대로 2\", \"차량번호\": \"(개인정보 의심 · 표시 안 함)\", \"사망자수\": \"2\", \"비고\": \"null\"}\n{\"사고번호\": \"A000003\", \"발생일시\": \"20260704\", \"도로링크ID\": \"L00004\", \"사고주소\": \"서울특별시 종로구 세종대로 3\", \"차량번호\": \"(개인정보 의심 · 표시 안 함)\", \"사망자수\": \"0\", \"비고\": \"정상\"}",
+     "source": "자동",
+     "optional": false,
+     "filled": true,
+     "note": "개인정보 의심 컬럼은 자동 탐지 기준으로 가렸습니다. 주소·이름처럼 탐지되지 않은 민감 정보가 없는지 배포 전에 확인하세요"
+    },
+    {
+     "item": "데이터 필드 정의",
+     "content": "",
+     "source": "작성 필요",
+     "optional": false,
+     "filled": false,
+     "note": "정의 작성 2/7개 — STEP 3 데이터 사전 탭에서 채웁니다"
+    },
+    {
+     "item": "키/식별자 규칙",
+     "content": "연계키 K5 도로링크(도로링크ID), K7 시각(발생일시) · 중복 없는 컬럼 사고번호, 사고주소, 차량번호",
+     "source": "자동",
+     "optional": false,
+     "filled": true
+    },
+    {
+     "item": "결측·특수값 규칙",
+     "content": "결측 표기 (빈 셀), -, null",
+     "source": "자동",
+     "optional": false,
+     "filled": true
+    },
+    {
+     "item": "분할 정보(Splits)",
+     "content": "",
+     "source": "해당 시",
+     "optional": true,
+     "filled": false
+    },
+    {
+     "item": "포맷·인코딩·표준",
+     "content": "정형(CSV) · 문자 인코딩 cp949 — UTF-8 이 아님",
+     "source": "자동",
+     "optional": false,
+     "filled": true
+    },
+    {
+     "item": "기계 이해 스키마 제공",
+     "content": "",
+     "source": "작성 필요",
+     "optional": false,
+     "filled": false
+    }
+   ]
+  },
+  {
+   "section": "데이터셋 생성",
+   "items": [
+    {
+     "item": "구축 배경",
+     "content": "교통사고 위험 구간을 찾아 도로 안전 예산을 배분하기 위함",
+     "source": "입력",
+     "optional": false,
+     "filled": true
+    },
+    {
+     "item": "데이터 소스(출처)",
+     "content": "",
+     "source": "작성 필요",
+     "optional": false,
+     "filled": false
+    },
+    {
+     "item": "정제·전처리 과정",
+     "content": "",
+     "source": "작성 필요",
+     "optional": false,
+     "filled": false
+    },
+    {
+     "item": "어노테이션 과정(해당 시)",
+     "content": "",
+     "source": "해당 시",
+     "optional": true,
+     "filled": false
+    },
+    {
+     "item": "비식별·보호 조치",
+     "content": "",
+     "source": "작성 필요",
+     "optional": false,
+     "filled": false,
+     "note": "자동 탐지된 개인정보 의심 컬럼: 차량번호 — 적용한 보호조치를 적어야 합니다"
+    },
+    {
+     "item": "품질관리 절차",
+     "content": "STEP 6 SHACL 검증 통과 (셰이프 rs-3.0, publish 모드)",
+     "source": "자동",
+     "optional": false,
+     "filled": true
+    }
+   ]
+  },
+  {
+   "section": "사용 시 고려사항",
+   "items": [
+    {
+     "item": "권장 사용 범위",
+     "content": "사고 위험 예측 모델 학습, 정책 분석",
+     "source": "입력",
+     "optional": false,
+     "filled": true
+    },
+    {
+     "item": "비권장/금지 사용",
+     "content": "",
+     "source": "작성 필요",
+     "optional": false,
+     "filled": false
+    },
+    {
+     "item": "사회적 영향",
+     "content": "",
+     "source": "작성 필요",
+     "optional": false,
+     "filled": false
+    },
+    {
+     "item": "편향성 및 한계",
+     "content": "",
+     "source": "작성 필요",
+     "optional": false,
+     "filled": false
+    },
+    {
+     "item": "기술적 제약",
+     "content": "행 150건",
+     "source": "자동",
+     "optional": false,
+     "filled": true
+    },
+    {
+     "item": "리스크 완화 권고",
+     "content": "",
+     "source": "작성 필요",
+     "optional": false,
+     "filled": false
+    }
+   ]
+  },
+  {
+   "section": "추가 정보 및 라이선스",
+   "items": [
+    {
+     "item": "라이선스",
+     "content": "기관 간 협약",
+     "source": "입력",
+     "optional": false,
+     "filled": true
+    },
+    {
+     "item": "인용",
+     "content": "경기도, 「교통사고」, https://catalog.molit.go.kr/id/dataset/DST-000002, 접속일 (인용 시 기입)",
+     "source": "자동",
+     "optional": false,
+     "filled": true
+    },
+    {
+     "item": "작성자/관리자 정보",
+     "content": "",
+     "source": "작성 필요",
+     "optional": false,
+     "filled": false
+    },
+    {
+     "item": "버전/변경 이력",
+     "content": "",
+     "source": "작성 필요",
+     "optional": false,
+     "filled": false
+    },
+    {
+     "item": "관련 문서",
+     "content": "",
+     "source": "작성 필요",
+     "optional": false,
+     "filled": false
+    }
+   ]
+  },
+  {
+   "section": "기술적 사양",
+   "items": [
+    {
+     "item": "재현성",
+     "content": "",
+     "source": "작성 필요",
+     "optional": false,
+     "filled": false
+    },
+    {
+     "item": "환경 설정",
+     "content": "",
+     "source": "작성 필요",
+     "optional": false,
+     "filled": false
+    },
+    {
+     "item": "매개변수/규칙",
+     "content": "",
+     "source": "작성 필요",
+     "optional": false,
+     "filled": false
+    },
+    {
+     "item": "코드 및 라이브러리 버전",
+     "content": "",
+     "source": "작성 필요",
+     "optional": false,
+     "filled": false
+    },
+    {
+     "item": "무결성 검증 정보",
+     "content": "SHA-256 6f3b1e0700cf9f0429efa9ce00223630c97519e31de523c502e11ef73321cf62 · 파일 크기 11,440 B · 레코드 150건",
+     "source": "자동",
+     "optional": false,
+     "filled": true
+    },
+    {
+     "item": "접근 사양(해당 시)",
+     "content": "",
+     "source": "해당 시",
+     "optional": true,
+     "filled": false
+    }
+   ]
+  }
+ ],
+ "filled": 17,
+ "total": 34
+}

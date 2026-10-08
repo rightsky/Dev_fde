@@ -1,14 +1,17 @@
 {
  "run": {
-  "id": 2,
+  "id": 4,
   "process_id": 1,
-  "validation_run_id": 5,
+  "validation_run_id": 7,
   "mode": "publish",
   "formats": [
    "ttl",
    "jsonld",
    "txt",
-   "schema"
+   "schema",
+   "croissant",
+   "card",
+   "dict"
   ],
   "ok_count": 3,
   "fail_count": 0,
@@ -17,15 +20,15 @@
     "dataset_id": 1,
     "name": "도로목록",
     "resource_id": "DST-000001",
-    "checksum": "94ef997fb0642e6d8666eaddcba02f51646375a5da64d93656b4e96a779f81be",
+    "checksum": "d2f6c260defdb038d41f35e05a3ea35f2c4baa185996de68709871fb0d0fbd67",
     "readiness": "ai-ready",
-    "triple_count": 110,
+    "triple_count": 199,
     "passed": true,
     "checks": [
      {
       "name": "① TTL 재파싱",
       "ok": true,
-      "detail": "110트리플"
+      "detail": "199트리플"
      },
      {
       "name": "② prefix 완결",
@@ -40,17 +43,22 @@
      {
       "name": "④ TTL↔JSON-LD 그래프 동형",
       "ok": true,
-      "detail": "TTL 110 · JSON-LD 110 · 정본 110트리플"
+      "detail": "TTL 199 · JSON-LD 199 · 정본 199트리플"
      },
      {
       "name": "⑤ 검증 대상 = 산출 대상",
       "ok": true,
-      "detail": "체크섬 94ef997fb0642e6d 일치"
+      "detail": "체크섬 d2f6c260defdb038 일치"
      },
      {
       "name": "⑥ JSON 인스턴스 스키마 적합",
       "ok": true,
       "detail": "필수 5필드"
+     },
+     {
+      "name": "⑦ 문서 산출물 정합",
+      "ok": true,
+      "detail": "Croissant 필드·데이터 사전 7행·데이터 카드가 정본과 일치"
      }
     ]
    },
@@ -58,15 +66,15 @@
     "dataset_id": 2,
     "name": "교통사고",
     "resource_id": "DST-000002",
-    "checksum": "459780ef28bb9a3414e1f65772d2e95c6bfd88d2e79402d967ba8b245aca1346",
+    "checksum": "ddb22002f61156107370c78e2e7490d94a46c6b7b73f227cda23d20d79550bcb",
     "readiness": "ai-ready",
-    "triple_count": 110,
+    "triple_count": 157,
     "passed": true,
     "checks": [
      {
       "name": "① TTL 재파싱",
       "ok": true,
-      "detail": "110트리플"
+      "detail": "157트리플"
      },
      {
       "name": "② prefix 완결",
@@ -81,17 +89,22 @@
      {
       "name": "④ TTL↔JSON-LD 그래프 동형",
       "ok": true,
-      "detail": "TTL 110 · JSON-LD 110 · 정본 110트리플"
+      "detail": "TTL 157 · JSON-LD 157 · 정본 157트리플"
      },
      {
       "name": "⑤ 검증 대상 = 산출 대상",
       "ok": true,
-      "detail": "체크섬 459780ef28bb9a34 일치"
+      "detail": "체크섬 ddb22002f6115610 일치"
      },
      {
       "name": "⑥ JSON 인스턴스 스키마 적합",
       "ok": true,
       "detail": "필수 5필드"
+     },
+     {
+      "name": "⑦ 문서 산출물 정합",
+      "ok": true,
+      "detail": "Croissant 필드·데이터 사전 7행·데이터 카드가 정본과 일치"
      }
     ]
    },
@@ -99,15 +112,15 @@
     "dataset_id": 3,
     "name": "cctv.vehicle.det.v1",
     "resource_id": "SVC-000001",
-    "checksum": "25a8e3fa3131cadace46657a291286f58ab59d84ec3873bb846126bd846edd2d",
+    "checksum": "f67523b910d51acc3e756ede1b3bb6d89c54d1a44acae2f78ba2be8cb70ebbe8",
     "readiness": "ai-ready",
-    "triple_count": 82,
+    "triple_count": 84,
     "passed": true,
     "checks": [
      {
       "name": "① TTL 재파싱",
       "ok": true,
-      "detail": "82트리플"
+      "detail": "84트리플"
      },
      {
       "name": "② prefix 완결",
@@ -122,96 +135,281 @@
      {
       "name": "④ TTL↔JSON-LD 그래프 동형",
       "ok": true,
-      "detail": "TTL 82 · JSON-LD 82 · 정본 82트리플"
+      "detail": "TTL 84 · JSON-LD 84 · 정본 84트리플"
      },
      {
       "name": "⑤ 검증 대상 = 산출 대상",
       "ok": true,
-      "detail": "체크섬 25a8e3fa3131cada 일치"
+      "detail": "체크섬 f67523b910d51acc 일치"
      },
      {
       "name": "⑥ JSON 인스턴스 스키마 적합",
       "ok": true,
       "detail": "필수 6필드"
+     },
+     {
+      "name": "⑦ 문서 산출물 정합",
+      "ok": true,
+      "detail": "Croissant 필드·데이터 사전 3행·데이터 카드가 정본과 일치"
      }
     ]
    }
   ],
-  "started_at": "2026-10-06T09:29:17.700853Z",
-  "ended_at": "2026-10-06T09:29:17.850955Z",
-  "activity": "ACT-K-0450",
+  "started_at": "2026-10-08T09:13:38.228205Z",
+  "ended_at": "2026-10-08T09:13:38.498019Z",
+  "activity": "ACT-K-0462",
   "artifacts": [
    {
-    "id": 13,
+    "id": 64,
     "dataset_id": 1,
     "dataset_name": "도로목록",
     "fmt": "ttl",
     "filename": "DST-000001_도로목록.ttl",
     "media_type": "text/turtle",
-    "size": 6873,
-    "size_label": "7 KB",
-    "sha256": "19afd470d1c2625a5e34ccfd271ff513858c32a1ec4094e958f56bd24bda19e3",
-    "set_checksum": "94ef997fb0642e6d8666eaddcba02f51646375a5da64d93656b4e96a779f81be"
+    "size": 12679,
+    "size_label": "12 KB",
+    "sha256": "9d61ec868a561f8f818a6e4bc465f8ed6afc37f78b16e8db87929e0d3d5e9318",
+    "set_checksum": "d2f6c260defdb038d41f35e05a3ea35f2c4baa185996de68709871fb0d0fbd67"
    },
    {
-    "id": 14,
+    "id": 65,
     "dataset_id": 1,
     "dataset_name": "도로목록",
     "fmt": "jsonld",
     "filename": "DST-000001_도로목록.jsonld",
     "media_type": "application/ld+json",
-    "size": 10857,
-    "size_label": "11 KB",
-    "sha256": "d827656885c9ed6cefcb9c2fad9980dfdfb06d2836074c273badbf6143e21c2a",
-    "set_checksum": "94ef997fb0642e6d8666eaddcba02f51646375a5da64d93656b4e96a779f81be"
+    "size": 19640,
+    "size_label": "19 KB",
+    "sha256": "6b4f3f98f606aad1ac4b26f7b86bc78853502356e8fb31a9c85284d90e894494",
+    "set_checksum": "d2f6c260defdb038d41f35e05a3ea35f2c4baa185996de68709871fb0d0fbd67"
    },
    {
-    "id": 15,
+    "id": 66,
     "dataset_id": 1,
     "dataset_name": "도로목록",
     "fmt": "txt",
     "filename": "DST-000001_도로목록_문장화.txt",
     "media_type": "text/plain",
-    "size": 593,
-    "size_label": "593 B",
-    "sha256": "ee5d9804f8e013f47d7aa2f94dbf1e6731b1490cef895009bc19f9bdbff3f83c",
-    "set_checksum": "94ef997fb0642e6d8666eaddcba02f51646375a5da64d93656b4e96a779f81be"
+    "size": 621,
+    "size_label": "621 B",
+    "sha256": "117035d13beab6baa258256694be311c58bb1dd9b28c1b329b86130ef8152039",
+    "set_checksum": "d2f6c260defdb038d41f35e05a3ea35f2c4baa185996de68709871fb0d0fbd67"
    },
    {
-    "id": 16,
+    "id": 67,
     "dataset_id": 1,
     "dataset_name": "도로목록",
     "fmt": "schema",
     "filename": "DST-000001_도로목록_schema.json",
     "media_type": "application/json",
-    "size": 6606,
-    "size_label": "6 KB",
-    "sha256": "99717559a19990faba8ec1b9bdfc3cf6e8a45d72ac0e0665f4e5c512c00bf84b",
-    "set_checksum": "94ef997fb0642e6d8666eaddcba02f51646375a5da64d93656b4e96a779f81be"
+    "size": 9308,
+    "size_label": "9 KB",
+    "sha256": "6ab4cc4eee35e1db0ac76ee9ee68ec43f71dcc65a207ef29329f56e625e592ff",
+    "set_checksum": "d2f6c260defdb038d41f35e05a3ea35f2c4baa185996de68709871fb0d0fbd67"
    },
    {
-    "id": 17,
+    "id": 68,
+    "dataset_id": 1,
+    "dataset_name": "도로목록",
+    "fmt": "croissant",
+    "filename": "DST-000001_도로목록_croissant.json",
+    "media_type": "application/ld+json",
+    "size": 5898,
+    "size_label": "6 KB",
+    "sha256": "330c52b4bde12dc047a072207c38c09afa3131260d9238588db88300b5e370b4",
+    "set_checksum": "d2f6c260defdb038d41f35e05a3ea35f2c4baa185996de68709871fb0d0fbd67"
+   },
+   {
+    "id": 69,
+    "dataset_id": 1,
+    "dataset_name": "도로목록",
+    "fmt": "card",
+    "filename": "DST-000001_도로목록_데이터카드.md",
+    "media_type": "text/markdown",
+    "size": 5914,
+    "size_label": "6 KB",
+    "sha256": "107919bd7c66f41dd057ee7e7b5bf133f3654443ea309595aabe78df803675a9",
+    "set_checksum": "d2f6c260defdb038d41f35e05a3ea35f2c4baa185996de68709871fb0d0fbd67"
+   },
+   {
+    "id": 70,
+    "dataset_id": 1,
+    "dataset_name": "도로목록",
+    "fmt": "dict",
+    "filename": "DST-000001_도로목록_데이터사전.csv",
+    "media_type": "text/csv",
+    "size": 829,
+    "size_label": "829 B",
+    "sha256": "81a9dce61ecdf1f7b39de434857a3de8a685d501cc88326984b743ca9e6e557c",
+    "set_checksum": "d2f6c260defdb038d41f35e05a3ea35f2c4baa185996de68709871fb0d0fbd67"
+   },
+   {
+    "id": 71,
     "dataset_id": 2,
     "dataset_name": "교통사고",
     "fmt": "ttl",
     "filename": "DST-000002_교통사고.ttl",
     "media_type": "text/turtle",
-    "size": 6874,
-    "size_label": "7 KB",
-    "sha256": "148542367bab4736b5b178d369b8af2806819d1b10c71a596644ed8b4ec28898",
-    "set_checksum": "459780ef28bb9a3414e1f65772d2e95c6bfd88d2e79402d967ba8b245aca1346"
+    "size": 9931,
+    "size_label": "10 KB",
+    "sha256": "60f6d28fa139258f77f0770ab620813a0c78a6d442837c0ed8ac32de519fc74d",
+    "set_checksum": "ddb22002f61156107370c78e2e7490d94a46c6b7b73f227cda23d20d79550bcb"
    },
    {
-    "id": 18,
+    "id": 72,
     "dataset_id": 2,
     "dataset_name": "교통사고",
     "fmt": "jsonld",
     "filename": "DST-000002_교통사고.jsonld",
     "media_type": "application/ld+json",
-    "size": 10823,
-    "size_label": "11 KB",
-    "sha256": "11a594ffce161720babbb1d1e4ae3980fa769afe8c8376606a5cae423a7594da",
-    "set_checksum": "459780ef28bb9a3414e1f65772d2e95c6bfd88d2e79402d967ba8b245aca1346"
+    "size": 15103,
+    "size_label": "15 KB",
+    "sha256": "37e87ecb4c7ecb852c64b23b6dd4511bd0bacf5ddd80e80649e726553e4dbe3c",
+    "set_checksum": "ddb22002f61156107370c78e2e7490d94a46c6b7b73f227cda23d20d79550bcb"
+   },
+   {
+    "id": 73,
+    "dataset_id": 2,
+    "dataset_name": "교통사고",
+    "fmt": "txt",
+    "filename": "DST-000002_교통사고_문장화.txt",
+    "media_type": "text/plain",
+    "size": 704,
+    "size_label": "704 B",
+    "sha256": "59213b283d6e4ec76efb918282459045a6b3df803308a5ab7e07428fddbd607e",
+    "set_checksum": "ddb22002f61156107370c78e2e7490d94a46c6b7b73f227cda23d20d79550bcb"
+   },
+   {
+    "id": 74,
+    "dataset_id": 2,
+    "dataset_name": "교통사고",
+    "fmt": "schema",
+    "filename": "DST-000002_교통사고_schema.json",
+    "media_type": "application/json",
+    "size": 6696,
+    "size_label": "7 KB",
+    "sha256": "38c494f01fbcce9274cca6e5f183577c73d6bf4e3c63b93ebc604991c5e25f0e",
+    "set_checksum": "ddb22002f61156107370c78e2e7490d94a46c6b7b73f227cda23d20d79550bcb"
+   },
+   {
+    "id": 75,
+    "dataset_id": 2,
+    "dataset_name": "교통사고",
+    "fmt": "croissant",
+    "filename": "DST-000002_교통사고_croissant.json",
+    "media_type": "application/ld+json",
+    "size": 5327,
+    "size_label": "5 KB",
+    "sha256": "76007edfa5c6a656607d0a36a3e29fa7833ca7469c5545fa7f26f1a9a3c8c712",
+    "set_checksum": "ddb22002f61156107370c78e2e7490d94a46c6b7b73f227cda23d20d79550bcb"
+   },
+   {
+    "id": 76,
+    "dataset_id": 2,
+    "dataset_name": "교통사고",
+    "fmt": "card",
+    "filename": "DST-000002_교통사고_데이터카드.md",
+    "media_type": "text/markdown",
+    "size": 5637,
+    "size_label": "6 KB",
+    "sha256": "9f2fac4d06e1b315d2c1cbd36c6e4035f6031eac41649004d37f3089414bd603",
+    "set_checksum": "ddb22002f61156107370c78e2e7490d94a46c6b7b73f227cda23d20d79550bcb"
+   },
+   {
+    "id": 77,
+    "dataset_id": 2,
+    "dataset_name": "교통사고",
+    "fmt": "dict",
+    "filename": "DST-000002_교통사고_데이터사전.csv",
+    "media_type": "text/csv",
+    "size": 944,
+    "size_label": "944 B",
+    "sha256": "9bd8a1d903964344f4b9d4b1f416830f078cc32f3103caa54f31f3bd1420ec20",
+    "set_checksum": "ddb22002f61156107370c78e2e7490d94a46c6b7b73f227cda23d20d79550bcb"
+   },
+   {
+    "id": 78,
+    "dataset_id": 3,
+    "dataset_name": "cctv.vehicle.det.v1",
+    "fmt": "ttl",
+    "filename": "SVC-000001_cctv_vehicle_det_v1.ttl",
+    "media_type": "text/turtle",
+    "size": 5338,
+    "size_label": "5 KB",
+    "sha256": "b0fe6ebcb4f38e6ebd5905b2b52b70e54025ed94f1cc1f5f7c4335a0539f537a",
+    "set_checksum": "f67523b910d51acc3e756ede1b3bb6d89c54d1a44acae2f78ba2be8cb70ebbe8"
+   },
+   {
+    "id": 79,
+    "dataset_id": 3,
+    "dataset_name": "cctv.vehicle.det.v1",
+    "fmt": "jsonld",
+    "filename": "SVC-000001_cctv_vehicle_det_v1.jsonld",
+    "media_type": "application/ld+json",
+    "size": 8195,
+    "size_label": "8 KB",
+    "sha256": "04f4ff37769ec5b30baf0d6ef966dbfd45adf30126784e3db40ed6afafc7015e",
+    "set_checksum": "f67523b910d51acc3e756ede1b3bb6d89c54d1a44acae2f78ba2be8cb70ebbe8"
+   },
+   {
+    "id": 80,
+    "dataset_id": 3,
+    "dataset_name": "cctv.vehicle.det.v1",
+    "fmt": "txt",
+    "filename": "SVC-000001_cctv_vehicle_det_v1_문장화.txt",
+    "media_type": "text/plain",
+    "size": 581,
+    "size_label": "581 B",
+    "sha256": "c9b2b21c9f7a99e5c2b44788487761d3f9f217b7efb859b23e67cee42feca502",
+    "set_checksum": "f67523b910d51acc3e756ede1b3bb6d89c54d1a44acae2f78ba2be8cb70ebbe8"
+   },
+   {
+    "id": 81,
+    "dataset_id": 3,
+    "dataset_name": "cctv.vehicle.det.v1",
+    "fmt": "schema",
+    "filename": "SVC-000001_cctv_vehicle_det_v1_schema.json",
+    "media_type": "application/json",
+    "size": 4943,
+    "size_label": "5 KB",
+    "sha256": "bcc3e24444414eecf0d34d0af7fbd167fc8afe8dadc4e5d1d6b77aa1a99f41e0",
+    "set_checksum": "f67523b910d51acc3e756ede1b3bb6d89c54d1a44acae2f78ba2be8cb70ebbe8"
+   },
+   {
+    "id": 82,
+    "dataset_id": 3,
+    "dataset_name": "cctv.vehicle.det.v1",
+    "fmt": "croissant",
+    "filename": "SVC-000001_cctv_vehicle_det_v1_croissant.json",
+    "media_type": "application/ld+json",
+    "size": 3506,
+    "size_label": "3 KB",
+    "sha256": "2c478cb1722ede5b20c22810a4772e3505a61508342e63e61bb978b4cc8a7d31",
+    "set_checksum": "f67523b910d51acc3e756ede1b3bb6d89c54d1a44acae2f78ba2be8cb70ebbe8"
+   },
+   {
+    "id": 83,
+    "dataset_id": 3,
+    "dataset_name": "cctv.vehicle.det.v1",
+    "fmt": "card",
+    "filename": "SVC-000001_cctv_vehicle_det_v1_데이터카드.md",
+    "media_type": "text/markdown",
+    "size": 4124,
+    "size_label": "4 KB",
+    "sha256": "9341ec54d88c049c715f3e0413f3a89d8c0f774ac69f08e664c97ccd101ed817",
+    "set_checksum": "f67523b910d51acc3e756ede1b3bb6d89c54d1a44acae2f78ba2be8cb70ebbe8"
+   },
+   {
+    "id": 84,
+    "dataset_id": 3,
+    "dataset_name": "cctv.vehicle.det.v1",
+    "fmt": "dict",
+    "filename": "SVC-000001_cctv_vehicle_det_v1_데이터사전.csv",
+    "media_type": "text/csv",
+    "size": 280,
+    "size_label": "280 B",
+    "sha256": "50a354a21e09dabbed71a51e3984c48b19256c58e47a39bf0eb1373d482d5a15",
+    "set_checksum": "f67523b910d51acc3e756ede1b3bb6d89c54d1a44acae2f78ba2be8cb70ebbe8"
    }
   ]
  },
@@ -248,6 +446,30 @@
    "suffix": "_schema.json",
    "media_type": "application/json",
    "use": "제약 디코딩용 스키마 · 스키마 레지스트리"
+  },
+  {
+   "key": "croissant",
+   "label": "Croissant 1.0 (ML 데이터셋 메타데이터)",
+   "tag": "Croissant",
+   "suffix": "_croissant.json",
+   "media_type": "application/ld+json",
+   "use": "AI 학습 도구 연계 · 표 13 수치 메타데이터(RecordSet·Field) · RAI 항목"
+  },
+  {
+   "key": "card",
+   "label": "데이터 카드 (부록 4)",
+   "tag": "데이터 카드",
+   "suffix": "_데이터카드.md",
+   "media_type": "text/markdown",
+   "use": "가이드라인 부록 4 양식 · 이용자 배포용 설명 문서"
+  },
+  {
+   "key": "dict",
+   "label": "데이터 사전",
+   "tag": "데이터 사전",
+   "suffix": "_데이터사전.csv",
+   "media_type": "text/csv",
+   "use": "컬럼별 정의·단위·코드값 · 엑셀로 열람"
   }
  ],
  "publish_blocked": []

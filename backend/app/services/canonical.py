@@ -33,6 +33,7 @@ VCARD = Namespace("http://www.w3.org/2006/vcard/ns#")
 ADMS = Namespace("http://www.w3.org/ns/adms#")
 DQV = Namespace("http://www.w3.org/ns/dqv#")
 OA = Namespace("http://www.w3.org/ns/oa#")
+SDO = Namespace("https://schema.org/")
 LANG_NS = "http://id.loc.gov/vocabulary/iso639-1/"
 IANA_MT = "https://www.iana.org/assignments/media-types/"
 
@@ -80,7 +81,28 @@ META_FIELDS: list[dict[str, Any]] = [
     {"name": "conforms_to", "property": "dcterms:conformsTo", "label": "준수 표준 (날짜 형식·코드 체계·좌표계 등)", "level": "선택", "type": "tags", "scope": "all", "guide": "부록 3 의미 및 표준"},
     {"name": "late_policy", "property": "fde:lateDataPolicy", "label": "지각(late) 데이터 정책", "level": "선택", "type": "late_policy", "scope": "stream"},
     {"name": "role_note", "property": "rdfs:comment", "label": "역할 설명 (문장화에 사용)", "level": "선택", "type": "text", "scope": "all"},
+] + [
+    # 부록 4 데이터 카드에만 있는 항목. 폼에서는 '데이터 카드' 묶음으로 따로 보여 준다 (group = card).
+    # Croissant RAI 에 같은 뜻의 속성이 있으면 그것을 쓰고, 없으면 fde: 확장 속성을 쓴다.
+    {"name": name, "property": prop, "label": label, "level": "선택", "type": "textarea", "scope": "all", "group": "card",
+     "guide": f"부록 4 {section} · {item}", "card_item": item}
+    for name, prop, label, section, item in (
+        ("card_background", "fde:creationBackground", "구축 배경 (정책·행정 목적, 구축 필요성, 제공 범위 결정 근거)", "데이터셋 생성", "구축 배경"),
+        ("card_preprocessing", "rai:dataPreprocessingProtocol", "정제·전처리 과정 (중복 제거, 오류 정정, 표준화, 이상치 처리)", "데이터셋 생성", "정제·전처리 과정"),
+        ("card_annotation", "rai:dataAnnotationProtocol", "어노테이션 과정 (라벨 정의, 작업자, 가이드라인, 품질검수)", "데이터셋 생성", "어노테이션 과정(해당 시)"),
+        ("card_protection", "rai:personalSensitiveInformation", "비식별·보호 조치 (개인정보 포함 여부, 비식별 방식, 재식별 위험 완화)", "데이터셋 생성", "비식별·보호 조치"),
+        ("card_splits", "fde:dataSplits", "분할 정보 (학습/검증/평가 분할 여부와 기준)", "데이터셋 구조", "분할 정보(Splits)"),
+        ("card_use_cases", "rai:dataUseCases", "권장 사용 범위 (정책분석·서비스 개선·AI 학습·평가 등)", "사용 시 고려사항", "권장 사용 범위"),
+        ("card_prohibited_uses", "fde:prohibitedUses", "비권장·금지 사용 (감시·차별·재식별 시도 등)", "사용 시 고려사항", "비권장/금지 사용"),
+        ("card_social_impact", "rai:dataSocialImpact", "사회적 영향 (시민·취약계층·정책결정에 미칠 영향)", "사용 시 고려사항", "사회적 영향"),
+        ("card_risk_mitigation", "fde:riskMitigation", "리스크 완화 권고 (시간순 분할, 편향 점검, 품질 플래그 활용 등)", "사용 시 고려사항", "리스크 완화 권고"),
+        ("card_reproducibility", "fde:reproducibility", "재현성 (같은 결과를 얻기 위한 전처리·생성 파이프라인)", "기술적 사양", "재현성"),
+        ("card_environment", "fde:processingEnvironment", "환경 설정 (OS, 컨테이너·가상환경)", "기술적 사양", "환경 설정"),
+        ("card_parameters", "fde:processingParameters", "매개변수·규칙 (집계 기준, 필터링 기준, 마스킹 임계값 등)", "기술적 사양", "매개변수/규칙"),
+        ("card_code", "fde:codeAndLibraries", "코드 및 라이브러리 버전 (코드 위치, 의존성과 버전)", "기술적 사양", "코드 및 라이브러리 버전"),
+    )
 ]
+CARD_FIELDS = [f for f in META_FIELDS if f.get("group") == "card"]
 META_FIELD_NAMES = {f["name"] for f in META_FIELDS}
 _DURATION = re.compile(r"^P(?!$)(\d+Y)?(\d+M)?(\d+W)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+(\.\d+)?S)?)?$")
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -108,7 +130,7 @@ def new_graph() -> Graph:
     s = get_settings()
     for prefix, ns in (("dcat", DCAT), ("dcterms", DCTERMS), ("prov", PROV), ("foaf", FOAF), ("skos", SKOS),
                        ("xsd", XSD), ("rdfs", RDFS), ("spdx", SPDX), ("rai", RAI), ("csvw", CSVW), ("qb", QB),
-                       ("vcard", VCARD), ("owl", OWL), ("adms", ADMS), ("dqv", DQV), ("oa", OA),
+                       ("vcard", VCARD), ("owl", OWL), ("adms", ADMS), ("dqv", DQV), ("oa", OA), ("schema", SDO),
                        ("fde", Namespace(s.def_ns))):
         g.bind(prefix, ns, override=True, replace=True)
     return g
@@ -278,7 +300,8 @@ def build(db: Session, pd: ProcessDataset, mode: str = "draft") -> Canonical:
         g.add((ds, RAI.dataBiases, _lit(meta["rai_data_biases"])))
         record["dataBiases"] = meta["rai_data_biases"]
     if meta.get("rai_known_limitations"):
-        g.add((ds, RAI.knownLimitations, _lit(meta["rai_known_limitations"])))
+        g.add((ds, RAI.knownLimitations, _lit(meta["rai_known_limitations"])))  # 가이드라인 표 12 의 표기
+        g.add((ds, RAI.dataLimitations, _lit(meta["rai_known_limitations"])))  # Croissant RAI 1.0 의 표기
         record["knownLimitations"] = meta["rai_known_limitations"]
     if meta.get("provenance"):
         prov_note = URIRef(f"{ds}#provenance")
@@ -286,6 +309,11 @@ def build(db: Session, pd: ProcessDataset, mode: str = "draft") -> Canonical:
         g.add((prov_note, RDF.type, DCTERMS.ProvenanceStatement))
         g.add((prov_note, RDFS.label, _lit(meta["provenance"])))
         record["provenance"] = meta["provenance"]
+    for f in CARD_FIELDS:
+        if meta.get(f["name"]):
+            prefix, local = f["property"].split(":")
+            g.add((ds, (RAI if prefix == "rai" else FDE)[local], _lit(meta[f["name"]])))
+            record[_camel(f["name"])] = meta[f["name"]]
     if meta.get("rai_missing_data"):
         g.add((ds, RAI.dataCollectionMissingData, _lit(meta["rai_missing_data"])))
         record["missingData"] = meta["rai_missing_data"]
@@ -365,8 +393,9 @@ def build(db: Session, pd: ProcessDataset, mode: str = "draft") -> Canonical:
             g.add((svc, DCAT.endpointURL, _iri(meta["endpoint_url"])))
             g.add((svc, DCAT.servesDataset, ds))
             d_rec["accessService"] = {"@id": str(svc), "endpointURL": meta["endpoint_url"]}
-        if "csvw:Table" in (pd.extra_classes or []):
-            _add_table_schema(g, dist, asset.profile)
+        if "csvw:Table" in (pd.extra_classes or []) or dictionary(pd):
+            # 데이터 사전을 적었으면 csvw:Table 을 고르지 않았어도 컬럼 구조를 정본에 넣는다 (정의가 정본에 남아야 산출물과 어긋나지 않는다)
+            _add_table_schema(g, dist, asset.profile, dictionary(pd))
         record["distribution"] = d_rec
     if not is_stream and meta.get("accrual_periodicity"):
         v = str(meta["accrual_periodicity"]).strip()
@@ -397,6 +426,8 @@ def build(db: Session, pd: ProcessDataset, mode: str = "draft") -> Canonical:
         if meta.get("late_policy"):
             g.add((ds, FDE.lateDataPolicy, _lit(meta["late_policy"])))
             record["lateDataPolicy"] = meta["late_policy"]
+        if dictionary(pd):
+            _add_columns(g, ds, URIRef(f"{ds}#schema"), (asset.profile.get("tables") or [{}])[0], dictionary(pd))
 
     # ---- 분류 (STEP 4)
     cls = pd.classification or {}
@@ -572,22 +603,52 @@ def _form_label(media_type: str, data_form: str | None) -> str | None:
     return data_form
 
 
-def _add_table_schema(g: Graph, dist: URIRef, profile: dict[str, Any]) -> None:
-    """csvw:Table 선택 시 프로파일된 컬럼 구조를 CSVW 로 기술한다."""
-    type_map = {"integer": XSD.integer, "number": XSD.decimal, "datetime": XSD.dateTime, "boolean": XSD.boolean,
-                "string": XSD.string}
+def _camel(name: str) -> str:
+    head, *rest = name.split("_")
+    return head + "".join(w.capitalize() for w in rest)
+
+
+def dictionary(pd: ProcessDataset) -> dict[str, dict[str, dict[str, str]]]:
+    """데이터 사전 입력값: {표 이름: {컬럼 이름: {description, unit, codes}}}. 빈 값은 뺀다."""
+    raw = (pd.meta or {}).get("_dictionary") or {}
+    out: dict[str, dict[str, dict[str, str]]] = {}
+    for table, cols in raw.items():
+        for col, ent in (cols or {}).items():
+            ent = {k: str(v).strip() for k, v in (ent or {}).items() if k in ("description", "unit", "codes") and str(v or "").strip()}
+            if ent:
+                out.setdefault(table, {})[col] = ent
+    return out
+
+
+_TYPE_MAP = {"integer": XSD.integer, "number": XSD.decimal, "datetime": XSD.dateTime, "boolean": XSD.boolean, "string": XSD.string}
+
+
+def _add_columns(g: Graph, owner: URIRef, schema: URIRef, table: dict[str, Any], dic: dict[str, dict[str, dict[str, str]]]) -> None:
+    g.add((owner, CSVW.tableSchema, schema))
+    g.add((schema, RDF.type, CSVW.Schema))
+    entries = dic.get(table.get("name", ""), {})
+    for ci, col in enumerate(table.get("columns", []), start=1):
+        c = URIRef(f"{schema}-col-{ci}")
+        g.add((schema, CSVW.column, c))
+        g.add((c, RDF.type, CSVW.Column))
+        g.add((c, CSVW.name, Literal(col["name"])))
+        g.add((c, CSVW.datatype, _TYPE_MAP.get(col["type"], XSD.string)))
+        if table.get("rows"):  # 스트림처럼 값을 보지 못한 경우 필수 여부를 단정하지 않는다
+            g.add((c, CSVW.required, Literal(col["null_rate"] == 0)))
+        ent = entries.get(col["name"], {})
+        if ent.get("description"):
+            g.add((c, DCTERMS.description, _lit(ent["description"])))
+        if ent.get("unit"):
+            g.add((c, SDO.unitText, _lit(ent["unit"])))
+        if ent.get("codes"):
+            g.add((c, fde().codeValues, _lit(ent["codes"])))
+
+
+def _add_table_schema(g: Graph, dist: URIRef, profile: dict[str, Any], dic: dict[str, dict[str, dict[str, str]]] | None = None) -> None:
+    """프로파일된 표 구조를 CSVW 로 기술한다. 데이터 사전 입력값(정의·단위·코드값)이 있으면 컬럼에 붙인다."""
     for ti, table in enumerate(profile.get("tables", []), start=1):
         t = URIRef(f"{dist}#table-{ti}")
-        schema = URIRef(f"{dist}#table-{ti}-schema")
         g.add((dist, CSVW.table, t))
         g.add((t, RDF.type, CSVW.Table))
         g.add((t, DCTERMS.title, _lit(table["name"])))
-        g.add((t, CSVW.tableSchema, schema))
-        g.add((schema, RDF.type, CSVW.Schema))
-        for ci, col in enumerate(table.get("columns", []), start=1):
-            c = URIRef(f"{dist}#table-{ti}-col-{ci}")
-            g.add((schema, CSVW.column, c))
-            g.add((c, RDF.type, CSVW.Column))
-            g.add((c, CSVW.name, Literal(col["name"])))
-            g.add((c, CSVW.datatype, type_map.get(col["type"], XSD.string)))
-            g.add((c, CSVW.required, Literal(col["null_rate"] == 0)))
+        _add_columns(g, t, URIRef(f"{dist}#table-{ti}-schema"), table, dic or {})

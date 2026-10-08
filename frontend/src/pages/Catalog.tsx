@@ -583,6 +583,9 @@ const FORMATS = [
   { key: "jsonld", label: "JSON-LD", ext: "jsonld" },
   { key: "txt", label: "문장화", ext: "txt" },
   { key: "schema", label: "JSON 스키마", ext: "json" },
+  { key: "croissant", label: "Croissant", ext: "croissant.json" },
+  { key: "card", label: "데이터 카드", ext: "데이터카드.md" },
+  { key: "dict", label: "데이터 사전", ext: "데이터사전.csv" },
 ] as const;
 type Fmt = (typeof FORMATS)[number]["key"];
 
@@ -604,6 +607,8 @@ function contentOf(e: CatalogEntry, fmt: Fmt): string {
       return e.text_summary || "";
     case "schema":
       return e.schema_json ? prettyJson(e.schema_json) : "";
+    default:
+      return e.documents?.[fmt] ?? "";
   }
 }
 
@@ -618,7 +623,7 @@ function FormatsCard({ e }: { e: CatalogEntry }) {
   const download = async (key: Fmt, ext: string) => {
     setBusy(key);
     try {
-      await downloadFile(downloads.catalogRaw(e.resource_id, key), `${e.resource_id}.${ext}`);
+      await downloadFile(downloads.catalogRaw(e.resource_id, key), `${e.resource_id}${ext.includes(".") ? "_" : "."}${ext}`);
     } catch (err) {
       toast.error(err);
     } finally {
@@ -653,7 +658,7 @@ function FormatsCard({ e }: { e: CatalogEntry }) {
           {def.label} · <span className="mono">{def.media_type}</span> — {def.use}
         </p>
       )}
-      {text ? <CodeBlock text={text} wrap={fmt === "txt"} light={fmt === "txt"} /> : <Empty>이 항목에는 {FORMATS.find((x) => x.key === fmt)?.label} 포맷이 없습니다 — 발행할 때 변환 대상에서 빠졌습니다</Empty>}
+      {text ? <CodeBlock text={text} wrap={fmt === "txt" || fmt === "card" || fmt === "dict"} light={fmt === "txt" || fmt === "card" || fmt === "dict"} /> : <Empty>이 항목에는 {FORMATS.find((x) => x.key === fmt)?.label} 포맷이 없습니다 — 발행할 때 변환 대상에서 빠졌습니다</Empty>}
     </Card>
   );
 }
