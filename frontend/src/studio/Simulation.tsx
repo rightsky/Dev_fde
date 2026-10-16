@@ -1,11 +1,11 @@
 // STEP 7 오른쪽 패널 — AI 활용 시뮬레이션. 변환한 산출물을 실제 AI 서비스(챗봇 · 에이전트)가 쓰는 모습을 Claude 로 실행해 보인다.
-// Before/After: 같은 질문을 메타데이터 없이 / 포함해서 두 번 실행해 나란히 본다.
+// 핵심 화면은 Before/After 비교: 같은 질문에 '메타데이터 없이' 와 '산출물 포함' 이 어떻게 다르게 답하는지 한 눈에 보인다.
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import { useAuth } from "../auth";
 import type { SimulationRun, SimulationStatus } from "../types";
-import { Badge, Banner, Button, Empty, QueryState, Tabs, fmtDateTime, fmtNum, useToast } from "../ui";
+import { Badge, Banner, Button, QueryState, cx, fmtDateTime, fmtNum, useToast } from "../ui";
 
 type Scenario = "chat" | "agent";
 
@@ -16,11 +16,11 @@ export function SimulationPanel({ pid }: { pid: number }) {
   const q = useQuery({ queryKey: ["simulations", pid], queryFn: () => api.simulations(pid) });
   const [scenario, setScenario] = useState<Scenario>("chat");
   const [question, setQuestion] = useState("");
-  const [picked, setPicked] = useState<number[] | null>(null); // null = 전체(차단 제외)
+  const [picked, setPicked] = useState<number[] | null>(null); // null = 쓸 수 있는 전부
   const [compare, setCompare] = useState(true);
   const [busy, setBusy] = useState(false);
   const [latest, setLatest] = useState<SimulationRun[] | null>(null);
-  const [showHistory, setShowHistory] = useState(false);
+  const [view, setView] = useState<"run" | "history">("run");
 
   const st = q.data;
   const usable = (st?.datasets || []).filter((d) => !d.blocked_reason && d.has_artifacts);
@@ -43,178 +43,226 @@ export function SimulationPanel({ pid }: { pid: number }) {
   };
 
   return (
-    <div className="card" style={{ position: "sticky", top: 0 }}>
-      <div className="card-head">
-        <div className="card-title">
-          ✦ AI 활용 시뮬레이션 {st?.model && <Badge tone="purple">{st.model}</Badge>}
+    <div className="card sim">
+      <div className="sim-head">
+        <h2>AI 활용 시뮬레이션</h2>
+        <div className="row" style={{ gap: 10 }}>
+          {st?.model && <span className="model">{st.model}</span>}
+          <button className="link-btn" onClick={() => setView(view === "run" ? "history" : "run")}>
+            {view === "run" ? `기록 ${fmtNum(st?.runs.length || 0)}` : "실행으로 돌아가기"}
+          </button>
         </div>
-        <button className="link-btn" onClick={() => setShowHistory((v) => !v)}>
-          {showHistory ? "실행으로" : `기록 ${fmtNum(st?.runs.length || 0)}`}
-        </button>
       </div>
       <QueryState q={q}>
-        {st && !st.enabled && <Banner tone="warn">AI 기능이 꺼져 있습니다 — .env 에 FDE_ANTHROPIC_API_KEY 를 지정하면 켜집니다.</Banner>}
-        {st && st.enabled && showHistory && <History runs={st.runs} onPick={(g) => { setLatest(g); setShowHistory(false); }} />}
-        {st && st.enabled && !showHistory && (
-          <div className="col gap-12">
-            <p className="small muted" style={{ margin: 0 }}>
-              이 프로세스의 산출물(JSON-LD · 데이터 카드 · 데이터 사전)이나 발행된 카탈로그를 실제 AI 서비스가 어떻게 쓰는지 보입니다. 원본 데이터 파일은 보내지 않습니다. 실행은 활동 로그에 남습니다.
-            </p>
-            <Tabs tabs={st.scenarios.map((s) => ({ key: s.key, label: s.label }))} value={scenario} onChange={(k) => { setScenario(k); setLatest(null); }} />
-            {sc && <div className="small dim">{sc.desc}</div>}
+        {st && !st.enabled && <Banner tone="warn">AI 기능이 꺼져 있습니다. .env 에 FDE_ANTHROPIC_API_KEY 를 넣으면 켜집니다.</Banner>}
+        {st && st.enabled && view === "history" && <History runs={st.runs} onPick={(g) => { setLatest(g); setView("run"); }} />}
+        {st && st.enabled && view === "run" && (
+          <>
+            <div className="sim-seg" role="tablist">
+              {st.scenarios.map((s) => (
+                <button key={s.key} role="tab" aria-selected={s.key === scenario} className={cx(s.key === scenario && "on")} onClick={() => { setScenario(s.key); setLatest(null); }}>
+                  {s.label}
+                  <small>{s.key === "chat" ? "산출물을 읽고 질문에 답합니다" : "도구를 골라 카탈로그를 탐색합니다"}</small>
+                </button>
+              ))}
+            </div>
 
             {scenario === "chat" ? (
-              <div className="col gap-4">
-                <span className="small bold dim">대상 데이터셋</span>
-                {st.datasets.map((d) => {
-                  const off = !!d.blocked_reason || !d.has_artifacts;
-                  return (
-                    <label key={d.id} className="check small" title={d.blocked_reason || (!d.has_artifacts ? "변환 산출물이 없습니다 — 먼저 변환을 실행하세요" : undefined)}>
-                      <input
-                        type="checkbox"
-                        disabled={off}
-                        checked={!off && selected.includes(d.id)}
-                        onChange={() => setPicked(selected.includes(d.id) ? selected.filter((x) => x !== d.id) : [...selected, d.id])}
-                      />
-                      {d.title}
-                      {d.blocked_reason && <Badge tone="err">외부 전송 제외</Badge>}
-                      {!d.has_artifacts && !d.blocked_reason && <Badge tone="warn">산출물 없음</Badge>}
-                    </label>
-                  );
-                })}
+              <div>
+                <div className="sim-label">문맥으로 줄 데이터셋</div>
+                <div className="sim-targets">
+                  {st.datasets.map((d) => {
+                    const off = !!d.blocked_reason || !d.has_artifacts;
+                    const on = !off && selected.includes(d.id);
+                    return (
+                      <label key={d.id} className={cx(off && "off", on && "on")} title={d.blocked_reason || (!d.has_artifacts ? "변환 산출물이 없습니다. 먼저 변환을 실행하세요" : undefined)}>
+                        <input type="checkbox" disabled={off} checked={on} onChange={() => setPicked(on ? selected.filter((x) => x !== d.id) : [...selected, d.id])} />
+                        <span className="grow">{d.title}</span>
+                        {d.blocked_reason && <Badge tone="err">외부 전송 제외</Badge>}
+                        {!d.has_artifacts && !d.blocked_reason && <Badge tone="warn">산출물 없음</Badge>}
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
             ) : (
               <div className="small dim">
-                발행된 카탈로그 {fmtNum(st.published_count)}건을 대상으로 모델이 도구를 골라 호출합니다.
+                발행된 카탈로그 {fmtNum(st.published_count)}건이 대상입니다.
                 {st.published_count === 0 && <span className="t-warn"> 발행된 항목이 없어 검색 결과가 비어 있을 것입니다.</span>}
                 {st.datasets.some((d) => d.blocked_reason) && <span> 외부 전송 제외 데이터셋은 검색에서 빠집니다.</span>}
               </div>
             )}
 
-            <div className="col gap-4">
-              <span className="small bold dim">질문 · 요청</span>
-              <div className="row wrap" style={{ gap: 4 }}>
+            <div>
+              <div className="sim-label">질문</div>
+              <div className="sim-examples" style={{ marginBottom: 6 }}>
                 {sc?.examples.map((ex) => (
-                  <button key={ex} className="chip" onClick={() => setQuestion(ex)} title="예시 질문 넣기">
-                    {ex.length > 26 ? ex.slice(0, 26) + "…" : ex}
-                  </button>
+                  <button key={ex} onClick={() => setQuestion(ex)}>{ex}</button>
                 ))}
               </div>
-              <textarea className="textarea" rows={3} value={question} onChange={(e) => setQuestion(e.target.value)} placeholder={sc?.examples[0]} />
+              <textarea className="textarea" rows={2} value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="예시를 고르거나 직접 적으세요" />
             </div>
-            <div className="row between wrap">
-              <label className="check small" title="같은 질문을 메타데이터 없이(파일명·컬럼명만 / 도구 없음) 한 번 더 실행해 나란히 봅니다">
+
+            <div className="sim-run">
+              <label className="check small" title="같은 질문을 메타데이터 없이 한 번 더 실행해 나란히 봅니다">
                 <input type="checkbox" checked={compare} onChange={(e) => setCompare(e.target.checked)} />
-                Before/After 비교 (메타데이터 없이 vs 포함)
+                메타데이터 없이 한 번 더 실행해 비교
               </label>
               <Button variant="primary" busy={busy} disabled={!canWrite || !question.trim() || (scenario === "chat" && selected.length === 0)} onClick={run}>
-                실행{compare ? " (2회 호출)" : ""}
+                {compare ? "비교 실행" : "실행"}
               </Button>
             </div>
-            {busy && <div className="small muted">모델을 호출하는 중입니다 — 에이전트는 도구를 여러 번 부르느라 30초 넘게 걸릴 수 있습니다.</div>}
+            {busy && (
+              <div className="sim-wait">
+                <span className="spinner" /> Claude 가 답하는 중입니다. 에이전트는 도구를 여러 번 부르느라 30초 넘게 걸릴 수 있습니다.
+              </div>
+            )}
 
-            {latest && <Results runs={latest} />}
-          </div>
+            {latest ? <Results runs={latest} /> : !busy && (
+              <div className="sim-empty">
+                질문을 고르고 실행하면 결과가 여기 나옵니다.
+                <br />
+                비교를 켜면 왼쪽에 메타데이터(또는 도구) 없이 답한 것, 오른쪽에 이 스튜디오의 결과물을 준 것이 나란히 보입니다.
+              </div>
+            )}
+          </>
         )}
       </QueryState>
     </div>
   );
 }
 
+// ───────────── 결과
+
 function Results({ runs }: { runs: SimulationRun[] }) {
-  const pair = runs.length === 2 && runs[0].group_id && runs[0].group_id === runs[1].group_id;
+  const sorted = [...runs].sort((a, b) => Number(a.with_metadata) - Number(b.with_metadata));
+  const pair = sorted.length === 2 && !!sorted[0].group_id && sorted[0].group_id === sorted[1].group_id;
+  const [before, after] = pair ? sorted : [null, sorted[sorted.length - 1]];
   return (
-    <div className="col gap-8">
-      <hr className="divider" />
-      {pair ? (
-        <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          {runs.map((r) => <RunCard key={r.id} r={r} />)}
+    <div className="col gap-10">
+      <hr className="divider" style={{ margin: 0 }} />
+      <div className="sim-q">{after.question}</div>
+      {pair && before && <Scoreboard before={before} after={after} />}
+      {pair && before ? (
+        <div className="sim-pair">
+          <Answer r={before} />
+          <Answer r={after} />
         </div>
       ) : (
-        runs.map((r) => <RunCard key={r.id} r={r} />)
+        <Answer r={after} />
       )}
-      {pair && (
-        <div className="small dim">
-          왼쪽은 메타데이터를 적지 않았을 때 AI 가 아는 전부(파일명·컬럼명 / 도구 없음)로 답한 것, 오른쪽은 이 스튜디오의 산출물을 준 것입니다.
+      <div className="sim-foot">
+        {pair ? "두 답 모두 같은 모델입니다. 차이는 모델에 준 정보뿐입니다." : after.scenario === "agent" ? "카탈로그 도구를 쓴 결과입니다." : "산출물을 문맥으로 준 결과입니다."} 실행 {fmtDateTime(after.created_at)}
+      </div>
+    </div>
+  );
+}
+
+const SIDE = {
+  chat: { before: "메타데이터 없이", after: "산출물 포함" },
+  agent: { before: "도구 없이", after: "카탈로그 도구 사용" },
+};
+
+function Scoreboard({ before, after }: { before: SimulationRun; after: SimulationRun }) {
+  const agent = after.scenario === "agent";
+  const side = SIDE[after.scenario];
+  const cell = (r: SimulationRun, k: "answered" | "sources" | "tools" | "tokens" | "time") => {
+    const res = r.result;
+    if (k === "answered") return res.answered === undefined ? (res.answer ? "답함" : "응답 없음") : res.answered ? "답함" : "답하지 못함";
+    if (k === "sources") return `${res.sources?.length ?? 0}건`;
+    if (k === "tools") return `${res.tool_calls ?? 0}회`;
+    if (k === "tokens") return fmtNum(r.usage.input_tokens + r.usage.output_tokens);
+    return `${(r.duration_ms / 1000).toFixed(1)}s`;
+  };
+  const rows: [string, "answered" | "sources" | "tools" | "tokens" | "time"][] = agent
+    ? [["도구 호출", "tools"], ["토큰", "tokens"], ["소요", "time"]]
+    : [["답변", "answered"], ["근거 속성", "sources"], ["토큰", "tokens"], ["소요", "time"]];
+  return (
+    <div className="sim-score">
+      <div />
+      <div className="hd">{side.before}</div>
+      <div className="hd">{side.after}</div>
+      {rows.map(([label, k]) => (
+        <RowFrag key={k} label={label} a={cell(before, k)} b={cell(after, k)} />
+      ))}
+    </div>
+  );
+}
+
+function RowFrag({ label, a, b }: { label: string; a: string; b: string }) {
+  return (
+    <>
+      <div>{label}</div>
+      <div>{a}</div>
+      <div className="bold">{b}</div>
+    </>
+  );
+}
+
+function Answer({ r }: { r: SimulationRun }) {
+  const res = r.result;
+  const after = r.with_metadata;
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <div className={cx("sim-who", after && "after")}>
+        <span className="dot" />
+        {after ? SIDE[r.scenario].after : SIDE[r.scenario].before}
+        {r.scenario === "agent" && after && res.tools_available && <span className="muted">· 도구 {res.tools_available.length}개</span>}
+      </div>
+      <div className={cx("sim-a", after ? "after" : "before")}>{res.answer || "(응답 없음)"}</div>
+      {res.sources && res.sources.length > 0 && (
+        <div className="sim-ev">
+          {res.sources.map((s, i) => (
+            <div key={i}>
+              <code title={s.dataset}>{s.property}</code>
+              <span className="v">{s.value}</span>
+            </div>
+          ))}
         </div>
+      )}
+      {res.missing && res.missing.length > 0 && (
+        <div className="sim-miss">
+          <span className="t">있으면 답할 수 있는 항목</span>
+          {res.missing.map((m) => <span key={m}>{m}</span>)}
+        </div>
+      )}
+      {res.trace && res.trace.length > 0 && (
+        <>
+          <button className="link-btn small" style={{ marginTop: 8 }} onClick={() => setOpen((v) => !v)}>
+            {open ? "도구 호출 접기" : `도구 호출 ${res.trace.length}회 펼치기`}
+          </button>
+          {open && (
+            <div className="sim-trace">
+              {res.trace.map((t, i) => (
+                <div key={i} className={t.status}>
+                  <code>{t.tool}</code> <span className="args">{Object.entries(t.arguments).map(([k, v]) => `${k}=${String(v)}`).join(" ")}</span>
+                  {t.status !== "ok" && <Badge tone={t.status === "denied" ? "warn" : "err"}>{t.status === "denied" ? "거부" : "오류"}</Badge>}
+                  {t.resource_ids.length > 0 && <span className="args"> → {t.resource_ids.slice(0, 4).join(", ")}</span>}
+                  <div className="pv">{t.preview}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 }
 
-function RunCard({ r }: { r: SimulationRun }) {
-  const res = r.result;
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="card tight flat" style={{ borderColor: r.with_metadata ? "var(--ok-line)" : "var(--line-strong)" }}>
-      <div className="row between wrap">
-        <Badge tone={r.with_metadata ? "ok" : "muted"}>{r.with_metadata ? "After · 메타데이터 포함" : "Before · 메타데이터 없음"}</Badge>
-        <span className="small muted">
-          {(r.duration_ms / 1000).toFixed(1)}s · 토큰 {fmtNum(r.usage.input_tokens + r.usage.output_tokens)}
-          {r.scenario === "agent" && ` · 도구 ${res.tool_calls ?? 0}회`}
-        </span>
-      </div>
-      {res.answered === false && <div className="small t-warn mt-4">답하지 못함</div>}
-      <div className="mt-8" style={{ whiteSpace: "pre-wrap", fontSize: 13 }}>{res.answer || <span className="muted">(응답 없음)</span>}</div>
-      {res.missing && res.missing.length > 0 && (
-        <div className="small mt-8">
-          <span className="bold dim">답하려면 필요한 항목:</span> {res.missing.join(", ")}
-        </div>
-      )}
-      {res.sources && res.sources.length > 0 && (
-        <div className="mt-8">
-          <div className="small bold dim">근거로 쓴 메타데이터 {res.sources.length}건</div>
-          <ul className="small" style={{ margin: "4px 0 0", paddingLeft: 16 }}>
-            {res.sources.map((s, i) => (
-              <li key={i}>
-                <span className="mono">{s.property}</span>
-                {s.dataset && <span className="muted"> · {s.dataset}</span>}: {s.value}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {res.trace && res.trace.length > 0 && (
-        <div className="mt-8">
-          <button className="link-btn small" onClick={() => setOpen((v) => !v)}>
-            {open ? "도구 호출 접기" : `도구 호출 ${res.trace.length}회 보기`}
-          </button>
-          {open && (
-            <ol className="small" style={{ margin: "4px 0 0", paddingLeft: 18 }}>
-              {res.trace.map((t, i) => (
-                <li key={i} className="mb-4">
-                  <span className="mono">{t.tool}</span>
-                  <span className="muted"> {Object.entries(t.arguments).map(([k, v]) => `${k}=${String(v)}`).join(" ")}</span>{" "}
-                  <Badge tone={t.status === "ok" ? "ok" : t.status === "denied" ? "warn" : "err"}>{t.status}</Badge>
-                  {t.resource_ids.length > 0 && <span className="mono muted"> → {t.resource_ids.slice(0, 4).join(", ")}</span>}
-                  <div className="muted" style={{ wordBreak: "break-all" }}>{t.preview.slice(0, 160)}{t.preview.length > 160 ? "…" : ""}</div>
-                </li>
-              ))}
-            </ol>
-          )}
-        </div>
-      )}
-      {r.with_metadata && res.context_parts && (
-        <div className="small muted mt-8">
-          문맥: {Object.entries(res.context_parts).map(([k, v]) => `${k}(${v.map((x) => x.replace("dcat_jsonld", "JSON-LD").replace("data_card_markdown", "카드").replace("data_dictionary_csv", "사전")).join("·")})`).join(", ")}
-        </div>
-      )}
-    </div>
-  );
-}
+// ───────────── 기록
 
 function History({ runs, onPick }: { runs: SimulationRun[]; onPick: (g: SimulationRun[]) => void }) {
   const qc = useQueryClient();
   const toast = useToast();
-  if (runs.length === 0) return <Empty>실행 기록이 없습니다</Empty>;
-  // Before/After 묶음은 한 줄로
+  if (runs.length === 0) return <div className="sim-empty">아직 실행한 기록이 없습니다.</div>;
   const groups: SimulationRun[][] = [];
   const seen = new Set<string>();
   for (const r of runs) {
     if (r.group_id) {
       if (seen.has(r.group_id)) continue;
       seen.add(r.group_id);
-      groups.push(runs.filter((x) => x.group_id === r.group_id).sort((a, b) => Number(a.with_metadata) - Number(b.with_metadata)));
+      groups.push(runs.filter((x) => x.group_id === r.group_id));
     } else groups.push([r]);
   }
   const remove = async (g: SimulationRun[]) => {
@@ -226,21 +274,19 @@ function History({ runs, onPick }: { runs: SimulationRun[]; onPick: (g: Simulati
     }
   };
   return (
-    <div className="col gap-4">
+    <div className="sim-hist">
       {groups.map((g) => (
-        <div key={g[0].id} className="card tight flat clickable" onClick={() => onPick(g)}>
-          <div className="row between wrap">
-            <span className="small">
-              <Badge tone={g[0].scenario === "agent" ? "purple" : "info"}>{g[0].scenario_label}</Badge> {g.length === 2 && <Badge>Before/After</Badge>}
+        <div key={g[0].id} onClick={() => onPick(g)}>
+          <div className="row between wrap small">
+            <span>
+              <Badge tone={g[0].scenario === "agent" ? "purple" : "info"}>{g[0].scenario_label}</Badge> {g.length === 2 && <Badge>비교</Badge>}
             </span>
-            <span className="small muted">
-              {fmtDateTime(g[0].created_at)} · {g[0].created_by}{" "}
-              <button className="link-btn danger" onClick={(e) => { e.stopPropagation(); void remove(g); }}>
-                삭제
-              </button>
+            <span className="muted">
+              {fmtDateTime(g[0].created_at)} {g[0].created_by}{" "}
+              <button className="link-btn danger" onClick={(e) => { e.stopPropagation(); void remove(g); }}>삭제</button>
             </span>
           </div>
-          <div className="small mt-4">{g[0].question}</div>
+          <div className="q">{g[0].question}</div>
         </div>
       ))}
     </div>
