@@ -655,6 +655,13 @@ def preview(did: int, db: Session = Depends(get_db), _: User = Depends(current_u
                            "results": res["results"], "gate0": res["gate0"]}}
 
 
+@router.get("/datasets/{did}/diagnosis-preview")
+def diagnosis_preview(did: int, db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
+    """즉시 진단 — 지금 저장된 정본으로 STEP 8 규칙을 돌려 이 데이터셋에 해당하는 항목의 판정과, 마지막 진단 대비 변화를 준다. 기록은 남기지 않는다."""
+    pd = _dataset(db, did, editable=False)
+    return diagnosis.preview(db, pd.process, pd.id)
+
+
 # ------------------------------------------------------------------ STEP 4 분류
 @router.get("/datasets/{did}/classification/suggestions")
 def classification_suggestions(did: int, db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:

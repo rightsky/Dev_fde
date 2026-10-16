@@ -964,3 +964,31 @@ export interface SimulationStatus {
   note: string;
   runs: SimulationRun[];
 }
+
+// ───────────── 즉시 진단 (STEP 3·4 미리보기)
+export interface DiagPreviewItem {
+  id: string;
+  name: string;
+  area: string;
+  method: DiagMethod;
+  level?: string | null;
+  status: DiagStatus;
+  previous: DiagStatus | null;
+  changed: boolean;
+  provisional: boolean;
+  route: FixRoute | null;
+  detail: string | null;
+  focus: string | null;
+  dataset_status: DiagStatus | null;
+}
+export interface DiagPreview {
+  items: DiagPreviewItem[];
+  counts: Record<DiagStatus, number>;
+  score: number;
+  max_score: number;
+  last_run: { id: number; score: number; max_score: number; at: string } | null;
+  improved: DiagPreviewItem[];
+  regressed: DiagPreviewItem[];
+  provisional_note: string | null;
+  dataset_id: number | null;
+}

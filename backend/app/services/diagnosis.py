@@ -396,10 +396,8 @@ def _derive(ctx: _Ctx, rule: dict[str, Any], done: dict[str, dict[str, Any]], sc
     return item
 
 
-def run(db: Session, process: Process, user: User) -> DiagnosisRun:
-    rules = guideline_rules()
-    ctx = _Ctx(db, process)
-    started = utcnow()
+def _evaluate_all(ctx: _Ctx, rules: dict[str, Any]) -> list[dict[str, Any]]:
+    """80항목 전체 판정 (저장하지 않는다)."""
     scoring = rules["scoring"]
     done: dict[str, dict[str, Any]] = {}
     for r in rules["rules"]:
@@ -416,6 +414,76 @@ def run(db: Session, process: Process, user: User) -> DiagnosisRun:
     items = [done[r["id"]] for r in rules["rules"]]
     for it in items:
         it["score"] = scoring.get(it["status"], 0.0) if it["status"] != "na" else None
+    return items
+
+
+# 변환 산출물(STEP 7)이 있어야 확정되는 판정기. 즉시 진단에서는 산출물이 최신이 아니면 '변환 후 확정'으로 표시한다
+_NEEDS_ARTIFACTS = {"data_dictionary", "data_card", "machine_readable"}
+
+
+def preview(db: Session, process: Process, dataset_id: int | None = None) -> dict[str, Any]:
+    """즉시 진단 — 지금 저장된 정본으로 판정만 하고 기록은 남기지 않는다 (STEP 3·4 오른쪽 미리보기용).
+    마지막 저장된 진단과 비교해 항목별 변화(delta)도 준다."""
+    rules = guideline_rules()
+    ctx = _Ctx(db, process)
+    items = _evaluate_all(ctx, rules)
+    by_rule = {r["id"]: r for r in rules["rules"]}
+    s_stale = serialize.stale_reason(db, process, ctx.sr, ctx.vr, ctx.v_stale) if ctx.sr else "변환 산출물 없음"
+    provisional: set[str] = set()
+    if s_stale:
+        for r in rules["rules"]:
+            res = r["resolver"]
+            if res["type"] == "builtin" and res["name"] in _NEEDS_ARTIFACTS:
+                provisional.add(r["id"])
+        changed = True
+        while changed:  # 산출물에 기대는 항목을 종합하는 원칙도 잠정
+            changed = False
+            for r in rules["rules"]:
+                if r["resolver"]["type"] == "derived" and r["id"] not in provisional and any(c in provisional for c in r["resolver"]["from"]):
+                    provisional.add(r["id"])
+                    changed = True
+    last = latest_run(db, process.id)
+    last_items = {i["id"]: i for i in (last.items if last else [])}
+    out = []
+    for it in items:
+        row = next((d for d in it["datasets"] if d["id"] == dataset_id), None) if dataset_id is not None else None
+        if dataset_id is not None and it["datasets"] and row is None:
+            continue  # 다른 데이터셋에만 해당하는 항목
+        prev = last_items.get(it["id"])
+        prev_row = next((d for d in (prev or {}).get("datasets", []) if d["id"] == dataset_id), None) if row else None
+        # 데이터셋 화면에서는 그 데이터셋의 판정 변화를, 전체 화면에서는 항목 판정 변화를 본다
+        now_s = row["status"] if row else it["status"]
+        prev_s = (prev_row["status"] if prev_row else None) if row else (prev["status"] if prev else None)
+        out.append({"id": it["id"], "name": it["name"], "area": it["area"], "method": it["method"], "level": it["level"],
+                    "status": it["status"], "previous": prev_s,
+                    "changed": prev_s is not None and prev_s != now_s,
+                    "provisional": it["id"] in provisional, "route": it["route"],
+                    "detail": row["detail"] if row else (it["evidence"][0] if it["evidence"] else None),
+                    "focus": (row or {}).get("focus") or (it["route"] or {}).get("focus"),
+                    "dataset_status": row["status"] if row else None})
+    counts = {k: 0 for k in ("met", "partial", "unmet", "pending", "na")}
+    for o in out:
+        counts[o["status"]] += 1
+    scored = [o for o in out if o["status"] != "na"]
+    score = sum(rules["scoring"].get(o["status"], 0.0) for o in scored)
+    return {"items": out, "counts": counts, "score": round(score, 1), "max_score": float(len(scored)),
+            "last_run": {"id": last.id, "score": last.score, "max_score": last.max_score, "at": last.started_at.isoformat()} if last else None,
+            "improved": [o for o in out if o["changed"] and _rank(o["dataset_status"] or o["status"]) > _rank(o["previous"])],
+            "regressed": [o for o in out if o["changed"] and _rank(o["dataset_status"] or o["status"]) < _rank(o["previous"])],
+            "provisional_note": ("STEP 7 변환이 최신이 아니라 산출물에 기대는 항목은 변환 후 확정됩니다" if s_stale else None),
+            "dataset_id": dataset_id}
+
+
+def _rank(status: str | None) -> int:
+    return {"unmet": 0, "pending": 1, "partial": 2, "met": 3, "na": 3}.get(status or "", 0)
+
+
+def run(db: Session, process: Process, user: User) -> DiagnosisRun:
+    rules = guideline_rules()
+    ctx = _Ctx(db, process)
+    started = utcnow()
+    scoring = rules["scoring"]
+    items = _evaluate_all(ctx, rules)
     scored = [i for i in items if i["status"] != "na"]
     total = sum(i["score"] for i in scored)
     areas = []

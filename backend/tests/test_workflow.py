@@ -960,3 +960,29 @@ def test_16_rerun_pipeline(client):
     client.patch(f"/api/datasets/{did}/meta", json={"values": {"publisher_org_id": org}, "approve": ["publisher_org_id"]})
     body = client.post(f"/api/processes/{pid}/rerun").json()
     assert body["stopped"] is None and body["diagnosis"] is not None
+
+
+# ------------------------------------------------------------------ 즉시 진단 (STEP 3·4 미리보기)
+def test_17_diagnosis_preview(client):
+    pid, did = S["pid"], S["d_road"]
+    # 최신 상태에서: 저장된 진단과 같다
+    pv = client.get(f"/api/datasets/{did}/diagnosis-preview").json()
+    assert pv["last_run"] and pv["improved"] == [] and pv["regressed"] == [] and pv["provisional_note"] is None
+    assert all(not i["provisional"] for i in pv["items"]) and pv["max_score"] > 0
+    m07 = next(i for i in pv["items"] if i["id"] == "M-07")
+    assert m07["dataset_status"] == "met" and m07["focus"] == "accrual_periodicity"
+    # 갱신주기를 지우면 즉시 진단에서 바로 미흡으로, 산출물에 기대는 항목은 잠정으로 표시된다
+    assert client.patch(f"/api/datasets/{did}/meta", json={"values": {"accrual_periodicity": None}}).status_code == 200
+    pv = client.get(f"/api/datasets/{did}/diagnosis-preview").json()
+    m07 = next(i for i in pv["items"] if i["id"] == "M-07")
+    assert m07["dataset_status"] == "unmet" and m07["changed"] and any(r["id"] == "M-07" for r in pv["regressed"])
+    assert pv["provisional_note"] and next(i for i in pv["items"] if i["id"] == "R-10")["provisional"]
+    assert next(i for i in pv["items"] if i["id"] == "P-04")["provisional"], "산출물 항목을 종합하는 원칙도 잠정"
+    assert client.get(f"/api/processes/{pid}/diagnosis-runs/latest").json()["run"]["id"] == pv["last_run"]["id"], "기록은 남기지 않는다"
+    # 되돌리면 개선으로 잡힌다
+    client.patch(f"/api/datasets/{did}/meta", json={"values": {"accrual_periodicity": "P1M"}})
+    pv = client.get(f"/api/datasets/{did}/diagnosis-preview").json()
+    assert not any(r["id"] == "M-07" for r in pv["regressed"])
+    # 다른 데이터셋에만 해당하는 항목은 빠진다
+    acc = client.get(f"/api/datasets/{S['d_acc']}/diagnosis-preview").json()
+    assert {i["id"] for i in acc["items"]} <= {i["id"] for i in pv["items"]} | {i["id"] for i in acc["items"]}
