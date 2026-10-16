@@ -498,10 +498,42 @@ class DraftIn(BaseModel):
 
 
 @router.get("/ai-status")
-def ai_status(_: User = Depends(current_user)) -> dict[str, Any]:
+def ai_status(dataset_id: int | None = None, db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
+    """AI 초안 기능 상태. dataset_id 를 주면 그 데이터셋에 쓸 수 있는지(C 등급 예외)도 알려 준다."""
     from ..services import assist
 
-    return assist.status()
+    out = assist.status()
+    if dataset_id is not None:
+        pd = _dataset(db, dataset_id, editable=False)
+        out["blocked_reason"] = assist.blocked_reason(pd)
+        out["grade"] = assist.grade(pd)
+        out["excluded"] = assist.excluded(pd)
+    return out
+
+
+class ExcludeIn(BaseModel):
+    excluded: bool
+    reason: str | None = Field(default=None, max_length=500)
+
+
+@router.put("/datasets/{did}/ai-exclusion")
+def set_ai_exclusion(did: int, body: ExcludeIn, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    """담당자가 이 데이터셋을 외부 AI 전송에서 제외(또는 해제)한다. 등급과 무관하게 적용되며 활동 로그에 남는다."""
+    from ..services import assist
+
+    pd = _dataset(db, did)
+    meta = dict(pd.meta or {})
+    title = meta.get("title") or pd.asset.name
+    if body.excluded:
+        meta[assist.EXCLUDE_KEY] = {"by": user.name, "at": utcnow().isoformat(), "reason": (body.reason or "").strip() or None}
+        activity.log(db, "ai_exclude", f"외부 AI 전송 제외 — {title}" + (f" ({body.reason.strip()})" if body.reason and body.reason.strip() else ""),
+                     user=user, process_id=pd.process_id, dataset_id=pd.id)
+    else:
+        meta.pop(assist.EXCLUDE_KEY, None)
+        activity.log(db, "ai_exclude_clear", f"외부 AI 전송 제외 해제 — {title}", user=user, process_id=pd.process_id, dataset_id=pd.id)
+    pd.meta = meta
+    db.commit()
+    return {"excluded": assist.excluded(pd), "blocked_reason": assist.blocked_reason(pd)}
 
 
 @router.post("/datasets/{did}/drafts")

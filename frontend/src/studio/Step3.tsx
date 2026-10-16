@@ -7,7 +7,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { api } from "../api";
 import type { CardItem, Dataset, DictRow, MetaField, Org, Preview, Reference, Severity } from "../types";
 import { Badge, Banner, Button, Card, CodeBlock, ConfirmButton, Empty, QueryState, Tabs, cx, errText, fmtDateTime, fmtNum, shortHash, useToast } from "../ui";
-import { AiDraftButton } from "./AiDraft";
+import { AiDraftButton, AiExclusionBox } from "./AiDraft";
 import { useStudio } from "./context";
 import { DatasetList, Gate0List, ProfileTable, ReadOnlyNote, ReadinessBadge, StepHeader, ValidationRows } from "./shared";
 
@@ -381,6 +381,7 @@ export function Step3() {
             {!dataset.minted && <Badge title="관리자가 STEP 6 에서 ID 를 발급하면 정식 식별자로 바뀝니다">임시 ID</Badge>}
           </div>
           <Tabs tabs={TABS} value={tab} onChange={setTab} />
+          {(tab === "form" || tab === "card") && <AiExclusionBox did={dataset.id} editable={editable} />}
 
           {tab === "class" && <ClassTab key={dataset.id} pid={pid} dataset={dataset} reference={reference} editable={editable} busy={busy} onToggle={toggleClass} />}
           {tab === "form" && <FormTab key={dataset.id} m={model} fields={fields.filter((f) => !f.group)} />}

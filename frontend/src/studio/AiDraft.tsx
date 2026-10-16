@@ -1,12 +1,12 @@
 // STEP 3 — AI 초안 제안. 서술형 칸의 초안을 받아 담당자가 하나씩 검토·채택한다 (채택해도 저장 전까지는 폼의 미저장 변경일 뿐이다)
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import type { AiDraft, MetaField } from "../types";
 import { Badge, Banner, Button, Modal, useToast } from "../ui";
 
-export function useAiStatus() {
-  return useQuery({ queryKey: ["ai-status"], queryFn: api.aiStatus, staleTime: 5 * 60_000 });
+export function useAiStatus(did?: number) {
+  return useQuery({ queryKey: ["ai-status", did ?? 0], queryFn: () => api.aiStatus(did), staleTime: 60_000 });
 }
 
 /** 초안을 만들 수 있는 칸: 서술형(textarea) · 준수 표준(tags, 규칙) */
@@ -26,16 +26,18 @@ export function AiDraftButton(props: {
   size?: "sm" | "md";
   label?: string;
 }) {
-  const st = useAiStatus();
+  const st = useAiStatus(props.did);
   const [open, setOpen] = useState(false);
   const enabled = st.data?.enabled ?? false;
+  const blocked = st.data?.blocked_reason || null;
   const targets = st.data ? draftable(props.fields, st.data.fields, st.data.rule_fields) : [];
   if (!props.editable || targets.length === 0) return null;
-  const title = enabled ? `${st.data?.model} 로 서술형 칸 ${targets.length}개의 초안을 받습니다` : "AI 초안 기능이 꺼져 있습니다 (.env 의 FDE_ANTHROPIC_API_KEY)";
+  const title = blocked ? blocked : enabled ? `${st.data?.model} 로 서술형 칸 ${targets.length}개의 초안을 받습니다` : "AI 초안 기능이 꺼져 있습니다 (.env 의 FDE_ANTHROPIC_API_KEY)";
   return (
     <>
-      <Button size={props.size || "sm"} variant={enabled ? "outline" : "default"} disabled={!enabled} title={title} onClick={() => setOpen(true)}>
+      <Button size={props.size || "sm"} variant={enabled && !blocked ? "outline" : "default"} disabled={!enabled || !!blocked} title={title} onClick={() => setOpen(true)}>
         ✦ {props.label || "AI 초안 제안"}
+        {blocked && <Badge tone="err">제외</Badge>}
       </Button>
       {open && <DraftModal {...props} targets={targets} model={st.data?.model || ""} onClose={() => setOpen(false)} />}
     </>
@@ -162,5 +164,54 @@ function DraftModal(props: {
         </div>
       )}
     </Modal>
+  );
+}
+
+/** STEP 3 상단: 이 데이터셋의 외부 AI 전송 상태와 담당자 제외 표시. C 등급은 자동 제외라 토글이 잠긴다. */
+export function AiExclusionBox({ did, editable }: { did: number; editable: boolean }) {
+  const st = useAiStatus(did);
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (!st.data || !st.data.enabled) return null;
+  const isC = st.data.grade === "C";
+  const ex = st.data.excluded;
+  const set = async (excluded: boolean) => {
+    setBusy(true);
+    try {
+      await api.setAiExclusion(did, excluded, reason);
+      await qc.invalidateQueries({ queryKey: ["ai-status", did] });
+      toast.ok(excluded ? "외부 AI 전송 제외로 표시했습니다 — 이 데이터셋에는 AI 초안을 쓰지 않습니다" : "외부 AI 전송 제외를 해제했습니다");
+      setReason("");
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className={"banner " + (isC || ex ? "warn" : "info")} style={{ alignItems: "center" }}>
+      <div className="grow small">
+        <b>외부 AI 전송</b>{" "}
+        {isC ? (
+          <>— <Badge tone="err">N²SF C(기밀)</Badge> STEP 4 에서 담당자가 C 등급으로 지정해 AI 초안을 쓰지 않습니다 (요약·통계도 기관 밖으로 보내지 않음).</>
+        ) : ex ? (
+          <>— <Badge tone="warn">담당자 제외</Badge> {ex.by} · {ex.at.slice(0, 16).replace("T", " ")}{ex.reason ? ` · ${ex.reason}` : ""}. AI 초안 제안이 잠겨 있습니다.</>
+        ) : (
+          <>— 허용 (N²SF {st.data.grade || "미지정"}). AI 초안을 받으면 데이터셋 요약·컬럼 통계가 Anthropic API 로 전송됩니다. 보내면 안 되는 자료면 제외로 표시하세요.</>
+        )}
+      </div>
+      {editable && !isC && (
+        ex ? (
+          <Button size="sm" busy={busy} onClick={() => void set(false)}>제외 해제</Button>
+        ) : (
+          <div className="row">
+            <input className="input" style={{ width: 200 }} placeholder="사유 (선택)" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} />
+            <Button size="sm" variant="outline" busy={busy} onClick={() => void set(true)}>외부 AI 전송 제외</Button>
+          </div>
+        )
+      )}
+    </div>
   );
 }

@@ -796,3 +796,34 @@ def test_14_ai_drafts(client, monkeypatch):
     viewer = client.post("/api/auth/login", json={"username": "viewer1", "password": "viewer-pass-1"}).json()["access_token"]
     assert client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_known_limitations"]},
                        headers={"Authorization": f"Bearer {viewer}"}).status_code == 403
+    # 표준 속성 이름을 모델에 알려 준다
+    assert "https://www.w3.org/TR/prov-o/" in sent["system"] and '"property": "rai:knownLimitations"' in sent["user"]
+    # N²SF C(기밀) 등급은 외부 모델에 보내지 않는다 (규칙 기반 칸은 된다)
+    monkeypatch.setattr(assist, "_call", fake_call)
+    from app.models import ProcessDataset
+    from app.db import SessionLocal
+
+    with SessionLocal() as db:
+        p = db.get(ProcessDataset, did)
+        p.classification = {**(p.classification or {}), "N2SF": "N2SF-C"}
+        db.commit()
+    st = client.get("/api/ai-status", params={"dataset_id": did}).json()
+    assert st["grade"] == "C" and "C(기밀)" in st["blocked_reason"]
+    r = client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_known_limitations"]})
+    assert r.status_code == 403 and "C(기밀)" in r.json()["detail"]
+    assert client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_missing_data"]}).status_code == 200
+    with SessionLocal() as db:
+        p = db.get(ProcessDataset, did)
+        p.classification = {**(p.classification or {}), "N2SF": "N2SF-S"}
+        db.commit()
+    assert client.get("/api/ai-status", params={"dataset_id": did}).json()["blocked_reason"] is None
+    # 등급과 무관하게 담당자가 외부 AI 전송 제외로 표시할 수 있다
+    r = client.put(f"/api/datasets/{did}/ai-exclusion", json={"excluded": True, "reason": "내부 조사 자료"})
+    assert r.status_code == 200 and r.json()["excluded"]["by"] == "관리자" and "내부 조사 자료" in r.json()["blocked_reason"]
+    assert client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_known_limitations"]}).status_code == 403
+    assert client.put(f"/api/datasets/{did}/ai-exclusion", json={"excluded": False}).json()["excluded"] is None
+    assert client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_known_limitations"]}).status_code == 200
+    types = [a["type"] for a in client.get("/api/activities").json()]
+    assert "ai_exclude" in types and "ai_exclude_clear" in types
+    # 제외 표시는 정본 그래프에 들어가지 않는다 (내부 운영 표시)
+    assert "_ai_excluded" not in client.get(f"/api/datasets/{did}/preview").json()["turtle"]

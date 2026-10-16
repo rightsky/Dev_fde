@@ -105,10 +105,27 @@ def _context(db: Session, pd: ProcessDataset) -> dict[str, Any]:
             "combo": [((d.meta or {}).get("title") or d.asset.name) for d in pd.process.combo if d.id != pd.id]}
 
 
+# 초안이 따라야 할 표준. 칸마다 property(예: dcterms:provenance, rai:dataBiases)를 함께 주므로 그 속성의 정의에 맞게 쓰게 한다.
+STANDARDS = (
+    "참조 표준 (칸의 property 접두어가 어느 표준의 어떤 속성인지 알려 준다):\n"
+    "- dcat: / dcterms: — W3C DCAT 3 (https://www.w3.org/TR/vocab-dcat-3/), DCAT 2 (https://www.w3.org/TR/vocab-dcat-2/). "
+    "dcterms:description 은 데이터셋의 자유 텍스트 설명, dcterms:provenance 는 출처·가공 이력 진술(ProvenanceStatement), "
+    "dcterms:rights 는 권리 진술, adms:versionNotes 는 이전 판 대비 변경 사항, dqv:hasQualityAnnotation 은 품질 평가·검토 내용.\n"
+    "- prov: — W3C PROV-O (https://www.w3.org/TR/prov-o/). 이력은 활동(Activity)·주체(Agent)·원천 엔티티(Entity)가 드러나게 쓴다 "
+    "(무엇에서, 누가, 어떤 처리로 만들었는지).\n"
+    "- rai: — MLCommons Croissant 1.0 RAI 어휘 (https://mlcommons.org/working-groups/data/croissant/). "
+    "rai:dataBiases 는 확인된 편향, rai:dataLimitations·knownLimitations 는 데이터 한계, rai:dataCollectionMissingData 는 결측, "
+    "rai:dataUseCases 는 권장 용도, rai:personalSensitiveInformation 은 개인·민감정보와 보호 조치, "
+    "rai:dataPreprocessingProtocol·dataAnnotationProtocol 은 전처리·어노테이션 절차, rai:dataSocialImpact 는 사회적 영향.\n"
+    "- fde: — 이 스튜디오의 확장 속성 (가이드라인 부록 4 데이터 카드 칸 가운데 표준에 없는 것).\n"
+)
+
 SYSTEM = (
     "당신은 한국 공공기관의 데이터 관리 담당자를 돕는 메타데이터 작성 보조자입니다. "
     "「공공데이터의 인공지능 친화적 관리 가이드라인 v1.1」의 메타데이터 항목(표 9~12)과 데이터 카드(부록 4)에 들어갈 초안을 씁니다.\n"
+    + STANDARDS +
     "규칙:\n"
+    "- 칸의 property 가 가리키는 표준 속성의 뜻에 맞게 씁니다. 다른 칸에 들어갈 내용(예: 설명 칸에 라이선스)을 섞지 마세요.\n"
     "- 주어진 데이터셋 요약과 컬럼 통계에 근거해서만 쓰고, 모르는 사실은 지어내지 말고 '[담당자 확인]' 표시와 함께 빈칸으로 남기세요.\n"
     "- 공공기관 문서체(…함, …임 또는 평서문)로 간결하게, 칸마다 1~3문장 또는 짧은 목록으로 씁니다.\n"
     "- 요청받은 칸만 씁니다. 각 칸에 어떤 근거(컬럼·통계·기존 입력)를 썼는지 basis 에 적습니다.\n"
@@ -151,16 +168,45 @@ def _call(system: str, user: str, tool: dict[str, Any]) -> tuple[dict[str, Any],
     raise AssistError(502, "모델이 구조화된 초안을 돌려주지 않았습니다 — 다시 시도해 보세요")
 
 
+def grade(pd: ProcessDataset) -> str | None:
+    """STEP 4 에서 정한 N²SF 등급 (O · S · C). 미지정은 None."""
+    g = (pd.classification or {}).get("N2SF")
+    return str(g).replace("N2SF-", "") if g else None
+
+
+EXCLUDE_KEY = "_ai_excluded"  # pd.meta 안의 담당자 제외 표시 {"by", "at", "reason"}
+
+
+def excluded(pd: ProcessDataset) -> dict[str, Any] | None:
+    v = (pd.meta or {}).get(EXCLUDE_KEY)
+    return v if isinstance(v, dict) and v else None
+
+
+def blocked_reason(pd: ProcessDataset) -> str | None:
+    """외부 모델로 보낼 수 없는 데이터셋이면 그 사유 (가이드라인 3.4.5 외부 AI 서비스 연계 범위).
+    ① STEP 4 에서 담당자가 N²SF 를 C(기밀)로 지정 → 자동 제외. ② 등급과 무관하게 담당자가 STEP 3 에서 '외부 AI 전송 제외'로 표시 → 제외."""
+    if grade(pd) == "C":
+        return "N²SF C(기밀) 등급 데이터셋은 외부 AI 서비스에 요약·통계를 보낼 수 없어 AI 초안을 쓰지 않습니다. 결측치 정보 · 준수 표준(통계 자동)만 됩니다"
+    ex = excluded(pd)
+    if ex:
+        return (f"담당자({ex.get('by', '')})가 외부 AI 전송 제외로 표시한 데이터셋입니다"
+                + (f" — {ex['reason']}" if ex.get("reason") else "") + ". 결측치 정보 · 준수 표준(통계 자동)만 됩니다")
+    return None
+
+
 def drafts(db: Session, pd: ProcessDataset, user: User, names: list[str], instructions: str | None = None) -> dict[str, Any]:
     if not enabled():
         raise AssistError(503, "AI 초안 기능이 꺼져 있습니다 — .env 에 FDE_ANTHROPIC_API_KEY 를 지정하세요")
+    why = blocked_reason(pd)
+    if why:
+        raise AssistError(403, why)
     by_name = {f["name"]: f for f in LLM_FIELDS}
     scope = "stream" if pd.asset.kind == "stream" else "dataset"
     fields = [by_name[n] for n in dict.fromkeys(names) if n in by_name and by_name[n]["scope"] in ("all", scope)]
     if not fields:
         raise AssistError(422, "AI 초안을 만들 수 있는 서술형 칸을 하나 이상 고르세요")
     ctx = _context(db, pd)
-    ask = [{"name": f["name"], "label": f["label"], "guide": f.get("guide"), "help": f.get("help")} for f in fields]
+    ask = [{"name": f["name"], "property": f["property"], "label": f["label"], "guide": f.get("guide"), "help": f.get("help")} for f in fields]
     user_msg = ("<dataset>\n" + json.dumps(ctx, ensure_ascii=False, indent=1) + "\n</dataset>\n\n"
                 "<fields>\n" + json.dumps(ask, ensure_ascii=False, indent=1) + "\n</fields>\n\n"
                 + (f"<instructions_from_staff>\n{instructions.strip()[:1000]}\n</instructions_from_staff>\n\n" if instructions and instructions.strip() else "")

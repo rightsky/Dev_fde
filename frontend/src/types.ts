@@ -887,6 +887,10 @@ export interface AiStatus {
   fields: string[];
   rule_fields: string[];
   note: string;
+  /** dataset_id 를 주었을 때: 이 데이터셋에 쓸 수 없는 사유 (C 등급 · 담당자 제외) */
+  blocked_reason?: string | null;
+  grade?: string | null;
+  excluded?: { by: string; at: string; reason: string | null } | null;
 }
 export interface AiDraft {
   text: string | string[];

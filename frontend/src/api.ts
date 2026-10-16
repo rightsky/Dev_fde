@@ -148,7 +148,9 @@ export const api = {
   activities: (params?: { process_id?: number; limit?: number }) => get<T.Activity[]>("/activities", params),
 
   // AI 초안 제안
-  aiStatus: () => get<T.AiStatus>("/ai-status"),
+  aiStatus: (dataset_id?: number) => get<T.AiStatus>("/ai-status", { dataset_id }),
+  setAiExclusion: (did: number, excluded: boolean, reason?: string) =>
+    put<{ excluded: T.AiStatus["excluded"]; blocked_reason: string | null }>(`/datasets/${did}/ai-exclusion`, { excluded, reason }),
   aiDrafts: (did: number, fields: string[], instructions?: string) => post<T.AiDraftResult>(`/datasets/${did}/drafts`, { fields, instructions }),
 
   // AI 에이전트(MCP)
