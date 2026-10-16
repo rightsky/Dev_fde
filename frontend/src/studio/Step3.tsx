@@ -189,11 +189,21 @@ export function Step3() {
     el.classList.add("flash");
     if (el.matches("input, select, textarea") && !(el as HTMLInputElement).disabled) el.focus({ preventScroll: true });
     const t = window.setTimeout(() => el.classList.remove("flash"), 2400);
+    // STEP 8 에서 넘어온 수정 작업이면 안내가 떠 있는 동안 '수정 대상' 표시를 칸에 남긴다
+    const wrap = params.fix ? (el.closest<HTMLElement>(".card.tight.flat, .field") ?? el) : null;
+    if (wrap) {
+      wrap.classList.add("fix-target");
+      wrap.dataset.fix = params.fix ?? "";
+    }
     return () => {
       window.clearTimeout(t);
       el.classList.remove("flash");
+      if (wrap) {
+        wrap.classList.remove("fix-target");
+        delete wrap.dataset.fix;
+      }
     };
-  }, [focusReq]);
+  }, [focusReq, params.fix]);
 
   // ── 다른 화면에서 넘어온 선택 데이터셋·강조 필드 (주소가 바뀔 때마다 한 번씩)
   const paramKey = `${params.dataset ?? ""}|${params.focus ?? ""}`;

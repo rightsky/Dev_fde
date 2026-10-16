@@ -457,7 +457,7 @@ function RoadmapCard({ roadmap, onShowItem }: { roadmap: RoadmapRow[]; onShowIte
                   <td className="small muted">{r.basis}</td>
                   <td className="nowrap right">
                     {r.route && (
-                      <Button size="sm" title={`STEP ${r.route.step} · ${r.route.label}`} onClick={() => go(r.route!.step, { focus: r.route!.focus })}>
+                      <Button size="sm" title={`STEP ${r.route.step} · ${r.route.label}`} onClick={() => go(r.route!.step, { focus: r.route!.focus, fix: r.item_id })}>
                         이동
                       </Button>
                     )}
@@ -733,7 +733,7 @@ function ItemRow(props: {
                         {route && (
                           <td className="nowrap right">
                             {d.status !== "met" && (
-                              <button className="link-btn small" onClick={() => go(route.step, { dataset: d.id, focus: d.focus ?? route.focus })}>
+                              <button className="link-btn small" onClick={() => go(route.step, { dataset: d.id, focus: d.focus ?? route.focus, fix: item.id })}>
                                 STEP {route.step} 에서 수정
                               </button>
                             )}
@@ -773,7 +773,7 @@ function ItemRow(props: {
           {(route || item.method === "HUMAN-ATTEST") && (
             <div className="row wrap">
               {route && (
-                <Button size="sm" title={route.label} onClick={() => go(route.step, { dataset: firstOpen?.id, focus: firstOpen?.focus ?? route.focus })}>
+                <Button size="sm" title={route.label} onClick={() => go(route.step, { dataset: firstOpen?.id, focus: firstOpen?.focus ?? route.focus, fix: item.id })}>
                   수정하러 이동 → STEP {route.step}
                 </Button>
               )}

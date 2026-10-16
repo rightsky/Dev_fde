@@ -6,6 +6,7 @@ import { useAuth, useReference } from "../auth";
 import type { Process, ProcessDetail } from "../types";
 import { Badge, Banner, Button, ConfirmButton, Empty, Loading, Modal, QueryState, cx, errText, fmtDateTime, useToast } from "../ui";
 import { StudioCtx } from "./context";
+import { FixGuide } from "./FixGuide";
 import type { GoOptions, StudioValue } from "./context";
 
 /** /studio — 가장 최근에 작업한 진행 중 프로세스로 보낸다. 없으면 시작 화면. */
@@ -99,6 +100,7 @@ export function StudioLayout() {
       if (opts?.focus) qs.set("focus", opts.focus);
       if (opts?.from) qs.set("from", String(opts.from));
       if (opts?.shape) qs.set("shape", opts.shape);
+      if (opts?.fix) qs.set("fix", opts.fix);
       const s = qs.toString();
       nav(`/studio/${pid}/step/${n}${s ? `?${s}` : ""}`);
       if (canWrite && detail.process.status === "active" && detail.process.current_step !== n) {
@@ -135,7 +137,7 @@ export function StudioLayout() {
       go,
       refresh,
       guard,
-      params: { dataset: num("ds"), focus: sp.get("focus"), from: num("from"), shape: sp.get("shape") },
+      params: { dataset: num("ds"), focus: sp.get("focus"), from: num("from"), shape: sp.get("shape"), fix: sp.get("fix") },
     };
   }, [detail, pid, step, reference, canWrite, isAdmin, go, refresh, sp]);
 
@@ -252,6 +254,7 @@ export function StudioLayout() {
                 </Banner>
               </div>
             )}
+            {value.params.fix && step !== 8 && <FixGuide pid={pid} itemId={value.params.fix} datasetId={value.params.dataset} step={step} go={go} />}
             <Outlet />
           </main>
           <div className="bottom-bar">
