@@ -246,6 +246,25 @@ def _cell(text: str) -> str:
     return text.replace("|", "\\|").replace("\n", "<br>")
 
 
+def ai_terms_rows(record: dict[str, Any]) -> list[dict[str, str]]:
+    """AI 활용 이용조건 5항목 (가이드라인 3.4.5 표 39). 고르지 않은 항목은 '미정'."""
+    terms = record.get("aiUsageTerms") or {}
+    return [{"name": name, "label": label, "description": desc, "status": terms.get(name, ""),
+             "status_label": canonical.AI_TERM_STATUS.get(terms.get(name, ""), "미정")}
+            for name, _action, label, desc in canonical.AI_TERMS]
+
+
+def ai_terms_lines(record: dict[str, Any]) -> list[str]:
+    lines = ["## 부가. AI 활용 이용조건 (가이드라인 3.4.5 표 39)", "",
+             "> 부록 4 양식 밖의 항목입니다. 정본에는 ODRL 정책(odrl:hasPolicy)으로 들어갑니다.", "",
+             "| 항목 | 허용 여부 | 뜻 |", "|---|---|---|"]
+    for r in ai_terms_rows(record):
+        lines.append(f"| {r['label']} | {r['status_label']} | {_cell(r['description'])} |")
+    if record.get("aiUsageConditions"):
+        lines += ["", f"**조건 · 제한 사항:** {_cell(record['aiUsageConditions'])}"]
+    return lines + [""]
+
+
 def render_card(canon: canonical.Canonical, pd: ProcessDataset, vr: ValidationRun | None, files: list[str]) -> str:
     sections = card_items(canon, pd, vr, files)
     filled, total = card_coverage(sections)
@@ -262,6 +281,7 @@ def render_card(canon: canonical.Canonical, pd: ProcessDataset, vr: ValidationRu
                 content += f" ({it['note']})"
             lines.append(f"| {_cell(it['item'])} | {_cell(content)} | {it['source']} |")
         lines.append("")
+    lines += ai_terms_lines(canon.record)
     rows = dictionary_rows(pd)
     if rows:
         lines += ["## 부록. 데이터 필드 정의", "", "| 표 | 컬럼 | 자료형 | 정의 | 단위 |", "|---|---|---|---|---|"]

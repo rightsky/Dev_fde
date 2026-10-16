@@ -407,6 +407,10 @@ function EntryView({ e }: { e: CatalogEntry }) {
             </dd>
             <dt>이용조건</dt>
             <dd>{f.license || dash}</dd>
+            <dt>AI 활용 이용조건</dt>
+            <dd>
+              <AiTermsList terms={f.ai_terms} conditions={f.ai_conditions} />
+            </dd>
             <dt>N²SF</dt>
             <dd>
               <N2sfBadge grade={f.n2sf} />
@@ -685,4 +689,37 @@ function usePublishToggle(e: CatalogEntry) {
     }
   };
   return { busy, toggle };
+}
+
+// AI 활용 이용조건 (가이드라인 3.4.5 표 39) — 이름은 서버 canonical.AI_TERMS 와 같다
+const AI_TERM_LABELS: [string, string][] = [
+  ["ai_training", "AI 학습"],
+  ["ai_combination", "결합"],
+  ["ai_automated_access", "자동화 접근"],
+  ["ai_bulk_access", "대량 호출"],
+  ["ai_redistribution", "재배포"],
+];
+const AI_STATUS: Record<string, { label: string; tone: "ok" | "warn" | "err" }> = {
+  permitted: { label: "허용", tone: "ok" },
+  conditional: { label: "조건부", tone: "warn" },
+  prohibited: { label: "불허", tone: "err" },
+};
+
+function AiTermsList({ terms, conditions }: { terms?: Record<string, string>; conditions?: string | null }) {
+  const t = terms || {};
+  return (
+    <div className="col gap-4">
+      <div className="row wrap" style={{ gap: 4 }}>
+        {AI_TERM_LABELS.map(([k, label]) => {
+          const st = AI_STATUS[t[k]];
+          return (
+            <Badge key={k} tone={st?.tone || "muted"}>
+              {label} {st?.label || "미정"}
+            </Badge>
+          );
+        })}
+      </div>
+      {conditions && <span className="small">{conditions}</span>}
+    </div>
+  );
 }

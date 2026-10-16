@@ -374,6 +374,8 @@ def _clean_meta(pd: ProcessDataset, db: Session, values: dict[str, Any]) -> dict
             raise HTTPException(422, f"{f['label']}은(는) YYYY-MM-DD 형식이어야 합니다")
         if f["type"] == "url" and not re.match(r"^[a-z][a-z0-9+.-]*://\S+$", str(v), re.I):
             raise HTTPException(422, f"{f['label']}은(는) URL 형식이어야 합니다")
+        if f["type"] == "ai_term" and v not in canonical.AI_TERM_STATUS:
+            raise HTTPException(422, f"{f['label']}은(는) permitted · conditional · prohibited 중 하나여야 합니다")
         if f["type"] == "media_type" and not re.fullmatch(r"[a-z]+/[A-Za-z0-9.+-]+", str(v)):
             raise HTTPException(422, "미디어타입 형식이 올바르지 않습니다 (예: text/csv)")
         if k == "contact_email" and not re.fullmatch(r"[\w.+-]+@[\w-]+\.[\w.-]+", str(v)):

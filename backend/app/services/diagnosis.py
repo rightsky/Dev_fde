@@ -278,7 +278,8 @@ def _b_mcp_hint(ctx: _Ctx, pd: ProcessDataset):
     if not ex:
         return None
     return "attest", (f"MCP 로 제공 중 — {entry.resource_id} (N²SF {ex['grade']}) · 접근 가능 키 {ex['keys']}개 · "
-                      f"최근 30일 호출 {ex['calls']}건" + (f" (거부 {ex['denied']}건)" if ex["denied"] else "") + " · 호출 이력 기록 중")
+                      f"최근 30일 호출 {ex['calls']}건" + (f" (거부 {ex['denied']}건)" if ex["denied"] else "") + " · 호출 이력 기록 중"
+                      + f" · AI 이용조건 {len(ctx.canon[pd.id].record.get('aiUsageTerms') or {})}/{len(canonical.AI_TERMS)}항목 명시")
 
 
 _BUILTINS = {"minted": _b_minted, "periodicity": _b_periodicity, "related": _b_related, "provenance": _b_provenance,
