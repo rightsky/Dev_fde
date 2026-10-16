@@ -557,6 +557,54 @@ def ai_drafts(did: int, body: DraftIn, db: Session = Depends(get_db), user: User
     return out
 
 
+# ------------------------------------------------------------------ STEP 7 AI 활용 시뮬레이션
+class SimulateIn(BaseModel):
+    scenario: str
+    question: str = Field(max_length=2000)
+    dataset_ids: list[int] = Field(default_factory=list)
+    compare: bool = False
+
+
+@router.get("/processes/{pid}/simulations")
+def list_simulations(pid: int, db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
+    from ..services import simulate
+
+    p = _process(db, pid)
+    return {**simulate.status(db, p), "runs": [simulate.out(r) for r in simulate.recent(db, pid)]}
+
+
+@router.post("/processes/{pid}/simulations")
+def run_simulation(pid: int, body: SimulateIn, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    """산출물을 AI 서비스(챗봇 · 에이전트)가 쓰는 모습을 실제 모델로 실행한다. 결과는 저장되어 다시 볼 수 있다."""
+    from ..services import simulate
+
+    p = _process(db, pid)
+    if p.status == "trashed":
+        raise HTTPException(409, "휴지통에 있는 프로세스입니다")
+    try:
+        runs = simulate.run(db, p, user, body.scenario, body.question, body.dataset_ids, body.compare)
+    except simulate.SimError as exc:
+        db.rollback()
+        raise HTTPException(exc.status, exc.message)
+    except Exception as exc:  # noqa: BLE001
+        db.rollback()
+        raise HTTPException(502, f"AI 호출 실패 — {type(exc).__name__}: {str(exc)[:200]}")
+    db.commit()
+    return {"runs": [simulate.out(r) for r in runs]}
+
+
+@router.delete("/simulations/{sid}")
+def delete_simulation(sid: int, db: Session = Depends(get_db), _: User = Depends(require_writer)) -> dict[str, Any]:
+    from ..models import SimulationRun
+
+    r = db.get(SimulationRun, sid)
+    if r is None:
+        raise HTTPException(404, "기록이 없습니다")
+    db.delete(r)
+    db.commit()
+    return {"deleted": sid}
+
+
 @router.get("/datasets/{did}/card")
 def card_preview(did: int, db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
     """지금 정본으로 만든 데이터 카드 미리보기 (STEP 7 산출물과 같은 함수). 칸마다 채움 여부와 근거를 준다."""

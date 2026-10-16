@@ -142,12 +142,18 @@ def _tool(fields: list[dict[str, Any]]) -> dict[str, Any]:
             "input_schema": {"type": "object", "properties": props, "required": [f["name"] for f in fields]}}
 
 
-def _call(system: str, user: str, tool: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Claude API 호출. 테스트에서는 이 함수를 바꿔 끼운다. (입력 딕셔너리, 사용량) 을 돌려준다."""
+def client():  # noqa: ANN201
+    """Claude API 클라이언트 (키·타임아웃은 설정에서)."""
     import anthropic
 
     s = get_settings()
-    client = anthropic.Anthropic(api_key=s.anthropic_api_key, timeout=s.ai_timeout_seconds, max_retries=1)
+    return anthropic.Anthropic(api_key=s.anthropic_api_key, timeout=s.ai_timeout_seconds, max_retries=1)
+
+
+def _call(system: str, user: str, tool: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Claude API 호출. 테스트에서는 이 함수를 바꿔 끼운다. (입력 딕셔너리, 사용량) 을 돌려준다."""
+    s = get_settings()
+    client = globals()["client"]()
     # 일부 모델(Opus 5.5 등)은 tool_choice 강제를 지원하지 않는다. 도구는 열어 두고(auto) 지시문으로 호출을 요구하며,
     # 모델이 도구 대신 본문에 JSON 으로 답하면 그것을 읽는다.
     msg = client.messages.create(model=s.ai_model, max_tokens=s.ai_max_tokens, system=system, tools=[tool],

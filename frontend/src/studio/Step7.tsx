@@ -7,6 +7,7 @@ import type { Artifact, CatalogEntry, FormatDef, PublishReview, SelfVerify, Seri
 import { Badge, Banner, Button, Card, CodeBlock, Empty, Modal, QueryState, cx, fmtDateTime, fmtNum, shortHash, useToast } from "../ui";
 import { DatasetTable, RiskBadge, SignalList, STATUS_TONE } from "../review/ReviewParts";
 import { useAuth } from "../auth";
+import { SimulationPanel } from "./Simulation";
 import { useStudio } from "./context";
 import { ReadOnlyNote, StepHeader } from "./shared";
 
@@ -53,6 +54,24 @@ export function Step7() {
   };
 
   const run = latest?.run ?? null;
+  // 오른쪽 AI 활용 시뮬레이션 패널 (온/오프). 선택은 브라우저에만 기억한다
+  const [sim, setSim] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem("fde.step7.sim") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggleSim = () => {
+    setSim((v) => {
+      try {
+        sessionStorage.setItem("fde.step7.sim", v ? "0" : "1");
+      } catch {
+        /* 저장소 없음 */
+      }
+      return !v;
+    });
+  };
 
   return (
     <div className="col gap-12">
@@ -60,8 +79,16 @@ export function Step7() {
         n={7}
         title="직렬화 · 발행 포맷 변환"
         sub="검증을 통과한 데이터셋의 정본 그래프를 RDF·JSON 4개 포맷과 문서 3개(Croissant·데이터 카드·데이터 사전)로 변환하고, 산출물을 실제 파서로 다시 읽어 정본과 대조합니다."
+        right={
+          <label className="check" title="변환한 산출물을 실제 AI 서비스(챗봇 · 에이전트)가 어떻게 쓰는지 Claude 로 실행해 봅니다">
+            <input type="checkbox" checked={sim} onChange={toggleSim} />
+            <b>✦ AI 활용 시뮬레이션</b> {sim ? "켜짐" : "꺼짐"}
+          </label>
+        }
       />
       <ReadOnlyNote />
+      <div className={cx("grid", sim && "sim-on")} style={sim ? { gridTemplateColumns: "minmax(0, 1fr) 440px", gap: 16, alignItems: "start" } : undefined}>
+      <div className="col gap-12">
       <QueryState q={q}>
         {latest && (
           <>
@@ -157,6 +184,9 @@ export function Step7() {
           </>
         )}
       </QueryState>
+      </div>
+      {sim && <SimulationPanel pid={pid} />}
+      </div>
 
       {preview && <PreviewModal artifact={preview} tag={formats.find((f) => f.key === preview.fmt)?.tag ?? preview.fmt} onClose={() => setPreview(null)} />}
     </div>

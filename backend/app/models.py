@@ -470,3 +470,23 @@ class ReviewRequest(Base):
     acknowledged: Mapped[list[str]] = mapped_column(JSON, default=list)  # 승인자가 확인한 고위험 신호 코드
     self_approved: Mapped[bool] = mapped_column(Boolean, default=False)  # 요청자가 직접 승인
     published: Mapped[list[str]] = mapped_column(JSON, default=list)  # 승인으로 발행된 발행 ID
+
+
+class SimulationRun(Base):
+    """STEP 7 AI 활용 시뮬레이션 실행 기록 (시연 때 다시 열어 볼 수 있게 결과를 저장한다)."""
+
+    __tablename__ = "simulation_run"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    process_id: Mapped[int] = mapped_column(ForeignKey("process.id", ondelete="CASCADE"), index=True)
+    scenario: Mapped[str] = mapped_column(String(20))  # chat | agent
+    with_metadata: Mapped[bool] = mapped_column(Boolean, default=True)  # False = 메타데이터 없이(Before)
+    dataset_ids: Mapped[list[int]] = mapped_column(JSON, default=list)
+    question: Mapped[str] = mapped_column(Text)
+    result: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)  # 답변·근거·도구 호출 이력
+    usage: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    model: Mapped[str] = mapped_column(String(60), default="")
+    duration_ms: Mapped[int] = mapped_column(Integer, default=0)
+    group_id: Mapped[str | None] = mapped_column(String(40), default=None, index=True)  # Before/After 비교 묶음
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("app_user.id"), default=None)
+    created_label: Mapped[str] = mapped_column(String(100), default="")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)

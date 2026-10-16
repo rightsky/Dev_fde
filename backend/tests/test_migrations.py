@@ -10,7 +10,7 @@ from app.db import Base, _make_engine
 from app.migrate import BASELINE, upgrade
 
 
-LATER_TABLES = {"agent_key", "agent_call", "review_request"}  # 0002 (v0.5) · 0003 (v0.7)
+LATER_TABLES = {"agent_key", "agent_call", "review_request", "simulation_run"}  # 0002 (v0.5) · 0003 (v0.7) · 0004 (v0.9)
 
 
 def _engine(tmp_path: Path, name: str):
