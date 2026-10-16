@@ -259,6 +259,16 @@ export const api = {
   latestSerialization: (pid: number) => get<T.SerializationLatest>(`/processes/${pid}/serialization-runs/latest`),
   artifact: (aid: number) => get<T.ArtifactContent>(`/artifacts/${aid}`),
   publish: (pid: number) => post<{ published: T.CatalogEntry[] }>(`/processes/${pid}/publish`),
+  // 발행 검수 큐
+  publishReview: (pid: number) => get<T.PublishReview>(`/processes/${pid}/publish-review`),
+  submitReview: (pid: number, message: string) => post<T.ReviewRequest>(`/processes/${pid}/review-requests`, { message }),
+  reviews: (status: "pending" | "done" | "all" = "pending") =>
+    get<{ items: T.ReviewRequest[]; counts: Record<string, number> }>("/review-requests", { status }),
+  review: (id: number) => get<T.ReviewRequest>(`/review-requests/${id}`),
+  approveReview: (id: number, body: { note?: string; acknowledged: string[] }) =>
+    post<{ request: T.ReviewRequest; published: T.CatalogEntry[] }>(`/review-requests/${id}/approve`, body),
+  rejectReview: (id: number, note: string) => post<T.ReviewRequest>(`/review-requests/${id}/reject`, { note }),
+  withdrawReview: (id: number) => post<T.ReviewRequest>(`/review-requests/${id}/withdraw`),
 
   // STEP 8
   runDiagnosis: (pid: number) => post<{ run: T.DiagRun; state: T.ProcessState }>(`/processes/${pid}/diagnosis-runs`),

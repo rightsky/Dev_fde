@@ -3,6 +3,7 @@ import { AdminPage } from "./pages/Admin";
 import { AssetsPage } from "./pages/Assets";
 import { CatalogPage } from "./pages/Catalog";
 import { HomePage } from "./pages/Home";
+import { ReviewsPage } from "./pages/Reviews";
 import { Header } from "./shell/Header";
 import { Step1 } from "./studio/Step1";
 import { Step2 } from "./studio/Step2";
@@ -42,6 +43,8 @@ export function App() {
         <Route path="/catalog" element={<Plane><CatalogPage /></Plane>} />
         <Route path="/catalog/:rid" element={<Plane><CatalogPage /></Plane>} />
         <Route path="/admin" element={<Plane><AdminPage /></Plane>} />
+        <Route path="/reviews" element={<Plane><ReviewsPage /></Plane>} />
+        <Route path="/reviews/:rid" element={<Plane><ReviewsPage /></Plane>} />
         <Route path="/studio" element={<div className="body"><StudioIndex /></div>} />
         <Route path="/studio/:pid" element={<StudioLayout />}>
           <Route index element={<Navigate to="step/1" replace />} />

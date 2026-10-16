@@ -3,8 +3,10 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, api, downloadFile, downloads } from "../api";
-import type { Artifact, CatalogEntry, FormatDef, SelfVerify, SerializationRun } from "../types";
+import type { Artifact, CatalogEntry, FormatDef, PublishReview, SelfVerify, SerializationRun } from "../types";
 import { Badge, Banner, Button, Card, CodeBlock, Empty, Modal, QueryState, cx, fmtDateTime, fmtNum, shortHash, useToast } from "../ui";
+import { DatasetTable, RiskBadge, SignalList, STATUS_TONE } from "../review/ReviewParts";
+import { useAuth } from "../auth";
 import { useStudio } from "./context";
 import { ReadOnlyNote, StepHeader } from "./shared";
 
@@ -469,6 +471,11 @@ function PublishCard({ run, blocked }: { run: SerializationRun | null; blocked: 
   const qc = useQueryClient();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const { canWrite } = useAuth();
+  // 발행 위험 신호와 검수 요청 상태 (가이드라인 3.4.6 표 40 HITL)
+  const prQ = useQuery({ queryKey: ["publish-review", pid, run?.id ?? 0], queryFn: () => api.publishReview(pid) });
+  const pr = prQ.data;
   const [rejected, setRejected] = useState<string[]>([]);
   const [justPublished, setJustPublished] = useState<CatalogEntry[]>([]);
   // 이 프로세스에서 발행되어 카탈로그에 게시 중인 항목
@@ -480,7 +487,14 @@ function PublishCard({ run, blocked }: { run: SerializationRun | null; blocked: 
   const reasons = blocked.length > 0 ? blocked : rejected;
   const needsValidation = !detail.process.pub_mode || v.mode !== "publish" || !v.done || v.pass_count < 1;
   const mintedCount = combo.filter((d) => d.minted_id).length;
-  const disabledReason = !isAdmin ? "관리자 권한 필요" : trashed ? "휴지통에 있는 프로세스는 발행할 수 없습니다" : "";
+  const disabledReason = !isAdmin
+    ? "관리자 권한 필요"
+    : trashed
+      ? "휴지통에 있는 프로세스는 발행할 수 없습니다"
+      : pr && !pr.direct_publish
+        ? pr.direct_publish_reason || "검수 승인이 필요합니다"
+        : "";
+  const canRequest = canWrite && detail.process.status !== "trashed" && !!pr?.assessment && !pr.pending && pr.assessment.datasets.some((d) => d.change !== "same");
 
   const publish = async () => {
     setBusy(true);
@@ -488,7 +502,7 @@ function PublishCard({ run, blocked }: { run: SerializationRun | null; blocked: 
       const r = await api.publish(pid);
       setRejected([]);
       setJustPublished(r.published);
-      await Promise.all([refresh(), qc.invalidateQueries({ queryKey: ["catalog"] })]);
+      await Promise.all([refresh(), qc.invalidateQueries({ queryKey: ["catalog"] }), qc.invalidateQueries({ queryKey: ["publish-review", pid] })]);
       toast.ok(`카탈로그 발행 ${r.published.length}건 — ${r.published.map((e) => e.resource_id).join(", ")}`);
     } catch (e) {
       if (e instanceof ApiError && e.code === "PUBLISH_BLOCKED") {
@@ -517,9 +531,18 @@ function PublishCard({ run, blocked }: { run: SerializationRun | null; blocked: 
       }
       right={
         reasons.length === 0 && (
-          <Button variant="primary" busy={busy} disabled={disabledReason !== ""} title={disabledReason || undefined} onClick={publish}>
-            카탈로그 발행{run && run.ok_count > 0 ? ` (${run.ok_count}건)` : ""}
-          </Button>
+          <div className="row">
+            {canRequest && (
+              <Button variant={pr?.direct_publish && isAdmin ? "default" : "primary"} onClick={() => setAsking(true)}>
+                검수 요청
+              </Button>
+            )}
+            {isAdmin && pr?.direct_publish && (
+              <Button variant="primary" busy={busy} disabled={disabledReason !== ""} title={disabledReason || undefined} onClick={publish}>
+                바로 발행{run && run.ok_count > 0 ? ` (${run.ok_count}건)` : ""}
+              </Button>
+            )}
+          </div>
         )
       }
     >
@@ -540,6 +563,19 @@ function PublishCard({ run, blocked }: { run: SerializationRun | null; blocked: 
         </li>
       </ol>
 
+      {reasons.length === 0 && pr?.assessment && <ReviewStatus pr={pr} />}
+      {asking && pr?.assessment && (
+        <RequestModal
+          pid={pid}
+          pr={pr}
+          onClose={() => setAsking(false)}
+          onDone={async () => {
+            setAsking(false);
+            await Promise.all([qc.invalidateQueries({ queryKey: ["publish-review", pid] }), qc.invalidateQueries({ queryKey: ["reviews"] })]);
+          }}
+        />
+      )}
+
       {reasons.length > 0 ? (
         <div className="col gap-4 mt-12">
           {reasons.map((r) => (
@@ -558,7 +594,7 @@ function PublishCard({ run, blocked }: { run: SerializationRun | null; blocked: 
         disabledReason && (
           <div className="small t-warn mt-12">
             ⚠ {disabledReason}
-            {!isAdmin && " — 카탈로그 발행은 관리자 계정만 할 수 있습니다."}
+            {!isAdmin && " — 카탈로그 발행은 관리자 승인으로 이루어집니다. [검수 요청] 으로 올리세요."}
           </div>
         )
       )}
@@ -609,5 +645,88 @@ function PublishCard({ run, blocked }: { run: SerializationRun | null; blocked: 
         </>
       )}
     </Card>
+  );
+}
+
+/** 발행 위험 수준 · 신호 · 검수 요청 상태 */
+function ReviewStatus({ pr }: { pr: PublishReview }) {
+  const a = pr.assessment!;
+  const [open, setOpen] = useState(a.level !== "low");
+  const last = pr.latest;
+  return (
+    <div className="col gap-8 mt-12">
+      {pr.pending ? (
+        <Banner tone="info" right={<Link to={`/reviews/${pr.pending.id}`}>검수 큐에서 보기 →</Link>}>
+          검수 대기 중 — 요청 #{pr.pending.id} · {pr.pending.requested_by} · {fmtDateTime(pr.pending.requested_at)}
+          {pr.pending.stale && <div className="small t-warn">⚠ {pr.pending.stale} — 이 요청은 승인할 수 없습니다. 취소하고 다시 요청하세요.</div>}
+        </Banner>
+      ) : (
+        last &&
+        last.status !== "withdrawn" && (
+          <Banner tone={last.status === "rejected" ? "warn" : "ok"} right={<Link to={`/reviews/${last.id}`}>자세히 →</Link>}>
+            최근 검수 #{last.id}: <Badge tone={STATUS_TONE[last.status]}>{last.status_label}</Badge> {last.reviewer} · {fmtDateTime(last.decided_at)}
+            {last.decision_note && <div className="small">{last.status === "rejected" ? "반려 사유: " : "검토 의견: "}{last.decision_note}</div>}
+          </Banner>
+        )
+      )}
+      <div className="row between wrap">
+        <div className="row">
+          <span className="small bold dim">발행 위험</span> <RiskBadge level={a.level} />
+          <span className="small muted">
+            {a.level === "high" ? "제한공유 · 개인정보 · 결합 등 고위험 — 관리자 검수 승인 후 발행 (표 40 HITL)" : "관리자가 바로 발행할 수 있습니다. 검수 요청도 할 수 있습니다"}
+          </span>
+        </div>
+        <button className="link-btn" onClick={() => setOpen((v) => !v)}>
+          {open ? "신호 접기" : `위험 신호 ${a.signals.length}건 보기`}
+        </button>
+      </div>
+      {open && <SignalList signals={a.signals} />}
+    </div>
+  );
+}
+
+function RequestModal({ pid, pr, onClose, onDone }: { pid: number; pr: PublishReview; onClose: () => void; onDone: () => Promise<void> }) {
+  const toast = useToast();
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const a = pr.assessment!;
+  const submit = async () => {
+    setBusy(true);
+    try {
+      const r = await api.submitReview(pid, message);
+      toast.ok(`검수 요청 #${r.id} 을 올렸습니다 — 관리자가 승인하면 발행됩니다`);
+      await onDone();
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal
+      title={<>발행 검수 요청 <RiskBadge level={a.level} /></>}
+      onClose={onClose}
+      wide
+      footer={
+        <>
+          <Button onClick={onClose}>취소</Button>
+          <Button variant="primary" busy={busy} onClick={submit}>
+            요청 올리기
+          </Button>
+        </>
+      }
+    >
+      <div className="col gap-12">
+        <div className="small dim">
+          지금의 변환 결과(정본 체크섬)를 묶어 요청합니다. 요청 뒤에 내용을 고치면 이 요청은 승인할 수 없게 되므로, 고친 뒤에는 다시 요청하세요.
+        </div>
+        <DatasetTable rows={a.datasets} />
+        <SignalList signals={a.signals} />
+        <label className="field">
+          <span className="label">요청 메모 (검토자에게)</span>
+          <textarea className="textarea" rows={3} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="예: 차량번호는 앞 3자리만 남기고 마스킹했습니다 (C-12 증빙 첨부)" />
+        </label>
+      </div>
+    </Modal>
   );
 }
