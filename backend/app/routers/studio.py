@@ -1005,9 +1005,9 @@ class SerializeIn(BaseModel):
 @router.post("/processes/{pid}/serialization-runs")
 def run_serialization(pid: int, body: SerializeIn, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
     p = _editable(db, pid)
-    ok, reason = gates.can_enter(db, p, 7)
+    ok, reason = gates.can_run(db, p, 7)
     if not ok:
-        raise HTTPException(409, f"STEP 7 잠김 — {reason}")
+        raise HTTPException(409, f"STEP 7 변환 불가 — {reason}")
     bad = [f for f in body.formats if f not in serialize.FORMAT_KEYS]
     if bad:
         raise HTTPException(422, f"지원하지 않는 포맷입니다: {bad}")
@@ -1091,12 +1091,48 @@ def run_diagnosis(pid: int, db: Session = Depends(get_db), user: User = Depends(
     p = _process(db, pid)
     if p.status == "trashed":
         raise HTTPException(409, "휴지통에 있는 프로세스입니다")
-    ok, reason = gates.can_enter(db, p, 8)
+    ok, reason = gates.can_run(db, p, 8)
     if not ok:
-        raise HTTPException(409, f"STEP 8 잠김 — {reason}")
+        raise HTTPException(409, f"STEP 8 진단 불가 — {reason}")
     dr = diagnosis.run(db, p, user)
     db.commit()
     return {"run": diagnosis_out(dr), "state": gates.state(db, p)}
+
+
+@router.post("/processes/{pid}/rerun")
+def rerun_pipeline(pid: int, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    """검증 → 변환 → 진단을 한 번에 다시 실행한다 (미흡 항목을 여러 개 고친 뒤 한 번만 누르면 된다).
+    앞 단계가 막히면 거기서 멈추고 어디까지 됐는지 돌려준다."""
+    p = _editable(db, pid)
+    out: dict[str, Any] = {"validation": None, "serialization": None, "diagnosis": None, "stopped": None}
+    ok, reason = gates.can_run(db, p, 6)
+    if not ok:
+        out["stopped"] = f"STEP 6 — {reason}"
+        return {**out, "state": gates.state(db, p)}
+    try:
+        vr = validation.run(db, p, user)
+    except validation.LineageUnresolved:
+        out["stopped"] = "STEP 6 — 조합이 2건 이상인데 확정된 관계가 없습니다 (STEP 5 에서 관계를 확정하거나 미결 사유를 기록하세요)"
+        db.commit()
+        return {**out, "state": gates.state(db, p)}
+    db.flush()
+    out["validation"] = {"run_id": vr.id, "pass_count": vr.pass_count, "total": len(vr.results), "mode": vr.mode}
+    if vr.pass_count < 1:
+        out["stopped"] = "STEP 6 — 검증을 통과한 데이터셋이 없습니다. 위반을 고친 뒤 다시 실행하세요"
+        db.commit()
+        return {**out, "state": gates.state(db, p)}
+    prev = serialize.latest_run(db, pid)
+    sr = serialize.run(db, p, user, vr, prev.formats if prev else None)
+    db.flush()
+    out["serialization"] = {"run_id": sr.id, "ok_count": sr.ok_count, "fail_count": sr.fail_count}
+    if sr.ok_count < 1:
+        out["stopped"] = "STEP 7 — 자가검증을 통과한 산출물이 없습니다"
+        db.commit()
+        return {**out, "state": gates.state(db, p)}
+    dr = diagnosis.run(db, p, user)
+    out["diagnosis"] = {"run_id": dr.id, "score": dr.score, "max_score": dr.max_score}
+    db.commit()
+    return {**out, "state": gates.state(db, p)}
 
 
 @router.get("/processes/{pid}/diagnosis-runs/latest")

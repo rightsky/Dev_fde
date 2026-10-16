@@ -106,7 +106,8 @@ def test_04_validation_fails_before_approval(client):
     stream = next(d for d in run["datasets"] if d["dataset_id"] == S["d_stream"])
     assert any(x["shape"] == "StreamServiceShape" and x["route"]["step"] == 3 for x in stream["results"] if x["severity"] == "Violation")
     assert all(c["ok"] for c in road["gate0"]), "구조 검사(게이트 0)는 통과해야 한다"
-    assert not gate(r.json()["state"], 7)["can_enter"]
+    # 검증 결과가 있으면 STEP 7 에 들어가 볼 수는 있지만(열람), 통과가 없으니 변환은 할 수 없다
+    assert gate(r.json()["state"], 7)["can_enter"] and not gate(r.json()["state"], 7)["can_run"]
     client.delete(f"/api/processes/{pid}/lineage-waiver")
 
 
@@ -300,14 +301,16 @@ def test_08_validation_passes_and_goes_stale(client):
     crs = [x for x in road["results"] if "좌표계" in x["message"]]
     assert crs and crs[0]["severity"] == "Warning" and crs[0]["route"]["focus"] == "conforms_to"
     st = r.json()["state"]
-    assert gate(st, 6)["done"] and gate(st, 7)["can_enter"]
+    assert gate(st, 6)["done"] and gate(st, 7)["can_enter"] and gate(st, 7)["can_run"]
     S["checksum_before"] = road["checksum"]
 
-    # 상류(STEP 3)를 고치면 검증 결과가 무효화되고 STEP 7 이 다시 잠긴다
+    # 상류(STEP 3)를 고치면 검증 결과가 무효화된다. STEP 7 은 지난 결과를 볼 수는 있지만(열람) 새로 변환할 수는 없다
     client.patch(f"/api/datasets/{S['d_road']}/meta", json={"values": {"conforms_to": ["EPSG:5186"]}})
     st = client.get(f"/api/processes/{pid}").json()["state"]
-    assert st["validation"]["stale"] and not gate(st, 6)["done"] and not gate(st, 7)["can_enter"]
-    assert client.post(f"/api/processes/{pid}/serialization-runs", json={}).status_code == 409
+    assert st["validation"]["stale"] and not gate(st, 6)["done"]
+    assert gate(st, 7)["can_enter"] and not gate(st, 7)["can_run"] and "최신" in gate(st, 7)["run_reason"] or gate(st, 7)["run_reason"]
+    r = client.post(f"/api/processes/{pid}/serialization-runs", json={})
+    assert r.status_code == 409 and "변환 불가" in r.json()["detail"]
 
     run = client.post(f"/api/processes/{pid}/validation-runs").json()["run"]
     road = next(d for d in run["datasets"] if d["dataset_id"] == S["d_road"])
@@ -924,3 +927,36 @@ def test_15_ai_simulation(client, monkeypatch):
     assert any(a["type"] == "ai_simulate" for a in client.get("/api/activities").json())
     # 시뮬레이션은 MCP 키 호출 이력(agent_call)에는 섞이지 않는다
     assert all(c["key_label"] != "STEP 7 시뮬레이션 (sim…)" for c in client.get("/api/agent-calls").json())
+
+
+
+# ------------------------------------------------------------------ 검증 → 변환 → 진단 한 번에 재실행
+def test_16_rerun_pipeline(client):
+    pid = S["pid"]
+    did = S["d_road"]
+    # 상류를 고쳐 전부 '최신 아님'으로 만든다
+    assert client.patch(f"/api/datasets/{did}/meta", json={"values": {"spatial": "대한민국 경기도"}}).status_code == 200
+    st = client.get(f"/api/processes/{pid}").json()["state"]
+    assert st["validation"]["stale"] and gate(st, 7)["can_enter"] and gate(st, 8)["can_enter"], "지난 결과는 볼 수 있다"
+    assert not gate(st, 7)["can_run"] and not gate(st, 8)["can_run"]
+    assert client.post(f"/api/processes/{pid}/diagnosis-runs").status_code == 409
+    old = client.get(f"/api/processes/{pid}/diagnosis-runs/latest").json()
+    assert old["run"] is not None and old["stale"], "열람용 지난 진단이 남아 있다"
+
+    r = client.post(f"/api/processes/{pid}/rerun")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["stopped"] is None and body["validation"]["pass_count"] == 3 and body["serialization"]["ok_count"] == 3
+    assert body["diagnosis"]["max_score"] > 0
+    st = body["state"]
+    assert gate(st, 6)["done"] and gate(st, 7)["done"] and gate(st, 8)["done"] and not st["diagnosis"]["stale"]
+    # 한 데이터셋이 검증에 떨어져도 나머지로 이어서 돌고, 결과에 통과 수가 드러난다 (제공기관 승인 해제 → 도로목록만 실패)
+    r = client.patch(f"/api/datasets/{did}/meta", json={"values": {"publisher_org_id": None}, "approve": []})
+    assert r.status_code == 200, r.text
+    body = client.post(f"/api/processes/{pid}/rerun").json()
+    assert body["stopped"] is None and body["validation"]["pass_count"] == 2 and body["serialization"]["ok_count"] == 2
+    # 되돌리고 다시 전부 실행
+    org = client.get("/api/orgs").json()[0]["id"]
+    client.patch(f"/api/datasets/{did}/meta", json={"values": {"publisher_org_id": org}, "approve": ["publisher_org_id"]})
+    body = client.post(f"/api/processes/{pid}/rerun").json()
+    assert body["stopped"] is None and body["diagnosis"] is not None

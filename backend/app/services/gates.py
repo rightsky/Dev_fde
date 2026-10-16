@@ -49,12 +49,17 @@ def state(db: Session, process: Process) -> dict[str, Any]:
             "can_enter": combo_ok, "reason": need_combo, "progress": f"관계 {rel_n}건"},
         6: {"done": v_done, "can_enter": combo_ok, "reason": need_combo,
             "progress": f"통과 {v_pass}/{len(vr.results)}" if vr else ""},
-        7: {"done": s_done, "can_enter": v_done and v_pass >= 1,
-            "reason": v_stale or "STEP 6 검증을 먼저 실행하세요 (통과 1건 이상 필요)",
+        # 7·8 은 '들어가기'(지난 결과 열람)와 '실행하기'를 나눈다. 상류가 바뀌어도 지난 결과는 "최신 아님" 표시와 함께 볼 수 있고,
+        # 새로 실행하는 것만 최신 상류 결과를 요구한다 — 미흡 항목을 여러 개 고칠 때 단계마다 왕복하지 않기 위함.
+        7: {"done": s_done, "can_enter": vr is not None, "reason": "STEP 6 검증을 먼저 실행하세요",
+            "can_run": v_done and v_pass >= 1, "run_reason": v_stale or "STEP 6 검증을 먼저 실행하세요 (통과 1건 이상 필요)",
             "progress": f"{sr.ok_count}건 변환" if sr else ""},
-        8: {"done": d_done, "can_enter": s_done, "reason": s_stale or "STEP 7 변환을 먼저 실행하세요",
+        8: {"done": d_done, "can_enter": sr is not None, "reason": "STEP 7 변환을 먼저 실행하세요",
+            "can_run": s_done, "run_reason": s_stale or "STEP 7 변환을 먼저 실행하세요",
             "progress": f"{dr.score:g}/{dr.max_score:g}점" if dr else ""},
     }
+    for n in (1, 2, 3, 4, 5, 6):
+        g[n]["can_run"], g[n]["run_reason"] = g[n]["can_enter"], g[n]["reason"]
     return {
         "gates": [{"step": n, **v} for n, v in g.items()],
         "combo_ok": combo_ok,
@@ -72,3 +77,10 @@ def can_enter(db: Session, process: Process, step: int) -> tuple[bool, str]:
     st = state(db, process)
     gate = next(g for g in st["gates"] if g["step"] == step)
     return gate["can_enter"], gate["reason"]
+
+
+def can_run(db: Session, process: Process, step: int) -> tuple[bool, str]:
+    """그 단계의 실행(검증·변환·진단)을 지금 할 수 있는지. 열람(can_enter)보다 엄격하다."""
+    st = state(db, process)
+    gate = next(g for g in st["gates"] if g["step"] == step)
+    return gate["can_run"], gate["run_reason"]

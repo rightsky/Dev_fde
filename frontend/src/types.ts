@@ -301,9 +301,20 @@ export interface Dataset {
 export interface Gate {
   step: number;
   done: boolean;
+  /** 들어가서 볼 수 있는지 (7·8 은 지난 결과가 있으면 열람 가능) */
   can_enter: boolean;
   reason: string;
+  /** 새로 실행할 수 있는지 (열람보다 엄격: 상류 결과가 최신이어야 함) */
+  can_run: boolean;
+  run_reason: string;
   progress?: string;
+}
+export interface RerunResult {
+  validation: { run_id: number; pass_count: number; total: number; mode: string } | null;
+  serialization: { run_id: number; ok_count: number; fail_count: number } | null;
+  diagnosis: { run_id: number; score: number; max_score: number } | null;
+  stopped: string | null;
+  state: ProcessState;
 }
 
 export interface ProcessState {

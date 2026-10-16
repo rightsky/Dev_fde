@@ -284,6 +284,7 @@ export const api = {
 
   // STEP 8
   runDiagnosis: (pid: number) => post<{ run: T.DiagRun; state: T.ProcessState }>(`/processes/${pid}/diagnosis-runs`),
+  rerun: (pid: number) => post<T.RerunResult>(`/processes/${pid}/rerun`),
   latestDiagnosis: (pid: number) => get<T.DiagLatest>(`/processes/${pid}/diagnosis-runs/latest`),
   attest: (pid: number, itemId: string, body: { status: "met" | "partial" | "unmet" | "na"; note?: string; evidence?: string }) =>
     put<{ ok: boolean }>(`/processes/${pid}/attestations/${itemId}`, body),

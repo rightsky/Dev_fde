@@ -36,7 +36,7 @@ export function Step7() {
     });
 
   // 변환은 최신 검증이 유효하고 통과가 1건 이상일 때만 가능하다 (서버 게이트와 같은 조건)
-  const blockedReason = !v.done || v.pass_count < 1 ? v.stale || gate(7).reason || "STEP 6 검증을 먼저 실행하세요" : "";
+  const blockedReason = gate(7).can_run ? "" : gate(7).run_reason || v.stale || "STEP 6 검증을 먼저 실행하세요";
 
   const runSerialization = async () => {
     setRunning(true);
