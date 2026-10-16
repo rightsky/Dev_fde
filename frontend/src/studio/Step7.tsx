@@ -74,7 +74,7 @@ export function Step7() {
   };
 
   return (
-    <div className="col gap-12">
+    <div className={cx("col gap-12", sim && "step7-wide")}>
       <StepHeader
         n={7}
         title="직렬화 · 발행 포맷 변환"
@@ -87,7 +87,7 @@ export function Step7() {
         }
       />
       <ReadOnlyNote />
-      <div className={cx("grid", sim && "sim-on")} style={sim ? { gridTemplateColumns: "minmax(0, 1fr) 440px", gap: 16, alignItems: "start" } : undefined}>
+      <div className={cx(sim && "step7-split")}>
       <div className="col gap-12">
       <QueryState q={q}>
         {latest && (

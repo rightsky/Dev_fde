@@ -1120,6 +1120,21 @@ code,
 }
 
 /* ── STEP 7 AI 활용 시뮬레이션 ── */
+/* 패널을 켜면 1280px 폭 제한을 풀고 화면 전체를 두 단으로 쓴다. 오른쪽 패널은 화면의 44% (최소 520px) */
+.main > .step7-wide {
+  max-width: none;
+}
+.step7-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(520px, 44%, 760px);
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 1250px) {
+  .step7-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .sim {
   display: flex;
   flex-direction: column;
@@ -1470,8 +1485,7 @@ code,
   border-radius: var(--r-md);
   line-height: 1.6;
 }
-@media (max-width: 1400px) {
-  .sim-pair,
+@media (max-width: 1250px) {
   .sim-seg {
     grid-template-columns: 1fr;
   }
