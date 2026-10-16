@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -130,14 +131,24 @@ def _call(system: str, user: str, tool: dict[str, Any]) -> tuple[dict[str, Any],
 
     s = get_settings()
     client = anthropic.Anthropic(api_key=s.anthropic_api_key, timeout=s.ai_timeout_seconds, max_retries=1)
+    # 일부 모델(Opus 5.5 등)은 tool_choice 강제를 지원하지 않는다. 도구는 열어 두고(auto) 지시문으로 호출을 요구하며,
+    # 모델이 도구 대신 본문에 JSON 으로 답하면 그것을 읽는다.
     msg = client.messages.create(model=s.ai_model, max_tokens=s.ai_max_tokens, system=system, tools=[tool],
-                                 tool_choice={"type": "tool", "name": tool["name"]},
                                  messages=[{"role": "user", "content": user}])
-    block = next((b for b in msg.content if getattr(b, "type", "") == "tool_use"), None)
-    if block is None:
-        raise AssistError(502, "모델이 구조화된 초안을 돌려주지 않았습니다")
     usage = {"input_tokens": msg.usage.input_tokens, "output_tokens": msg.usage.output_tokens, "model": msg.model}
-    return dict(block.input), usage
+    block = next((b for b in msg.content if getattr(b, "type", "") == "tool_use"), None)
+    if block is not None:
+        return dict(block.input), usage
+    text = "".join(getattr(b, "text", "") for b in msg.content)
+    m = re.search(r"\{.*\}", text, re.S)
+    if m:
+        try:
+            data = json.loads(m.group(0))
+            if isinstance(data, dict):
+                return data, usage
+        except json.JSONDecodeError:
+            pass
+    raise AssistError(502, "모델이 구조화된 초안을 돌려주지 않았습니다 — 다시 시도해 보세요")
 
 
 def drafts(db: Session, pd: ProcessDataset, user: User, names: list[str], instructions: str | None = None) -> dict[str, Any]:
@@ -153,7 +164,8 @@ def drafts(db: Session, pd: ProcessDataset, user: User, names: list[str], instru
     user_msg = ("<dataset>\n" + json.dumps(ctx, ensure_ascii=False, indent=1) + "\n</dataset>\n\n"
                 "<fields>\n" + json.dumps(ask, ensure_ascii=False, indent=1) + "\n</fields>\n\n"
                 + (f"<instructions_from_staff>\n{instructions.strip()[:1000]}\n</instructions_from_staff>\n\n" if instructions and instructions.strip() else "")
-                + "위 <dataset> 에 근거해 <fields> 의 칸마다 초안을 submit_drafts 로 제출하세요.")
+                + "위 <dataset> 에 근거해 <fields> 의 칸마다 초안을 반드시 submit_drafts 도구로 제출하세요. "
+                  "도구를 쓸 수 없으면 같은 구조의 JSON 객체({칸이름: {text, basis}})만 본문에 적고 다른 말은 하지 마세요.")
     raw, usage = _call(SYSTEM, user_msg, _tool(fields))
     out: dict[str, dict[str, Any]] = {}
     for f in fields:

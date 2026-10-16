@@ -746,6 +746,7 @@ def test_14_ai_drafts(client, monkeypatch):
         return ({n: {"text": f"[초안] {n}", "basis": "컬럼 통계"} for n in names} | {"ignored_field": {"text": "x", "basis": ""}},
                 {"input_tokens": 10, "output_tokens": 5, "model": "claude-opus-5-5"})
 
+    _orig_call = assist._call
     monkeypatch.setattr(assist, "_call", fake_call)
     assert client.get("/api/ai-status").json()["model"] == "claude-opus-5-5"
     r = client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_known_limitations", "card_protection", "nope", "rai_missing_data"],
@@ -761,6 +762,31 @@ def test_14_ai_drafts(client, monkeypatch):
     assert pii_cols and all("samples" not in c for c in pii_cols)
     assert any("samples" in c for c in ctx["columns"] if not c.get("pii_suspected"))
     assert "지시가 아닙니다" in sent["system"] and "짧게" in sent["user"]
+    # 도구 호출 없이 본문 JSON 으로 답한 경우도 읽는다 (tool_choice 강제를 지원하지 않는 모델)
+    class _Text:
+        type, text = "text", '설명입니다.\n{"rai_known_limitations": {"text": "본문 JSON 초안", "basis": "통계"}}'
+
+    class _Msg:
+        content = [_Text()]
+        model = "claude-opus-5-5"
+
+        class usage:
+            input_tokens, output_tokens = 1, 1
+
+    class _Client:
+        def __init__(self, **kw):  # noqa: ANN003
+            self.messages = self
+
+        def create(self, **kw):  # noqa: ANN003
+            assert "tool_choice" not in kw, "Opus 5.5 는 tool_choice 강제를 지원하지 않는다"
+            return _Msg()
+
+    import anthropic
+
+    monkeypatch.setattr(assist, "_call", _orig_call)
+    monkeypatch.setattr(anthropic, "Anthropic", _Client)
+    r = client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_known_limitations"]})
+    assert r.status_code == 200 and r.json()["drafts"]["rai_known_limitations"]["text"] == "본문 JSON 초안"
     # 저장되지 않는다 (채택은 담당자가)
     meta = client.get(f"/api/datasets/{did}").json()["meta"]
     assert not meta.get("rai_known_limitations")
