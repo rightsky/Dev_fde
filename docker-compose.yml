@@ -29,6 +29,8 @@ services:
       FDE_BASE_IRI: ${FDE_BASE_IRI:-https://catalog.molit.go.kr}
       FDE_MAX_UPLOAD_MB: ${FDE_MAX_UPLOAD_MB:-50}
       FDE_SEED_DEMO_ORGS: ${FDE_SEED_DEMO_ORGS:-true}
+      FDE_ANTHROPIC_API_KEY: ${FDE_ANTHROPIC_API_KEY:-}
+      FDE_AI_MODEL: ${FDE_AI_MODEL:-claude-opus-5-5}
     volumes:
       - storage:/data/storage
 

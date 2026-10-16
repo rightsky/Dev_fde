@@ -147,6 +147,10 @@ export const api = {
     patch<T.User>(`/users/${id}`, body),
   activities: (params?: { process_id?: number; limit?: number }) => get<T.Activity[]>("/activities", params),
 
+  // AI 초안 제안
+  aiStatus: () => get<T.AiStatus>("/ai-status"),
+  aiDrafts: (did: number, fields: string[], instructions?: string) => post<T.AiDraftResult>(`/datasets/${did}/drafts`, { fields, instructions }),
+
   // AI 에이전트(MCP)
   mcpInfo: () => get<T.McpInfo>("/mcp-info"),
   agentKeys: () => get<T.AgentKey[]>("/agent-keys"),

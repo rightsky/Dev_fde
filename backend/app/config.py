@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     max_upload_mb: int = 50
     profile_max_rows: int = 50_000
 
+    # --- AI 초안 제안 (Claude API) ---
+    # 비어 있으면 AI 초안 기능이 꺼진다. 메타데이터 서술형 칸의 초안을 만들 때만 쓰며, 개인정보 의심 컬럼의 값은 보내지 않는다.
+    anthropic_api_key: str = ""
+    ai_model: str = "claude-opus-5-5"
+    ai_max_tokens: int = 4000
+    ai_timeout_seconds: int = 90
+
     # --- 기타 ---
     cors_origins: str = ""
     seed_demo_orgs: bool = True

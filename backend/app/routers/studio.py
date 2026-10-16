@@ -491,6 +491,40 @@ def put_dictionary(did: int, body: DictIn, db: Session = Depends(get_db), user: 
     return _dictionary_payload(pd)
 
 
+# ------------------------------------------------------------------ AI 초안 제안
+class DraftIn(BaseModel):
+    fields: list[str] = Field(default_factory=list)
+    instructions: str | None = Field(default=None, max_length=1000)
+
+
+@router.get("/ai-status")
+def ai_status(_: User = Depends(current_user)) -> dict[str, Any]:
+    from ..services import assist
+
+    return assist.status()
+
+
+@router.post("/datasets/{did}/drafts")
+def ai_drafts(did: int, body: DraftIn, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    """서술형 칸의 초안. 저장하지 않고 돌려준다 — 담당자가 검토해 채택하면 폼에 들어가고, 저장해야 정본에 반영된다."""
+    from ..services import assist
+
+    pd = _dataset(db, did)
+    rule = {k: v for k, v in assist.rule_drafts(pd).items() if not body.fields or k in body.fields}
+    llm_names = [n for n in body.fields if n in assist.LLM_FIELD_NAMES]
+    out: dict[str, Any] = {"drafts": rule, "model": None, "usage": None}
+    if llm_names:
+        try:
+            r = assist.drafts(db, pd, user, llm_names, body.instructions)
+        except assist.AssistError as exc:
+            raise HTTPException(exc.status, exc.message)
+        except Exception as exc:  # noqa: BLE001 - 외부 API 오류는 사용자에게 그대로 보이되 서버는 살아 있어야 한다
+            raise HTTPException(502, f"AI 초안 호출 실패 — {type(exc).__name__}: {str(exc)[:200]}")
+        db.commit()
+        out.update({"drafts": {**rule, **r["drafts"]}, "model": r["model"], "usage": r["usage"], "pii_withheld": r["pii_withheld"]})
+    return out
+
+
 @router.get("/datasets/{did}/card")
 def card_preview(did: int, db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
     """지금 정본으로 만든 데이터 카드 미리보기 (STEP 7 산출물과 같은 함수). 칸마다 채움 여부와 근거를 준다."""

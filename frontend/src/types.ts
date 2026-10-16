@@ -879,3 +879,23 @@ export interface PublishReview {
   direct_publish: boolean;
   direct_publish_reason: string | null;
 }
+
+// ───────────── AI 초안 제안
+export interface AiStatus {
+  enabled: boolean;
+  model: string | null;
+  fields: string[];
+  rule_fields: string[];
+  note: string;
+}
+export interface AiDraft {
+  text: string | string[];
+  basis: string;
+  source: "llm" | "rule";
+}
+export interface AiDraftResult {
+  drafts: Record<string, AiDraft>;
+  model: string | null;
+  usage: { input_tokens: number; output_tokens: number; model: string } | null;
+  pii_withheld?: number;
+}
