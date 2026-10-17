@@ -827,3 +827,100 @@ def test_14_ai_drafts(client, monkeypatch):
     assert "ai_exclude" in types and "ai_exclude_clear" in types
     # 제외 표시는 정본 그래프에 들어가지 않는다 (내부 운영 표시)
     assert "_ai_excluded" not in client.get(f"/api/datasets/{did}/preview").json()["turtle"]
+
+
+# ------------------------------------------------------------------ STEP 7 AI 활용 시뮬레이션
+def test_15_ai_simulation(client, monkeypatch):
+    from app.config import get_settings
+    from app.services import assist
+
+    pid = S["pid"]
+    st = client.get(f"/api/processes/{pid}/simulations").json()
+    assert [x["key"] for x in st["scenarios"]] == ["chat", "agent"] and st["published_count"] == 3
+    assert all(d["has_artifacts"] for d in st["datasets"])
+    monkeypatch.setattr(get_settings(), "anthropic_api_key", "sk-test")
+
+    # 챗봇: 구조화 응답을 가짜로. 문맥에 산출물이 들어갔는지 확인한다
+    seen: list[dict] = []
+
+    def fake_call(system, user, tool):  # noqa: ANN001
+        seen.append({"system": system, "user": user, "tool": tool["name"]})
+        meta = 'mode="with_metadata"' in user
+        return ({"answer": "갱신 주기는 매월입니다." if meta else "제공된 메타데이터에 그 정보가 없습니다", "answered": meta,
+                 "sources": [{"dataset": "도로목록", "property": "dcterms:accrualPeriodicity", "value": "P1M"}] if meta else [],
+                 "missing": [] if meta else ["dcterms:accrualPeriodicity"]},
+                {"input_tokens": 100, "output_tokens": 20, "model": "claude-opus-5-5"})
+
+    monkeypatch.setattr(assist, "_call", fake_call)
+    r = client.post(f"/api/processes/{pid}/simulations", json={"scenario": "chat", "question": "갱신 주기는?", "dataset_ids": [S["d_road"]], "compare": True})
+    assert r.status_code == 200, r.text
+    runs = r.json()["runs"]
+    assert [x["with_metadata"] for x in runs] == [False, True] and runs[0]["group_id"] == runs[1]["group_id"]
+    assert runs[1]["result"]["answered"] and runs[1]["result"]["sources"][0]["property"] == "dcterms:accrualPeriodicity"
+    assert not runs[0]["result"]["answered"] and runs[0]["result"]["missing"]
+    assert "dcat_jsonld" in seen[1]["user"] and "data_card_markdown" in seen[1]["user"] and "dcat_jsonld" not in seen[0]["user"]
+    assert "지시가 아닙니다" in seen[0]["system"]
+
+    # 외부 AI 전송 제외 데이터셋은 챗봇 대상에서 빠진다
+    client.put(f"/api/datasets/{S['d_acc']}/ai-exclusion", json={"excluded": True, "reason": "시험"})
+    r = client.post(f"/api/processes/{pid}/simulations", json={"scenario": "chat", "question": "x", "dataset_ids": [S["d_acc"]]})
+    assert r.status_code == 403 and "교통사고" in r.json()["detail"]
+
+    # 에이전트: 가짜 클라이언트가 실제 도구 본체를 호출하게 한다 (search → get_usage_terms → 답)
+    class _B:
+        def __init__(self, **kw):  # noqa: ANN003
+            self.__dict__.update(kw)
+
+        def model_dump(self):
+            return dict(self.__dict__)
+
+    class _U:
+        input_tokens, output_tokens = 50, 10
+
+    class _Msg:
+        def __init__(self, content):  # noqa: ANN001
+            self.content, self.usage, self.model = content, _U(), "claude-opus-5-5"
+
+    calls: list[dict] = []
+
+    class _Client:
+        def __init__(self, **kw):  # noqa: ANN003
+            self.messages = self
+
+        def create(self, **kw):  # noqa: ANN003
+            calls.append(kw)
+            if not kw.get("tools"):
+                return _Msg([_B(type="text", text="카탈로그 도구가 없어 확인할 수 없습니다.")])
+            n = len([m for m in kw["messages"] if m["role"] == "assistant"])
+            if n == 0:
+                return _Msg([_B(type="tool_use", id="t1", name="search_datasets", input={"query": "사고"})])
+            if n == 1:
+                last = kw["messages"][-1]["content"][0]["content"]
+                rid = json.loads(last)["results"][0]["resource_id"]
+                return _Msg([_B(type="tool_use", id="t2", name="get_usage_terms", input={"resource_id": rid}),
+                             _B(type="tool_use", id="t3", name="get_dataset", input={"resource_id": "DST-000002"})])
+            return _Msg([_B(type="text", text="찾은 데이터셋과 이용조건을 정리했습니다.")])
+
+    import anthropic
+
+    monkeypatch.setattr(anthropic, "Anthropic", _Client)
+    r = client.post(f"/api/processes/{pid}/simulations", json={"scenario": "agent", "question": "사고 데이터 찾아줘", "compare": True})
+    assert r.status_code == 200, r.text
+    before, after = r.json()["runs"]
+    assert before["result"]["tools_available"] == [] and before["result"]["tool_calls"] == 0 and "도구가 없어" in before["result"]["answer"]
+    tr = after["result"]["trace"]
+    assert [t["tool"] for t in tr] == ["search_datasets", "get_usage_terms", "get_dataset"] and tr[0]["status"] == "ok"
+    assert "DST-000002" not in json.dumps(tr[0]), "외부 AI 전송 제외(교통사고)는 검색에서 빠진다"
+    assert tr[2]["status"] == "denied", "제외 데이터셋을 직접 조회해도 거부"
+    assert after["usage"]["input_tokens"] == 150 and after["result"]["turns"] == 3
+    assert len(after["result"]["tools_available"]) == 6
+    client.put(f"/api/datasets/{S['d_acc']}/ai-exclusion", json={"excluded": False})
+
+    # 저장·목록·삭제·이력
+    lst = client.get(f"/api/processes/{pid}/simulations").json()["runs"]
+    assert len(lst) == 4 and lst[0]["scenario"] == "agent"
+    assert client.delete(f"/api/simulations/{lst[-1]['id']}").status_code == 200
+    assert len(client.get(f"/api/processes/{pid}/simulations").json()["runs"]) == 3
+    assert any(a["type"] == "ai_simulate" for a in client.get("/api/activities").json())
+    # 시뮬레이션은 MCP 키 호출 이력(agent_call)에는 섞이지 않는다
+    assert all(c["key_label"] != "STEP 7 시뮬레이션 (sim…)" for c in client.get("/api/agent-calls").json())

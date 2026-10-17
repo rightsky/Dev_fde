@@ -903,3 +903,53 @@ export interface AiDraftResult {
   usage: { input_tokens: number; output_tokens: number; model: string } | null;
   pii_withheld?: number;
 }
+
+// ───────────── STEP 7 AI 활용 시뮬레이션
+export interface SimSource {
+  dataset?: string;
+  property: string;
+  value: string;
+}
+export interface SimTrace {
+  tool: string;
+  arguments: Record<string, unknown>;
+  status: "ok" | "denied" | "error";
+  resource_ids: string[];
+  duration_ms: number;
+  preview: string;
+}
+export interface SimulationRun {
+  id: number;
+  process_id: number;
+  scenario: "chat" | "agent";
+  scenario_label: string;
+  with_metadata: boolean;
+  dataset_ids: number[];
+  question: string;
+  result: {
+    answer: string;
+    answered?: boolean;
+    sources?: SimSource[];
+    missing?: string[];
+    context_parts?: Record<string, string[]>;
+    trace?: SimTrace[];
+    tool_calls?: number;
+    turns?: number;
+    tools_available?: string[];
+  };
+  usage: { input_tokens: number; output_tokens: number; model?: string };
+  model: string;
+  duration_ms: number;
+  group_id: string | null;
+  created_by: string;
+  created_at: string;
+}
+export interface SimulationStatus {
+  enabled: boolean;
+  model: string | null;
+  scenarios: { key: "chat" | "agent"; label: string; desc: string; examples: string[] }[];
+  datasets: { id: number; title: string; has_artifacts: boolean; blocked_reason: string | null }[];
+  published_count: number;
+  note: string;
+  runs: SimulationRun[];
+}

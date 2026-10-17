@@ -632,13 +632,15 @@ function Workbench(props: {
 
 function AxisCard({ axis, count, flash, children }: { axis: TaxAxis; count: number; flash: boolean; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
+  const { params } = useStudio();
+  const target = !!params.fix && params.focus === axis.code;
   useEffect(() => {
     if (flash) ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [flash]);
   const natureTone = axis.nature === "필수" ? "err" : axis.nature === "권장" ? "warn" : "muted";
   const required = axis.nature === "필수";
   return (
-    <div ref={ref} className={cx("card", flash && "flash")}>
+    <div ref={ref} className={cx("card", flash && "flash", target && "fix-target")} data-fix={target ? params.fix ?? undefined : undefined}>
       <div className="card-head">
         <div className="card-title">
           <span>

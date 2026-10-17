@@ -371,6 +371,9 @@ code,
 .gap-4 {
   gap: 4px;
 }
+.gap-10 {
+  gap: 10px;
+}
 .gap-12 {
   gap: 12px;
 }
@@ -1114,4 +1117,468 @@ code,
     height: auto;
     overflow: visible;
   }
+}
+
+/* ── STEP 7 AI 활용 시뮬레이션 ── */
+/* 패널을 켜면 1280px 폭 제한을 풀고 화면 전체를 두 단으로 쓴다. 오른쪽 패널은 화면의 44% (최소 520px) */
+.main > .step7-wide {
+  max-width: none;
+}
+.step7-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(520px, 44%, 760px);
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 1250px) {
+  .step7-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.sim {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sim-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sim-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.sim-head .model {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.sim-seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 3px;
+  gap: 3px;
+}
+.sim-seg button {
+  border: 0;
+  background: transparent;
+  border-radius: 11px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-2);
+  cursor: pointer;
+  text-align: left;
+  line-height: 1.25;
+}
+.sim-seg button small {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+.sim-seg button.on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-1), inset 0 0 0 1px var(--line-strong);
+}
+.sim-seg button.on small {
+  color: var(--ink-2);
+}
+.sim-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-2);
+  margin-bottom: 6px;
+}
+.sim-targets {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sim-targets label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: 12.5px;
+  cursor: pointer;
+  background: var(--surface);
+}
+.sim-targets label.off {
+  color: var(--ink-3);
+  background: var(--surface-2);
+  cursor: not-allowed;
+}
+.sim-targets label.on {
+  border-color: var(--primary-line);
+}
+.sim-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sim-examples button {
+  border: 1px dashed var(--line-strong);
+  background: var(--surface);
+  color: var(--ink-2);
+  border-radius: var(--r-pill);
+  padding: 5px 11px;
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  text-align: left;
+}
+.sim-examples button:hover {
+  border-style: solid;
+  border-color: var(--primary);
+  color: var(--primary-ink);
+}
+.sim textarea.textarea {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.sim-run {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sim-wait {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--primary-bg);
+  color: var(--primary-ink);
+  font-size: 12px;
+}
+
+/* 결과: 질문 말풍선 + 비교 스코어 + 답변 두 단 */
+.sim-q {
+  align-self: flex-end;
+  max-width: 92%;
+  background: var(--dark);
+  color: #fff;
+  padding: 9px 13px;
+  border-radius: 16px 16px 4px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.sim-score {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  font-size: 12px;
+}
+.sim-score > div {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line-2);
+}
+.sim-score > div:nth-child(3n + 1) {
+  background: var(--surface-2);
+  color: var(--ink-3);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.sim-score > div:nth-child(3n + 3) {
+  background: var(--primary-bg);
+}
+.sim-score > div:nth-last-child(-n + 3) {
+  border-bottom: 0;
+}
+.sim-score .hd {
+  font-weight: 800;
+  color: var(--ink);
+}
+.sim-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: start;
+}
+.sim-a {
+  border-radius: 4px 16px 16px 16px;
+  padding: 11px 13px;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: keep-all;
+}
+.sim-a.before {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+}
+.sim-a.after {
+  background: var(--primary-bg);
+  border: 1px solid var(--primary-line);
+  color: var(--ink);
+}
+.sim-who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+  margin-bottom: 5px;
+}
+.sim-who .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ink-3);
+}
+.sim-who.after .dot {
+  background: var(--primary);
+}
+.sim-who.after {
+  color: var(--primary-ink);
+}
+.sim-ev {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sim-ev > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  padding: 5px 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.sim-ev code {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--primary-ink);
+  white-space: nowrap;
+}
+.sim-ev .v {
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.sim-miss {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sim-miss span {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-line);
+  color: var(--warn);
+}
+.sim-miss .t {
+  font-family: inherit;
+  background: none;
+  border: 0;
+  color: var(--ink-3);
+  padding-left: 0;
+}
+/* 도구 호출 타임라인 */
+.sim-trace {
+  margin-top: 10px;
+  padding-left: 14px;
+  border-left: 2px solid var(--line-strong);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sim-trace > div {
+  position: relative;
+  font-size: 11.5px;
+}
+.sim-trace > div::before {
+  content: "";
+  position: absolute;
+  left: -19px;
+  top: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.sim-trace > div.denied::before {
+  background: var(--warn);
+}
+.sim-trace > div.error::before {
+  background: var(--err);
+}
+.sim-trace code {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+}
+.sim-trace .args {
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 10.5px;
+}
+.sim-trace .pv {
+  color: var(--ink-2);
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+  max-height: 3.6em;
+  overflow: hidden;
+}
+.sim-foot {
+  font-size: 11px;
+  color: var(--ink-3);
+  margin-top: 6px;
+}
+.sim-hist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sim-hist > div {
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  background: var(--surface);
+}
+.sim-hist > div:hover {
+  border-color: var(--primary-line);
+  background: var(--primary-bg);
+}
+.sim-hist .q {
+  font-size: 12.5px;
+  margin-top: 3px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.sim-empty {
+  padding: 22px 14px;
+  text-align: center;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  line-height: 1.6;
+}
+@media (max-width: 1250px) {
+  .sim-seg {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── STEP 8 → 수정 작업 안내 (대상 단계 위에 붙는 띠) ── */
+.fixguide {
+  position: sticky;
+  top: -16px;
+  z-index: 30;
+  margin: -8px 0 14px;
+  border: 1px solid var(--orange);
+  border-left-width: 5px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+}
+.fixguide-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 9px 14px;
+  background: #fff7ec;
+  border-radius: var(--r-md) var(--r-md) 0 0;
+}
+.fixguide.collapsed .fixguide-bar {
+  border-radius: var(--r-md);
+}
+.fixguide-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.fixguide-id {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--orange);
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+.fixguide-body {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+.fixguide-cell {
+  padding: 10px 14px;
+  border-right: 1px solid var(--line-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.fixguide-cell:last-child {
+  border-right: 0;
+}
+.fixguide-k {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--orange);
+  margin-bottom: 3px;
+}
+.fixguide-v {
+  color: var(--ink);
+  word-break: keep-all;
+}
+@media (max-width: 1100px) {
+  .fixguide-body {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+/* 수정 대상 칸: 안내가 떠 있는 동안 계속 표시 */
+.fix-target {
+  position: relative;
+  outline: 2px solid var(--orange);
+  outline-offset: 3px;
+  border-radius: var(--r-sm);
+}
+.fix-target::after {
+  content: "수정 대상 " attr(data-fix);
+  position: absolute;
+  top: -11px;
+  right: 8px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--orange);
+  padding: 1px 7px;
+  border-radius: 6px;
+  pointer-events: none;
 }

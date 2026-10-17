@@ -37,7 +37,7 @@ INSTRUCTIONS = (
 )
 RAI = Namespace("http://mlcommons.org/croissant/RAI/")
 
-server = MCPServer(name="fde-data-studio", title="FDE Data Studio 카탈로그", instructions=INSTRUCTIONS, version="0.8.0")
+server = MCPServer(name="fde-data-studio", title="FDE Data Studio 카탈로그", instructions=INSTRUCTIONS, version="0.9.0")
 
 
 def _entry(db, key, resource_id: str, rec: agent.CallRecord) -> CatalogEntry:
@@ -82,67 +82,49 @@ def _run(ctx: Context, tool: str, args: dict[str, Any], fn) -> dict[str, Any]:  
     return {**out, "notice": NOTICE}
 
 
-@server.tool()
-def search_datasets(ctx: Context, query: str = "", limit: int = 10) -> dict[str, Any]:
-    """발행된 데이터셋을 찾는다. query 는 제목·설명·기관·키워드·주제에서 찾을 단어(공백으로 여러 개). 비우면 최근 발행순."""
-    def run(db, key, rec):  # noqa: ANN001
-        words = [w.lower() for w in query.split() if w.strip()]
-        rows = db.scalars(select(CatalogEntry).where(CatalogEntry.status == "published").order_by(CatalogEntry.published_at.desc()))
-        hits = [e for e in rows if agent.visible(e, key) and all(w in (e.search_text or "") for w in words)]
-        hits = hits[: max(1, min(limit, 50))]
-        rec.resource_ids += [e.resource_id for e in hits]
-        return {"count": len(hits), "results": [_summary(e) for e in hits]}
-    return _run(ctx, "search_datasets", {"query": query, "limit": limit}, run)
+# ---- 도구 본체 (MCP 와 STEP 7 AI 활용 시뮬레이션이 같이 쓴다). (db, key, rec, **인자) → 결과
+def impl_search_datasets(db, key, rec, query: str = "", limit: int = 10, exclude_assets: set[int] | None = None):  # noqa: ANN001
+    words = [w.lower() for w in query.split() if w.strip()]
+    rows = db.scalars(select(CatalogEntry).where(CatalogEntry.status == "published").order_by(CatalogEntry.published_at.desc()))
+    hits = [e for e in rows if agent.visible(e, key) and e.asset_id not in (exclude_assets or set())
+            and all(w in (e.search_text or "") for w in words)]
+    hits = hits[: max(1, min(limit, 50))]
+    rec.resource_ids += [e.resource_id for e in hits]
+    return {"count": len(hits), "results": [_summary(e) for e in hits]}
 
 
-@server.tool()
-def get_dataset(ctx: Context, resource_id: str) -> dict[str, Any]:
-    """데이터셋 1건의 요약: 분류, 연계키, 관계, 배포 형식, 준비도."""
-    def run(db, key, rec):  # noqa: ANN001
-        e = _entry(db, key, resource_id, rec)
-        f = e.facets or {}
-        docs = catalog_svc.documents_for(db, e)
-        return {**_summary(e), "collection": e.collection_title, "classification": f.get("classification", {}),
-                "join_keys": f.get("keys", []), "relations": f.get("relations", []), "media_type": f.get("media_type"),
-                "form": f.get("form"), "readiness": f.get("readiness"),
-                "available": ["metadata(jsonld)", "metadata(turtle)"] + (["schema"] if "dict" in docs else [])
-                + (["data_card"] if "card" in docs else [])}
-    return _run(ctx, "get_dataset", {"resource_id": resource_id}, run)
+def impl_get_dataset(db, key, rec, resource_id: str):  # noqa: ANN001
+    e = _entry(db, key, resource_id, rec)
+    f = e.facets or {}
+    docs = catalog_svc.documents_for(db, e)
+    return {**_summary(e), "collection": e.collection_title, "classification": f.get("classification", {}),
+            "join_keys": f.get("keys", []), "relations": f.get("relations", []), "media_type": f.get("media_type"),
+            "form": f.get("form"), "readiness": f.get("readiness"),
+            "available": ["metadata(jsonld)", "metadata(turtle)"] + (["schema"] if "dict" in docs else [])
+            + (["data_card"] if "card" in docs else [])}
 
 
-@server.tool()
-def get_metadata(ctx: Context, resource_id: str, format: str = "jsonld") -> dict[str, Any]:
-    """데이터셋의 DCAT 메타데이터 전체 (format: jsonld 또는 turtle)."""
-    def run(db, key, rec):  # noqa: ANN001
-        e = _entry(db, key, resource_id, rec)
-        if format not in ("jsonld", "turtle"):
-            raise agent.AccessDenied("format 은 jsonld 또는 turtle 입니다")
-        return {"resource_id": e.resource_id, "format": format, "content": e.jsonld if format == "jsonld" else e.turtle}
-    return _run(ctx, "get_metadata", {"resource_id": resource_id, "format": format}, run)
+def impl_get_metadata(db, key, rec, resource_id: str, format: str = "jsonld"):  # noqa: ANN001
+    e = _entry(db, key, resource_id, rec)
+    if format not in ("jsonld", "turtle"):
+        raise agent.AccessDenied("format 은 jsonld 또는 turtle 입니다")
+    return {"resource_id": e.resource_id, "format": format, "content": e.jsonld if format == "jsonld" else e.turtle}
 
 
-@server.tool()
-def get_schema(ctx: Context, resource_id: str) -> dict[str, Any]:
-    """컬럼 구조(데이터 사전): 표·컬럼·자료형·정의·단위·코드값·결측률·연계키. 예시값은 주지 않는다."""
-    def run(db, key, rec):  # noqa: ANN001
-        e = _entry(db, key, resource_id, rec)
-        body = catalog_svc.documents_for(db, e).get("dict")
-        if not body:
-            return {"resource_id": e.resource_id, "fields": [], "message": "이 발행본에는 데이터 사전이 없습니다"}
-        rows = list(csv.DictReader(io.StringIO(body.lstrip("﻿"))))
-        keep = ("표", "컬럼", "자료형", "정의", "단위", "코드값 의미", "필수(결측 없음)", "결측률(%)", "연계키")
-        return {"resource_id": e.resource_id, "fields": [{k: r.get(k, "") for k in keep} for r in rows]}
-    return _run(ctx, "get_schema", {"resource_id": resource_id}, run)
+def impl_get_schema(db, key, rec, resource_id: str):  # noqa: ANN001
+    e = _entry(db, key, resource_id, rec)
+    body = catalog_svc.documents_for(db, e).get("dict")
+    if not body:
+        return {"resource_id": e.resource_id, "fields": [], "message": "이 발행본에는 데이터 사전이 없습니다"}
+    rows = list(csv.DictReader(io.StringIO(body.lstrip("\ufeff"))))
+    keep = ("표", "컬럼", "자료형", "정의", "단위", "코드값 의미", "필수(결측 없음)", "결측률(%)", "연계키")
+    return {"resource_id": e.resource_id, "fields": [{k: r.get(k, "") for k in keep} for r in rows]}
 
 
-@server.tool()
-def get_data_card(ctx: Context, resource_id: str) -> dict[str, Any]:
-    """데이터 카드(가이드라인 부록 4 양식, Markdown): 개요·구조·생성·사용 시 고려사항·라이선스·기술 사양."""
-    def run(db, key, rec):  # noqa: ANN001
-        e = _entry(db, key, resource_id, rec)
-        card = catalog_svc.documents_for(db, e).get("card")
-        return {"resource_id": e.resource_id, "markdown": card or "", **({} if card else {"message": "이 발행본에는 데이터 카드가 없습니다"})}
-    return _run(ctx, "get_data_card", {"resource_id": resource_id}, run)
+def impl_get_data_card(db, key, rec, resource_id: str):  # noqa: ANN001
+    e = _entry(db, key, resource_id, rec)
+    card = catalog_svc.documents_for(db, e).get("card")
+    return {"resource_id": e.resource_id, "markdown": card or "", **({} if card else {"message": "이 발행본에는 데이터 카드가 없습니다"})}
 
 
 def _label(g: Graph, node) -> str | None:  # noqa: ANN001
@@ -155,33 +137,89 @@ def _label(g: Graph, node) -> str | None:  # noqa: ANN001
     return str(node)
 
 
+def impl_get_usage_terms(db, key, rec, resource_id: str):  # noqa: ANN001
+    e = _entry(db, key, resource_id, rec)
+    g = Graph().parse(data=e.turtle, format="turtle")
+    ds = URIRef(e.iri)
+    fde = Namespace(str(e.iri).split("/id/")[0] + "/def/")
+    contact = g.value(ds, URIRef("http://www.w3.org/ns/dcat#contactPoint"))
+    vcard = Namespace("http://www.w3.org/2006/vcard/ns#")
+    return {
+        "resource_id": e.resource_id,
+        "license": _label(g, g.value(ds, DCTERMS.license)),
+        "access_rights": _label(g, g.value(ds, DCTERMS.accessRights)),
+        "rights": _label(g, g.value(ds, DCTERMS.rights)),
+        "n2sf_grade": agent.entry_grade(e),
+        "recommended_uses": _label(g, g.value(ds, RAI.dataUseCases)),
+        "prohibited_uses": _label(g, g.value(ds, fde.prohibitedUses)),
+        "known_limitations": _label(g, g.value(ds, RAI.dataLimitations) or g.value(ds, RAI.knownLimitations)),
+        "biases": _label(g, g.value(ds, RAI.dataBiases)),
+        "contact": {"name": _label(g, g.value(contact, vcard.fn)), "email": str(g.value(contact, vcard.hasEmail) or "") or None}
+        if contact is not None else None,
+        "ai_usage_terms": _ai_terms(e),
+        "agent_access": {"key": key.name, "allowed_grades": key.grades, "calls_logged": True},
+    }
+
+
+IMPLS = {"search_datasets": impl_search_datasets, "get_dataset": impl_get_dataset, "get_metadata": impl_get_metadata,
+         "get_schema": impl_get_schema, "get_data_card": impl_get_data_card, "get_usage_terms": impl_get_usage_terms}
+
+
+@server.tool()
+def search_datasets(ctx: Context, query: str = "", limit: int = 10) -> dict[str, Any]:
+    """발행된 데이터셋을 찾는다. query 는 제목·설명·기관·키워드·주제에서 찾을 단어(공백으로 여러 개). 비우면 최근 발행순."""
+    return _run(ctx, "search_datasets", {"query": query, "limit": limit}, lambda db, key, rec: impl_search_datasets(db, key, rec, query, limit))
+
+
+@server.tool()
+def get_dataset(ctx: Context, resource_id: str) -> dict[str, Any]:
+    """데이터셋 1건의 요약: 분류, 연계키, 관계, 배포 형식, 준비도."""
+    return _run(ctx, "get_dataset", {"resource_id": resource_id}, lambda db, key, rec: impl_get_dataset(db, key, rec, resource_id))
+
+
+@server.tool()
+def get_metadata(ctx: Context, resource_id: str, format: str = "jsonld") -> dict[str, Any]:
+    """데이터셋의 DCAT 메타데이터 전체 (format: jsonld 또는 turtle)."""
+    return _run(ctx, "get_metadata", {"resource_id": resource_id, "format": format}, lambda db, key, rec: impl_get_metadata(db, key, rec, resource_id, format))
+
+
+@server.tool()
+def get_schema(ctx: Context, resource_id: str) -> dict[str, Any]:
+    """컬럼 구조(데이터 사전): 표·컬럼·자료형·정의·단위·코드값·결측률·연계키. 예시값은 주지 않는다."""
+    return _run(ctx, "get_schema", {"resource_id": resource_id}, lambda db, key, rec: impl_get_schema(db, key, rec, resource_id))
+
+
+@server.tool()
+def get_data_card(ctx: Context, resource_id: str) -> dict[str, Any]:
+    """데이터 카드(가이드라인 부록 4 양식, Markdown): 개요·구조·생성·사용 시 고려사항·라이선스·기술 사양."""
+    return _run(ctx, "get_data_card", {"resource_id": resource_id}, lambda db, key, rec: impl_get_data_card(db, key, rec, resource_id))
+
+
 @server.tool()
 def get_usage_terms(ctx: Context, resource_id: str) -> dict[str, Any]:
     """이용조건: 라이선스, 저작권, 제공 조건, 보안등급, 권장·금지 사용, 알려진 한계, 문의처, AI 활용 이용조건
     (AI 학습 · 결합 · 자동화 접근 · 대량 호출 · 재배포 허용 여부). 데이터를 쓰기 전에 확인한다."""
-    def run(db, key, rec):  # noqa: ANN001
-        e = _entry(db, key, resource_id, rec)
-        g = Graph().parse(data=e.turtle, format="turtle")
-        ds = URIRef(e.iri)
-        fde = Namespace(str(e.iri).split("/id/")[0] + "/def/")
-        contact = g.value(ds, URIRef("http://www.w3.org/ns/dcat#contactPoint"))
-        vcard = Namespace("http://www.w3.org/2006/vcard/ns#")
-        return {
-            "resource_id": e.resource_id,
-            "license": _label(g, g.value(ds, DCTERMS.license)),
-            "access_rights": _label(g, g.value(ds, DCTERMS.accessRights)),
-            "rights": _label(g, g.value(ds, DCTERMS.rights)),
-            "n2sf_grade": agent.entry_grade(e),
-            "recommended_uses": _label(g, g.value(ds, RAI.dataUseCases)),
-            "prohibited_uses": _label(g, g.value(ds, fde.prohibitedUses)),
-            "known_limitations": _label(g, g.value(ds, RAI.dataLimitations) or g.value(ds, RAI.knownLimitations)),
-            "biases": _label(g, g.value(ds, RAI.dataBiases)),
-            "contact": {"name": _label(g, g.value(contact, vcard.fn)), "email": str(g.value(contact, vcard.hasEmail) or "") or None}
-            if contact is not None else None,
-            "ai_usage_terms": _ai_terms(e),
-            "agent_access": {"key": key.name, "allowed_grades": key.grades, "calls_logged": True},
-        }
-    return _run(ctx, "get_usage_terms", {"resource_id": resource_id}, run)
+    return _run(ctx, "get_usage_terms", {"resource_id": resource_id}, lambda db, key, rec: impl_get_usage_terms(db, key, rec, resource_id))
+
+
+def tool_schemas() -> list[dict[str, Any]]:
+    """Claude API tools 형식의 도구 정의 (시뮬레이션용, MCP 와 같은 설명)."""
+    rid = {"type": "string", "description": "발행 ID (예: DST-000001)"}
+    specs = {
+        "search_datasets": {"query": {"type": "string", "description": "찾을 단어(공백으로 여러 개). 비우면 최근 발행순"},
+                            "limit": {"type": "integer", "description": "최대 건수"}},
+        "get_dataset": {"resource_id": rid},
+        "get_metadata": {"resource_id": rid, "format": {"type": "string", "enum": ["jsonld", "turtle"]}},
+        "get_schema": {"resource_id": rid},
+        "get_data_card": {"resource_id": rid},
+        "get_usage_terms": {"resource_id": rid},
+    }
+    out = []
+    for name, props in specs.items():
+        req = ["resource_id"] if "resource_id" in props else []
+        out.append({"name": name, "description": (globals()[name].__doc__ or "").strip(),
+                    "input_schema": {"type": "object", "properties": props, "required": req}})
+    return out
 
 
 _app = None  # 기동할 때마다 새로 만든다 (세션 관리자는 한 번만 run 할 수 있다)

@@ -153,6 +153,12 @@ export const api = {
     put<{ excluded: T.AiStatus["excluded"]; blocked_reason: string | null }>(`/datasets/${did}/ai-exclusion`, { excluded, reason }),
   aiDrafts: (did: number, fields: string[], instructions?: string) => post<T.AiDraftResult>(`/datasets/${did}/drafts`, { fields, instructions }),
 
+  // STEP 7 AI 활용 시뮬레이션
+  simulations: (pid: number) => get<T.SimulationStatus>(`/processes/${pid}/simulations`),
+  runSimulation: (pid: number, body: { scenario: "chat" | "agent"; question: string; dataset_ids: number[]; compare: boolean }) =>
+    post<{ runs: T.SimulationRun[] }>(`/processes/${pid}/simulations`, body),
+  deleteSimulation: (id: number) => del<{ deleted: number }>(`/simulations/${id}`),
+
   // AI 에이전트(MCP)
   mcpInfo: () => get<T.McpInfo>("/mcp-info"),
   agentKeys: () => get<T.AgentKey[]>("/agent-keys"),

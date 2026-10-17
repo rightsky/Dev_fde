@@ -12,6 +12,8 @@ export interface GoOptions {
   from?: number | null;
   /** 복귀 배너에 보여 줄 위반 이름 */
   shape?: string | null;
+  /** STEP 8 진단 항목 ID (수정 작업 안내 배너와 위치 표시) */
+  fix?: string | null;
 }
 
 export interface StudioValue {
@@ -35,7 +37,7 @@ export interface StudioValue {
    */
   guard: MutableRefObject<(() => boolean) | null>;
   /** URL 로 전달된 선택 데이터셋·강조 필드 */
-  params: { dataset: number | null; focus: string | null; from: number | null; shape: string | null };
+  params: { dataset: number | null; focus: string | null; from: number | null; shape: string | null; fix: string | null };
 }
 
 export const StudioCtx = createContext<StudioValue | null>(null);
