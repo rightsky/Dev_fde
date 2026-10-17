@@ -53,7 +53,7 @@ def assess(db: Session, p: Process, sr: SerializationRun | None) -> dict[str, An
     signals: list[dict[str, Any]] = []
     grade_s, grade_c, grade_unset, pii_ds, pii_ai, unset_terms, republish = [], [], [], [], [], [], []
     grade_s1, basis_missing, below_basis, prohibited_block, prohibited_review = [], [], [], [], []
-    org_conflict, needs_deid = [], []
+    org_conflict, needs_deid, pii_unconfirmed = [], [], []
     for s in targets:
         pd = by_id[s["dataset_id"]]
         canon = canonical.build(db, pd, "publish")
@@ -87,6 +87,8 @@ def assess(db: Session, p: Process, sr: SerializationRun | None) -> dict[str, An
             org_conflict.append(f"{rid} (기관표 {gst['org_grade']['label']} · 스튜디오 {gst['grade_label'] or '미지정'})")
         if gst["columns"]["needs_deid"]:
             needs_deid.append(f"{rid} ({', '.join(gst['columns']['needs_deid'][:3])})")
+        if gst["columns"]["suggested_count"] and (gst["basis"].get("personal_data") in (None, "", "none", "anonymized")):
+            pii_unconfirmed.append(f"{rid} ({', '.join(x['column'] for x in gst['columns']['suggested'][:3])})")
         if pii:
             pii_ds.append(f"{rid}({', '.join(pii[:3])}{' 외' if len(pii) > 3 else ''})")
             if terms.get("ai_training") in ("permitted", "conditional") or terms.get("ai_redistribution") in ("permitted", "conditional"):
@@ -121,6 +123,9 @@ def assess(db: Session, p: Process, sr: SerializationRun | None) -> dict[str, An
     if needs_deid:
         signals.append(_signal("column_deid_missing", "medium", "개인정보 컬럼의 비식별 처리 기록 없음",
                                "데이터 사전에서 개인정보 · 민감정보로 표시한 컬럼에 비식별 처리 방법이 기록되지 않았습니다 (생애주기 표 처리·가공 단계)", needs_deid))
+    if pii_unconfirmed:
+        signals.append(_signal("column_pii_unconfirmed", "low", "개인정보 의심 컬럼 미확인",
+                               "컬럼 이름으로 개인정보가 의심되는 컬럼이 있는데 데이터 사전에서 비개인 · 개인정보 여부를 표시하지 않았습니다. 등급에는 반영하지 않았으니 사전에서 한 번 확인하세요", pii_unconfirmed))
     cg = grading.combo_grade(p)
     if cg["below_floor"]:
         signals.append(_signal("combo_grade_lowered", "medium", "조합 등급을 구성 데이터셋보다 낮게 설정",

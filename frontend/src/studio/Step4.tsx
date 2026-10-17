@@ -1143,7 +1143,7 @@ function GradingPanel(props: {
           <input className="input" value={draft.basis.legal_refs ?? ""} disabled={locked} maxLength={500} placeholder="예: 정보공개법 제9조제1항제6호, 의료법 제19조"
             onChange={(e) => props.onBasis({ legal_refs: e.target.value })} />
         </label>
-        {(g.org_grade || g.columns.dataset_personal_data) && (
+        {(g.org_grade || g.columns.dataset_personal_data || g.columns.suggested_count > 0) && (
           <div className="small mt-8 col gap-4">
             {g.org_grade && (
               <div className={cx(g.org_conflict && "t-warn")}>
@@ -1157,6 +1157,12 @@ function GradingPanel(props: {
                 {!draft.basis.personal_data && (
                   <button type="button" className="link-btn small" disabled={locked} onClick={() => props.onBasis({ personal_data: g.columns.dataset_personal_data! })}>개인정보 유형에 적용</button>
                 )}
+              </div>
+            )}
+            {g.columns.suggested_count > 0 && (
+              <div className="muted" title={g.columns.suggested.map((x) => `${x.column}: ${x.reason}`).join("\n")}>
+                컬럼 이름 자동 탐지 {g.columns.suggested_count}건 ({g.columns.suggested.slice(0, 3).map((x) => x.column.split(".").pop()).join(", ")}
+                {g.columns.suggested_count > 3 ? " 외" : ""}) — 등급에는 반영하지 않습니다. STEP 3 데이터 사전에서 비개인 · 개인정보 여부를 표시하면 사라집니다
               </div>
             )}
           </div>

@@ -1309,6 +1309,10 @@ def test_20_n2sf_columns_combo_org(client):
     d = client.get(f"/api/datasets/{did}/dictionary").json()
     sug = [r for r in d["rows"] if r["personal_suggested"]]
     assert sug and d["sensitive"]["suggested_count"] >= 1 and "personal_data" in d["options"]
+    # 자동 탐지만으로는 등급을 올리지 않는다 (힌트만). 담당자가 사전에서 확인해야 바닥이 된다
+    assert d["sensitive"]["dataset_personal_data"] is None and d["sensitive"]["suggested"][0]["column"]
+    g0 = client.get(f"/api/datasets/{did}").json()["grading"]
+    assert not any("컬럼 민감 항목" in x for x in g0["reasons"]) and any("자동 탐지" in x for x in g0["hints"])
     col = sug[0]
     r = client.put(f"/api/datasets/{did}/dictionary", json={"entries": [{"table": col["table"], "column": col["column"], "personal_data": "personal"}]})
     assert r.status_code == 200, r.text

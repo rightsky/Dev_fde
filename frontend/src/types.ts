@@ -316,7 +316,17 @@ export interface GradingState {
   org_grade: { grade: string; label: string | null; name: string; system: string | null; entries: number; legal_basis: string | null; personal_data: string | null } | null;
   org_conflict: boolean;
   /** 데이터 사전 컬럼 민감 항목 요약 */
-  columns: { marked: number; deid: number; suggested_count: number; needs_deid: string[]; dataset_personal_data: string | null; dataset_personal_label: string | null };
+  columns: {
+    marked: number;
+    deid: number;
+    suggested_count: number;
+    /** 컬럼 이름 자동 탐지 (등급에 반영되지 않는 힌트). 데이터 사전에서 확인하면 사라진다 */
+    suggested: { column: string; personal_data: string; label: string; reason: string }[];
+    needs_deid: string[];
+    dataset_personal_data: string | null;
+    dataset_personal_label: string | null;
+  };
+  hints: string[];
   prohibited: { types: string[]; labels: string[]; auto: Record<string, string>; overrides: Record<string, string>; manual: string[]; blocked: boolean; mode: "block" | "review" };
   visibility: MetaVisibility;
   visibility_explicit: boolean;
