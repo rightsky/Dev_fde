@@ -42,3 +42,25 @@ def test_legacy_database_is_stamped_then_upgraded(tmp_path):
         assert "alembic_version" in inspect(c).get_table_names()
         assert c.execute(text("SELECT version_num FROM alembic_version")).scalar() >= BASELINE
         assert c.execute(text("SELECT count(*) FROM organization")).scalar() == 1
+
+
+def test_utc_datetime_normalizes_offsets(tmp_path):
+    """UTCDateTime: 시간대가 붙은 값은 UTC 로 바꿔 저장하고, 읽을 때 항상 UTC aware 로 돌려준다 (SQLite 는 오프셋을 저장하지 않는다)."""
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import select
+    from sqlalchemy.orm import Session
+
+    from app.models import Organization
+
+    eng = _engine(tmp_path, "tz.db")
+    Base.metadata.create_all(eng)
+    kst = timezone(timedelta(hours=9))
+    at = datetime(2026, 10, 17, 9, 0, tzinfo=kst)  # = 2026-10-17T00:00Z
+    with Session(eng) as s:
+        s.add(Organization(code="TZ", label="시간대", kind="gov", created_at=at))
+        s.commit()
+    with Session(eng) as s:
+        got = s.scalar(select(Organization).where(Organization.code == "TZ")).created_at
+        assert got.tzinfo is not None and got.utcoffset() == timedelta(0)
+        assert got == datetime(2026, 10, 17, 0, 0, tzinfo=timezone.utc)

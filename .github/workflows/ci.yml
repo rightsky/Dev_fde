@@ -76,12 +76,24 @@ jobs:
             echo "FDE_SECRET_KEY=$(openssl rand -hex 32)"
             echo "FDE_ADMIN_PASSWORD=ci-admin-$(openssl rand -hex 8)"
           } > .env
+      - name: 운영 덧붙임 파일 문법 확인 (Caddy 프록시 · 포트 닫힘)
+        run: |
+          FDE_DOMAIN=ci.example.test docker compose -f docker-compose.yml -f docker-compose.prod.yml config > /tmp/prod.yml
+          grep -q 'caddy:' /tmp/prod.yml
+          python3 - <<'PY'
+          import yaml; c = yaml.safe_load(open('/tmp/prod.yml'))
+          assert 'ports' not in c['services']['frontend'], '운영에서는 화면 컨테이너 포트가 닫혀야 한다'
+          assert any(p.get('published') == '443' for p in c['services']['caddy']['ports'])
+          print('prod compose ok')
+          PY
+          docker run --rm -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" -e FDE_DOMAIN=ci.example.test -e FDE_ACME_EMAIL=ci@example.test caddy:2.9-alpine caddy validate --config /etc/caddy/Caddyfile
       - name: 이미지 빌드·기동
         run: docker compose up -d --build --wait --wait-timeout 180
       - name: 화면과 API 응답 확인
         run: |
           curl -fsS http://localhost:8080/api/health
           curl -fsS http://localhost:8080/ | grep -q 'id="root"'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/docs)" = 200  # 개발 기본값은 열림
       - name: 관리자 로그인 확인
         run: |
           pw=$(grep '^FDE_ADMIN_PASSWORD=' .env | cut -d= -f2-)

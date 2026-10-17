@@ -199,7 +199,7 @@ export function AiExclusionBox({ did, editable }: { did: number; editable: boole
       <div className="grow small">
         <b>외부 AI 전송</b>{" "}
         {isC ? (
-          <>— <Badge tone="err">N²SF C(기밀)</Badge> STEP 4 에서 담당자가 C 등급으로 지정해 AI 초안을 쓰지 않습니다 (요약·통계도 기관 밖으로 보내지 않음).</>
+          <>— <Badge tone="err">N²SF C(비공개)</Badge> STEP 4 에서 담당자가 C 등급으로 지정해 AI 초안을 쓰지 않습니다 (요약·통계도 기관 밖으로 보내지 않음).</>
         ) : ex ? (
           <>— <Badge tone="warn">담당자 제외</Badge> {ex.by} · {ex.at.slice(0, 16).replace("T", " ")}{ex.reason ? ` · ${ex.reason}` : ""}. AI 초안 제안이 잠겨 있습니다.</>
         ) : (

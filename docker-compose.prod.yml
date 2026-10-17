@@ -1,0 +1,34 @@
+# 운영 덧붙임 파일 — HTTPS 역방향 프록시(Caddy) 를 앞에 두고 화면 컨테이너의 호스트 포트를 닫는다.
+# 실행: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# 필요한 .env 값: FDE_DOMAIN (예: data.example.go.kr), FDE_ACME_EMAIL (인증서 만료 안내 받을 메일)
+services:
+  caddy:
+    image: caddy:2.9-alpine
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      FDE_DOMAIN: ${FDE_DOMAIN:?.env 에 FDE_DOMAIN(도메인)을 지정하세요}
+      FDE_ACME_EMAIL: ${FDE_ACME_EMAIL:-}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+  frontend:
+    ports: !reset []   # 외부에서는 Caddy 를 통해서만 들어온다
+    expose:
+      - "80"
+
+  backend:
+    environment:
+      FDE_EXPOSE_API_DOCS: ${FDE_EXPOSE_API_DOCS:-false}   # 운영에서는 /api/docs 를 닫는다
+      FDE_CORS_ORIGINS: ${FDE_CORS_ORIGINS:-}
+
+volumes:
+  caddy-data:
+  caddy-config:

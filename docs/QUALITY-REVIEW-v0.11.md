@@ -55,7 +55,7 @@
 | 용어 통일 | "최신 아님" 계열로 통일 (배너 "최신 결과가 아닙니다", 사이드바 "최신 아님 · 열람 가능") |
 | 기타 | `PATCH current_step` 응답이 캐시를 덮던 것 → current_step 만 합침, "방금 발행" 배지 1분 뒤 해제, MCP 연결 안내 빈 상태 |
 
-남은 것: SQLite 시퀀스 경쟁(개발용 DB 한정), UTCDateTime 정규화 재검토, `/api/docs` 공개 여부(운영 시 프록시에서 차단 권고), 전체 용어 사전 정리.
+v0.16 에서 처리: UTCDateTime 은 시간대가 붙은 값을 UTC 로 정규화해 저장(테스트 추가), `/api/docs` 는 `FDE_EXPOSE_API_DOCS`(운영 기본 false) + Caddy 404 이중 차단, 용어 사전은 `docs/GLOSSARY.md` 로 정리하고 "C(기밀)" 잔재를 "C(비공개)"로 통일. 남은 것: SQLite 시퀀스 경쟁(개발용 DB 한정).
 
 ## 보통 · 낮음 (v0.11 시점에 남겨 두었던 목록)
 

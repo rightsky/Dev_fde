@@ -830,7 +830,7 @@ def test_14_ai_drafts(client, monkeypatch):
                        headers={"Authorization": f"Bearer {viewer}"}).status_code == 403
     # 표준 속성 이름을 모델에 알려 준다
     assert "https://www.w3.org/TR/prov-o/" in sent["system"] and '"property": "rai:dataLimitations"' in sent["user"]
-    # N²SF C(기밀) 등급은 외부 모델에 보내지 않는다 (규칙 기반 칸은 된다)
+    # N²SF C(비공개) 등급은 외부 모델에 보내지 않는다 (규칙 기반 칸은 된다)
     monkeypatch.setattr(assist, "_call", fake_call)
     from app.models import ProcessDataset
     from app.db import SessionLocal
@@ -840,9 +840,9 @@ def test_14_ai_drafts(client, monkeypatch):
         p.classification = {**(p.classification or {}), "N2SF": "N2SF-C"}
         db.commit()
     st = client.get("/api/ai-status", params={"dataset_id": did}).json()
-    assert st["grade"] == "C" and "C(기밀)" in st["blocked_reason"]
+    assert st["grade"] == "C" and "C(비공개)" in st["blocked_reason"]
     r = client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_known_limitations"]})
-    assert r.status_code == 403 and "C(기밀)" in r.json()["detail"]
+    assert r.status_code == 403 and "C(비공개)" in r.json()["detail"]
     assert client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_missing_data"]}).status_code == 200
     with SessionLocal() as db:
         p = db.get(ProcessDataset, did)
@@ -1407,3 +1407,18 @@ def test_21_ai_term_defaults(client):
     assert r.json()["meta"].get("ai_bulk_access") is None
     # 원복
     assert client.put(f"/api/datasets/{did}/classification", json={**body, "N2SF": base.get("N2SF", "N2SF-O")}).status_code == 200
+
+
+# ------------------------------------------------------------------ /api/docs 노출 설정
+def test_22_api_docs_toggle(client, monkeypatch):
+    """개발 기본값은 열림. FDE_EXPOSE_API_DOCS=false 면 앱을 만들 때 docs · openapi 경로가 빠진다 (운영 compose 기본값)."""
+    from fastapi import FastAPI
+
+    from app.config import get_settings
+    from app.main import app as live
+
+    assert client.get("/api/docs").status_code == 200 and client.get("/api/openapi.json").status_code == 200
+    assert isinstance(live, FastAPI)
+    monkeypatch.setattr(get_settings(), "expose_api_docs", False)
+    closed = FastAPI(docs_url="/api/docs" if get_settings().expose_api_docs else None, openapi_url="/api/openapi.json" if get_settings().expose_api_docs else None)
+    assert closed.docs_url is None and closed.openapi_url is None
