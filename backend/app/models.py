@@ -126,6 +126,8 @@ class Process(Base):
     completed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
     trashed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
 
+    taxonomy_set_id: Mapped[int | None] = mapped_column(ForeignKey("taxonomy_set.id"), default=None)  # 비우면 기본 세트
+
     datasets: Mapped[list[ProcessDataset]] = relationship(
         back_populates="process", cascade="all, delete-orphan", order_by="ProcessDataset.position"
     )
@@ -207,11 +209,31 @@ class TaxonomyAxis(Base):
     )
 
 
+class TaxonomySet(Base):
+    """분류체계 세트 (v0.20): F1~F6 코드 묶음에 이름 · 기관/분야가 붙은 것. 예) 국토교통부 ARD 분류체계(기본), 현대제철 분류체계.
+    K 연계키 · N²SF 등급 축은 시스템 공통이라 세트에 속하지 않는다. 프로세스마다 세트 하나를 고른다."""
+    __tablename__ = "taxonomy_set"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    slug: Mapped[str] = mapped_column(String(24), unique=True)  # 코드 접두에 쓴다 (F1-HS-01)
+    name: Mapped[str] = mapped_column(String(120))
+    scope: Mapped[str | None] = mapped_column(String(120), default=None)  # 기관 · 분야
+    description: Mapped[str | None] = mapped_column(Text, default=None)
+    base_set_id: Mapped[int | None] = mapped_column(ForeignKey("taxonomy_set.id", ondelete="SET NULL"), default=None)  # 복제 원본
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+    locked: Mapped[bool] = mapped_column(Boolean, default=False)  # 기본 세트: 관리자만 편집
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("app_user.id"), default=None)
+    created_label: Mapped[str] = mapped_column(String(100), default="")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+    deleted_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+
+
 class TaxonomyCode(Base):
     __tablename__ = "taxonomy_code"
     __table_args__ = (UniqueConstraint("axis_code", "code", name="uq_taxonomy_code"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     axis_code: Mapped[str] = mapped_column(ForeignKey("taxonomy_axis.code", ondelete="CASCADE"))
+    set_id: Mapped[int | None] = mapped_column(ForeignKey("taxonomy_set.id", ondelete="CASCADE"), default=None, index=True)  # F1~F6 만. K · N2SF 는 NULL(공통)
     code: Mapped[str] = mapped_column(String(40))  # IRI 로컬명 (예: F1-02, K5, N2SF-O)
     label: Mapped[str] = mapped_column(String(100))
     definition: Mapped[str | None] = mapped_column(String(400), default=None)

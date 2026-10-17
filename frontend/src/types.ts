@@ -31,6 +31,26 @@ export interface TaxCode {
   active: boolean;
   extra: Record<string, unknown>;
   iri: string;
+  /** 분류체계 세트 (F1~F6 만, K · N2SF 는 null = 공통) */
+  set_id?: number | null;
+}
+
+export interface TaxonomySet {
+  id: number;
+  slug: string;
+  name: string;
+  scope: string | null;
+  description: string | null;
+  base_set: { id: number; name: string } | null;
+  is_default: boolean;
+  locked: boolean;
+  created_by: string;
+  created_by_id: number | null;
+  created_at: string;
+  updated_at: string;
+  code_counts: Record<string, number>;
+  code_total: number;
+  process_count: number;
 }
 
 export interface TaxAxis {
@@ -43,6 +63,8 @@ export interface TaxAxis {
   description: string | null;
   scheme_iri: string;
   codes: TaxCode[];
+  /** 이 축이 세트에 속하는가 (F1~F6 true, K · N2SF false) */
+  in_set?: boolean;
 }
 
 export interface FixRoute {
@@ -250,6 +272,7 @@ export interface Process {
   current_step: number;
   /** 담당자 (만든 사람 또는 관리자가 배정). 작업자는 자기 담당 프로세스만 본다 */
   owner?: { id: number; name: string; org: string | null } | null;
+  taxonomy_set_id?: number | null;
   combo_title: string | null;
   combo_description: string | null;
   combo_source: "manual" | "suggestion" | null;
@@ -411,6 +434,8 @@ export interface ProcessDetail {
   datasets: Dataset[];
   state: ProcessState;
   removed_from_combo?: string[];
+  /** 이 프로세스가 쓰는 분류체계 세트 (비우면 기본 세트) */
+  taxonomy_set?: { id: number; slug: string; name: string; scope: string | null; is_default: boolean };
 }
 
 export interface Activity {

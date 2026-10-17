@@ -1853,3 +1853,75 @@ def test_30_external_check(client):
     r = client.post("/api/ard/check-external", data={"mode": "draft"}, files=[("files", ("good.ttl", good.encode(), "text/turtle"))]).json()["results"][0]
     assert next(c for c in r["gate0"] if c["key"] == "mint")["skipped"] is True
     assert any(a["type"] == "external_check" for a in client.get("/api/activities", params={"limit": 5}).json())
+
+
+def test_31_taxonomy_sets(client):
+    """분류체계 세트: 기본 세트 자동 이관 · 복제(코드 접두 · source_code) · 세트별 코드 추가 · CSV 내보내기/가져오기 · 프로세스 세트 전환(추천 매핑 · 확정 시 거부) · 삭제 보호."""
+    sets = client.get("/api/taxonomy-sets").json()
+    base = next(s for s in sets["items"] if s["slug"] == "base")
+    assert base["is_default"] and base["locked"] and base["code_total"] >= 50 and base["code_counts"]["F1"] >= 10
+    tax = client.get("/api/taxonomy").json()
+    f1 = next(a for a in tax if a["code"] == "F1")
+    assert all(c["set_id"] == base["id"] for c in f1["codes"]) and next(a for a in tax if a["code"] == "K")["in_set"] is False
+
+    # 복제: 현대제철 세트
+    r = client.post("/api/taxonomy-sets", json={"name": "현대제철 분류체계", "scope": "현대제철 · 제조", "base_set_id": base["id"], "slug": "HS"})
+    assert r.status_code == 201, r.text
+    hs = r.json()
+    assert hs["slug"] == "hs" and hs["code_total"] == base["code_total"] and hs["base_set"]["id"] == base["id"] and not hs["is_default"]
+    hs_tax = client.get("/api/taxonomy", params={"set_id": hs["id"]}).json()
+    hs_f1 = next(a for a in hs_tax if a["code"] == "F1")["codes"]
+    assert hs_f1[0]["code"].startswith("F1-HS-") and hs_f1[0]["extra"]["source_code"] == f1["codes"][0]["code"]
+    # 세트별 코드 추가 (작성자는 남의 세트 403, 관리자 OK), 기본 세트는 관리자만
+    wtok = client.post("/api/auth/login", json={"username": "worker1", "password": "worker-pass-1"}).json()["access_token"]
+    wh = {"Authorization": f"Bearer {wtok}"}
+    assert client.post("/api/taxonomy/F1/codes", json={"label": "제철 공정", "set_id": hs["id"]}, headers=wh).status_code == 403
+    assert client.post("/api/taxonomy/F1/codes", json={"label": "제철 공정"}, headers=wh).status_code == 403
+    r = client.post("/api/taxonomy/F1/codes", json={"label": "제철 공정", "definition": "고로 · 제강 · 압연", "set_id": hs["id"]})
+    assert r.status_code == 200 and any(c["label"] == "제철 공정" and c["code"].startswith("F1-HS-") for c in r.json()["codes"])
+    assert not any(c["label"] == "제철 공정" for c in next(a for a in client.get("/api/taxonomy").json() if a["code"] == "F1")["codes"]), "기본 세트에는 안 들어간다"
+    # 작성자가 만든 세트는 작성자가 고칠 수 있다
+    mine = client.post("/api/taxonomy-sets", json={"name": "담당자 세트", "base_set_id": base["id"], "empty": True}, headers=wh).json()
+    assert mine["code_total"] == 0
+    assert client.post("/api/taxonomy/F2/codes", json={"label": "센서 로그", "set_id": mine["id"]}, headers=wh).status_code == 200
+    # CSV 내보내기 · 가져오기 (replace 로 폐기까지)
+    csv_text = client.get(f"/api/taxonomy-sets/{hs['id']}/export").text
+    assert csv_text.startswith("﻿axis,code,label") and "F1-HS-01" in csv_text
+    up = "axis,label,definition\nF1,제철 공정,고로\nF1,물류 야드,출하\nF6,사내 공개,사내망 한정\n"
+    r = client.post(f"/api/taxonomy-sets/{mine['id']}/import", files=[("file", ("set.csv", up.encode("utf-8-sig"), "text/csv"))], headers=wh)
+    assert r.status_code == 200 and r.json()["added"] == 3, r.text
+    r = client.post(f"/api/taxonomy-sets/{mine['id']}/import?replace=true", files=[("file", ("set.csv", "axis,label\nF1,제철 공정\n".encode(), "text/csv"))], headers=wh).json()
+    assert r["updated"] == 1 and r["retired"] >= 2
+
+    # 프로세스 세트 전환: 추천이 세트 코드로 매핑, 분류 확정 뒤에는 거부
+    pid = S["pid"]
+    r = client.post("/api/processes", json={"name": "세트 테스트"}).json()
+    p2 = r["process"]["id"]
+    assert r.get("taxonomy_set", {}).get("id") == base["id"] or client.get(f"/api/processes/{p2}").json()["taxonomy_set"]["id"] == base["id"]
+    assert client.put(f"/api/processes/{p2}/selection", json={"asset_ids": [S["acc"]]}).status_code == 200
+    d2 = client.get(f"/api/processes/{p2}").json()["datasets"][0]["id"]
+    r = client.patch(f"/api/processes/{p2}", json={"taxonomy_set_id": hs["id"]})
+    assert r.status_code == 200 and r.json()["taxonomy_set"]["id"] == hs["id"] and r.json()["process"]["taxonomy_set_id"] == hs["id"]
+    sug = client.get(f"/api/datasets/{d2}/classification/suggestions").json()["suggestions"]
+    f1s = [x for x in sug if x["axis"] == "F1"]
+    assert f1s and all(x["code"].startswith("F1-HS-") and x["source_code"].startswith("F1-") for x in f1s), "추천이 세트 코드로 매핑"
+    assert client.get("/api/taxonomy", params={"process_id": p2}).json()[0]["codes"][0]["code"].startswith("F1-HS-")
+    # 세트 밖 코드는 422, 세트 코드는 200
+    assert client.put(f"/api/datasets/{d2}/classification", json={"F1": [f1["codes"][0]["code"]]}).status_code == 422
+    assert client.put(f"/api/datasets/{d2}/classification", json={"F1": [hs_f1[0]["code"]], "F2": [], "F3": [], "F4": [], "F5": [], "F6": [], "K": []}).status_code == 200
+    # 다시 기본으로 돌리면 source_code 로 코드가 따라온다
+    r = client.patch(f"/api/processes/{p2}", json={"taxonomy_set_id": base["id"]}).json()
+    assert r["datasets"][0]["classification"]["F1"] == [f1["codes"][0]["code"]]
+    # 확정 뒤에는 바꿀 수 없다
+    assert client.post(f"/api/datasets/{d2}/classification/confirm").status_code in (200, 409)
+    if client.get(f"/api/processes/{p2}").json()["datasets"][0]["class_confirmed_at"]:
+        assert client.patch(f"/api/processes/{p2}", json={"taxonomy_set_id": hs["id"]}).status_code == 409
+    # 삭제 보호: 기본 세트 · 사용 중 세트
+    assert client.delete(f"/api/taxonomy-sets/{base['id']}").status_code == 409
+    client.patch(f"/api/processes/{p2}", json={"taxonomy_set_id": hs["id"]})
+    used = client.get("/api/taxonomy-sets").json()
+    if next(s for s in used["items"] if s["id"] == hs["id"])["process_count"]:
+        assert client.delete(f"/api/taxonomy-sets/{hs['id']}").status_code == 409
+    assert client.delete(f"/api/taxonomy-sets/{mine['id']}", headers=wh).status_code == 200
+    assert client.post(f"/api/processes/{p2}/trash").status_code == 200
+    assert pid  # 기존 프로세스는 건드리지 않았다

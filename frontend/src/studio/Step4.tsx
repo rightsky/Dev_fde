@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
+import { TaxonomySetPicker } from "../components/taxsets";
 import type { Classification, ClassSuggestion, Dataset, GradeBasis, GradingState, MetaVisibility, TaxAxis, TaxCode } from "../types";
 import { Badge, Banner, Button, Empty, KeyPill, QueryState, cx, errText, fmtDateTime, useToast } from "../ui";
 import { useStudio } from "./context";
@@ -281,9 +282,10 @@ interface ConfirmNotice {
 }
 
 export function Step4() {
-  const { combo, params, guard } = useStudio();
+  const { combo, params, guard, pid, detail, editable, refresh } = useStudio();
   const toast = useToast();
-  const taxQ = useQuery({ queryKey: ["taxonomy"], queryFn: () => api.taxonomy() });
+  // 축 · 코드는 이 프로세스의 분류체계 세트 기준 (F1~F6 은 세트 코드, K · N2SF 는 공통)
+  const taxQ = useQuery({ queryKey: ["taxonomy", "process", pid, detail.taxonomy_set?.id], queryFn: () => api.taxonomy({ process_id: pid }) });
   const tax = useMemo(() => indexTaxonomy(taxQ.data ?? []), [taxQ.data]);
   const ready = taxQ.data != null;
 
@@ -365,6 +367,14 @@ export function Step4() {
         title="다중분류체계 배정"
         sub="축마다 코드를 배정하고 확정합니다. 배정한 분류는 정본 그래프(dcat:theme · dcterms:type · dcterms:license 등)에 들어가 STEP 6 검증과 STEP 7 산출물에 반영됩니다."
       />
+      <div className="card tight">
+        <TaxonomySetPicker pid={pid} current={detail.taxonomy_set} compact disabled={!editable || detail.datasets.some((d) => !!d.class_confirmed_at)} onChanged={refresh} />
+        <div className="tiny muted mt-4">
+          적용 세트 <b>{detail.taxonomy_set?.name}</b>
+          {detail.taxonomy_set?.scope && ` · ${detail.taxonomy_set.scope}`}. F1~F6 코드는 이 세트에서 고릅니다. 코드가 모자라면 「세트 관리」에서 추가하거나 「복제해서 커스텀」으로 이 프로세스용 세트를 만드세요.
+          {detail.datasets.some((d) => !!d.class_confirmed_at) && " 분류를 확정한 데이터셋이 있어 세트는 바꿀 수 없습니다."}
+        </div>
+      </div>
       <QueryState q={taxQ}>
         {combo.length === 0 ? (
           <Empty>조합에 편입된 데이터셋이 없습니다 — STEP 2 에서 조합을 확정하면 여기서 분류를 배정할 수 있습니다</Empty>

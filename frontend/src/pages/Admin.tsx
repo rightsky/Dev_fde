@@ -1,5 +1,5 @@
 // 시스템 관리 — 사용자 · 기관 · 분류체계 · 민팅 대장 · 활동 로그 · 셰이프 · AI 에이전트(MCP)
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
@@ -8,6 +8,8 @@ import { AgentsTab } from "./AdminAgents";
 import { OrgGradesTab } from "./AdminOrgGrades";
 import { useAuth, useReference } from "../auth";
 import type { Org, Role, TaxAxis, TaxCode, User } from "../types";
+import { TaxonomySetModal } from "../components/taxsets";
+import { downloadFile, downloads } from "../api";
 import { Badge, Banner, Button, Card, CodeBlock, ConfirmButton, Empty, Field, Modal, QueryState, SeverityBadge, Tabs, cx, fmtDateTime, fmtNum, useToast } from "../ui";
 
 const TABS = [
@@ -534,14 +536,100 @@ const FIXED_AXES = ["K", "N2SF"];
 const NATURE_TONE: Record<TaxAxis["nature"], "dark" | "info" | "muted"> = { 필수: "dark", 권장: "info", 보조: "muted" };
 
 function TaxonomyTab() {
-  const { isAdmin } = useAuth();
-  const q = useQuery({ queryKey: ["taxonomy"], queryFn: api.taxonomy });
+  const { isAdmin, canWrite, user } = useAuth();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const sets = useQuery({ queryKey: ["taxonomy-sets"], queryFn: api.taxonomySets });
+  const [sp, setSp] = useSearchParams();
+  const setIdParam = sp.get("set");
+  const items = sets.data?.items || [];
+  const current = items.find((s) => String(s.id) === setIdParam) || items.find((s) => s.is_default) || items[0];
+  const q = useQuery({ queryKey: ["taxonomy", current?.id], queryFn: () => api.taxonomy({ set_id: current!.id }), enabled: !!current });
   const [only, setOnly] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const axes = (q.data || []).filter((a) => !only || a.code === only);
+  const pick = (id: number) => {
+    const next = new URLSearchParams(sp);
+    next.set("set", String(id));
+    setSp(next, { replace: true });
+  };
+  const editable = !!current && (isAdmin || (canWrite && !current.locked && current.created_by_id === user.id));
+  const refresh = async () => {
+    await qc.invalidateQueries({ queryKey: ["taxonomy-sets"] });
+    await qc.invalidateQueries({ queryKey: ["taxonomy"] });
+  };
+  const act = async (key: string, fn: () => Promise<string>) => {
+    setBusy(key);
+    try {
+      toast.ok(await fn());
+      await refresh();
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      setBusy(null);
+    }
+  };
 
   return (
     <div className="col gap-12">
-      <Banner tone="info">폐기한 코드는 새 배정에서 빠지며 이미 발행된 항목은 그대로 유지됩니다.{isAdmin ? "" : " 코드 추가 · 수정 · 폐기는 관리자만 할 수 있습니다."}</Banner>
+      <Banner tone="info">
+        <b>분류체계 세트</b>는 F1~F6 코드 묶음입니다 (K 연계키 · N²SF 등급은 공통). 기관 · 분야마다 세트를 두고, 프로세스는 STEP 1 에서 세트 하나를 고릅니다. 비슷한 세트를 <b>복제</b>해 코드를 더하거나 폐기하는 식으로 커스텀하세요. 폐기한 코드는 새 배정에서 빠지고 발행본은 그대로입니다.
+      </Banner>
+      <QueryState q={sets}>
+        <div className="row between wrap" style={{ alignItems: "flex-start" }}>
+          <div className="row wrap gap-4">
+            {items.map((s) => (
+              <button key={s.id} type="button" className={cx("chip", current?.id === s.id && "on")} aria-pressed={current?.id === s.id} onClick={() => pick(s.id)} title={s.description || undefined}>
+                {s.name}
+                {s.is_default && " ★"}
+                <span className="score">{s.code_total}</span>
+              </button>
+            ))}
+          </div>
+          {canWrite && (
+            <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
+              ＋ 세트 만들기 (복제)
+            </Button>
+          )}
+        </div>
+        {current && (
+          <div className="card tight">
+            <div className="row between wrap" style={{ alignItems: "center" }}>
+              <div>
+                <span className="bold">{current.name}</span> {current.is_default && <Badge tone="dark">기본</Badge>} {current.locked && <Badge tone="muted">잠금</Badge>}
+                <span className="small muted"> · 접두 <span className="mono">{current.slug}</span>{current.scope && ` · ${current.scope}`}{current.base_set && ` · 「${current.base_set.name}」 복제`} · 만든 사람 {current.created_by} · 프로세스 {current.process_count}개 사용</span>
+                {current.description && <div className="small dim mt-4">{current.description}</div>}
+                <div className="tiny muted mt-4">코드: {Object.entries(current.code_counts).map(([k, v]) => `${k} ${v}`).join(" · ")}</div>
+              </div>
+              <div className="row gap-4 wrap">
+                <Button size="sm" busy={busy === "export"} onClick={() => act("export", async () => { await downloadFile(downloads.taxonomySetCsv(current.id), `분류체계_${current.name}.csv`); return "CSV 내려받기"; })}>
+                  ⤓ CSV
+                </Button>
+                {editable && (
+                  <>
+                    <input ref={fileRef} type="file" accept=".csv,text/csv" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) void act("import", async () => { const r = await api.importTaxonomySet(current.id, f, false); return `CSV 가져오기 — 추가 ${r.added} · 갱신 ${r.updated}`; }); e.target.value = ""; }} />
+                    <Button size="sm" busy={busy === "import"} onClick={() => fileRef.current?.click()} title="열: axis(축), label(이름), definition(정의), code(코드, 선택), active(사용)">
+                      CSV 가져오기
+                    </Button>
+                  </>
+                )}
+                {isAdmin && !current.is_default && (
+                  <Button size="sm" variant="outline" busy={busy === "default"} onClick={() => act("default", async () => { await api.updateTaxonomySet(current.id, { is_default: true }); return `기본 세트 — ${current.name}`; })}>
+                    기본으로 지정
+                  </Button>
+                )}
+                {editable && !current.is_default && current.slug !== "base" && (
+                  <ConfirmButton size="sm" variant="danger" busy={busy === "delete"} onConfirm={() => act("delete", async () => { await api.deleteTaxonomySet(current.id); const next = new URLSearchParams(sp); next.delete("set"); setSp(next, { replace: true }); return `세트 삭제 — ${current.name}`; })} confirmLabel="삭제">
+                    삭제
+                  </ConfirmButton>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </QueryState>
       <QueryState q={q}>
         <div className="row wrap">
           <button className={cx("chip", only === "" && "on")} aria-pressed={only === ""} onClick={() => setOnly("")}>
@@ -555,14 +643,24 @@ function TaxonomyTab() {
           ))}
         </div>
         {axes.map((a) => (
-          <AxisCard key={a.code} axis={a} isAdmin={isAdmin} />
+          <AxisCard key={a.code} axis={a} isAdmin={a.in_set === false ? isAdmin : editable} setId={current?.id ?? null} />
         ))}
       </QueryState>
+      {creating && sets.data && (
+        <TaxonomySetModal
+          sets={items}
+          defaultBaseId={current?.id}
+          onClose={() => setCreating(false)}
+          onCreated={(s) => {
+            pick(s.id);
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function AxisCard({ axis, isAdmin }: { axis: TaxAxis; isAdmin: boolean }) {
+function AxisCard({ axis, isAdmin, setId }: { axis: TaxAxis; isAdmin: boolean; setId: number | null }) {
   const qc = useQueryClient();
   const { busy, run } = useAction();
   const [adding, setAdding] = useState(false);
@@ -572,11 +670,12 @@ function AxisCard({ axis, isAdmin }: { axis: TaxAxis; isAdmin: boolean }) {
 
   const refresh = async () => {
     await qc.invalidateQueries({ queryKey: ["taxonomy"] });
+    void qc.invalidateQueries({ queryKey: ["taxonomy-sets"] });
     void qc.invalidateQueries({ queryKey: ["activities"] });
   };
   const add = async (label: string, definition: string) => {
     const ok = await run("add", async () => {
-      await api.addTaxCode(axis.code, { label, definition: definition || undefined });
+      await api.addTaxCode(axis.code, { label, definition: definition || undefined, set_id: axis.in_set === false ? null : setId });
       await refresh();
       return `코드 추가 — ${axis.code} ${axis.name}: ${label}`;
     });

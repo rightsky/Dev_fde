@@ -301,6 +301,17 @@ API: `GET /api/ard/summary` · `/filters` · `/artifacts` · `/published` · `/h
     - 읽기 권한만 있는 DB 계정을 쓰고, 스튜디오 서버에서 DB 포트가 닿도록 방화벽 · 보안그룹을 여십시오. 모든 등록 · 시험 · 동기화 · 삭제는 활동 로그(`connector_*`)에 남습니다.
     - Oracle · MS SQL 은 아직 없습니다 (드라이버 추가로 확장 가능).
 
+## 분류체계 세트 (v0.20)
+
+F1~F6 분류 코드를 **세트**로 묶어 따로 저장하고 불러 씁니다 (예: "국토교통부 ARD 분류체계 (기본)", "현대제철 분류체계"). K 연계키 · N²SF 등급 축은 시스템 공통이라 세트 밖입니다.
+
+- **세트 관리** (시스템 관리 › 분류체계): 세트 칩으로 전환, 「세트 만들기 (복제)」로 비슷한 세트를 복제해 시작(코드가 `F1-HS-01` 처럼 접두를 달고 복사되며 `source_code` 로 원본과 연결), 빈 세트로 시작, 세트별 코드 추가 · 수정 · 폐기, **CSV 내보내기 · 가져오기**(열 `axis,label,definition[,code,active]`, `replace=true` 면 파일에 없는 코드는 폐기), 기본 세트 지정(관리자), 삭제(기본 세트 · 사용 중 세트는 불가). 기본 세트는 관리자만, 커스텀 세트는 만든 담당자와 관리자가 고칩니다.
+- **프로세스에서 고르기**: STEP 1 카드와 STEP 4 머리의 「분류체계 세트」 선택. 「복제해서 커스텀」은 지금 세트를 복제해 바로 이 프로세스에 적용합니다. STEP 4 의 F1~F6 은 그 세트 코드만 보이고, 서버도 세트 밖 코드를 거부합니다(422). 세트를 바꾸면 이미 배정한 코드는 뿌리가 같은 코드로 따라가고(기본 ↔ 복제 양방향) 대응이 없는 코드는 지웁니다. **분류를 확정한 데이터셋이 있으면 바꿀 수 없습니다**(409).
+- **추천**: 규칙 기반 추천은 기본 세트 코드로 계산한 뒤 세트의 `source_code` 매핑으로 바꿔 보입니다. 새로 만든 코드(원본 없음)는 추천되지 않고 직접 고릅니다.
+- **기존 데이터**: 이관 0011 이 기존 F1~F6 코드를 전부 기본 세트(`base`)에 귀속시키므로 바뀌는 것이 없습니다. 정본 그래프의 개념 IRI 는 코드 그대로(`…/def/concept/F1-HS-01`), 스킴은 축 단위로 같습니다.
+
+API: `GET /api/taxonomy?set_id|process_id`, `GET/POST /api/taxonomy-sets`, `PATCH/DELETE /api/taxonomy-sets/{id}`, `GET …/export`, `POST …/import?replace=`, `POST /api/taxonomy/{axis}/codes` (`set_id`), `PATCH /api/processes/{id}` (`taxonomy_set_id`). 활동 로그 `taxonomy_set` · `taxonomy_change`.
+
 ## N²SF 등급 · 판단 근거 · 표 41 · 메타데이터 공개 수준 (STEP 4)
 
 가이드라인 1.3.2 · 3.6.1 · 표 41 을 STEP 4 보안등급 축에 넣었습니다. 설계 배경은 `docs/N2SF-IMPLEMENTATION-PLAN.md`, 컬럼 단위 등급을 미룬 이유는 `docs/N2SF-COLUMN-GRADING.md` 4절에 있습니다.
