@@ -77,7 +77,8 @@ class Asset(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(300))  # 표시 이름 (파일명에서 확장자 제거, 또는 스트림 토픽)
     kind: Mapped[str] = mapped_column(String(20))  # dataset | stream
-    source: Mapped[str] = mapped_column(String(20), default="upload")  # upload | stream
+    source: Mapped[str] = mapped_column(String(20), default="upload")  # upload | stream | dbschema
+    connector_id: Mapped[int | None] = mapped_column(ForeignKey("db_connector.id", ondelete="SET NULL"), default=None, index=True)
     filename: Mapped[str | None] = mapped_column(String(300), default=None)
     ext: Mapped[str | None] = mapped_column(String(20), default=None)
     size: Mapped[int | None] = mapped_column(Integer, default=None)
@@ -100,6 +101,7 @@ class Asset(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
 
     org: Mapped[Organization | None] = relationship()
+    connector: Mapped[DbConnector | None] = relationship(foreign_keys=[connector_id])
 
 
 class Process(Base):
@@ -531,3 +533,29 @@ class AgentGrant(Base):
     granted_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     expires_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
     revoked_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+
+
+class DbConnector(Base):
+    """기관 DB 스키마 읽기 커넥터. 테이블 · 컬럼 · 자료형만 읽고 행 데이터는 읽지 않는다 (데이터 패브릭 외부 연계)."""
+    __tablename__ = "db_connector"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    kind: Mapped[str] = mapped_column(String(20))  # postgresql | mysql
+    host: Mapped[str] = mapped_column(String(200))
+    port: Mapped[int] = mapped_column(Integer)
+    database: Mapped[str] = mapped_column(String(100))
+    db_schema: Mapped[str | None] = mapped_column(String(100), default=None)  # 비우면 기본 스키마 (public 등)
+    username: Mapped[str] = mapped_column(String(100))
+    secret_enc: Mapped[str] = mapped_column(Text)  # Fernet 으로 암호화한 비밀번호 (FDE_SECRET_KEY 파생 키)
+    org_id: Mapped[int | None] = mapped_column(ForeignKey("organization.id"), default=None)
+    note: Mapped[str | None] = mapped_column(Text, default=None)
+    status: Mapped[str] = mapped_column(String(20), default="never")  # never | ok | error
+    last_error: Mapped[str | None] = mapped_column(Text, default=None)
+    last_tested_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    last_synced_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    table_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("app_user.id"), default=None)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    deleted_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+
+    org: Mapped[Organization | None] = relationship()

@@ -222,12 +222,24 @@ export function AssetProfileModal({ assetId, onClose }: { assetId: number; onClo
         {a && (
           <div className="col gap-12">
             <div className="row wrap">
-              <Badge tone={a.kind === "stream" ? "purple" : "info"}>{a.kind === "stream" ? "실시간 스트림" : a.data_form || "파일"}</Badge>
+              <Badge tone={a.kind === "stream" ? "purple" : a.source === "dbschema" ? "dark" : "info"}>{a.kind === "stream" ? "실시간 스트림" : a.source === "dbschema" ? "DB 스키마" : a.data_form || "파일"}</Badge>
               <span className="small">{a.profile_summary}</span>
               {a.minted_id && <Badge tone="ok">발행 ID {a.minted_id}</Badge>}
             </div>
             <dl className="kv">
-              {a.filename && (
+              {a.source === "dbschema" ? (
+                <>
+                  <dt>원천 표</dt>
+                  <dd>
+                    <span className="mono">{a.filename}</span> · 커넥터 {a.connector?.name || "—"}
+                    {a.connector?.deleted && <Badge tone="warn">커넥터 삭제됨</Badge>}
+                  </dd>
+                  <dt>구조 지문</dt>
+                  <dd className="mono" title="컬럼 이름 · 자료형 · 널 허용 · 기본키로 만든 해시. 동기화 때 바뀌었는지 판단합니다">
+                    {shortHash(a.sha256, 24)}…
+                  </dd>
+                </>
+              ) : a.filename ? (
                 <>
                   <dt>파일</dt>
                   <dd>
@@ -236,7 +248,7 @@ export function AssetProfileModal({ assetId, onClose }: { assetId: number; onClo
                   <dt>SHA-256</dt>
                   <dd className="mono">{shortHash(a.sha256, 24)}…</dd>
                 </>
-              )}
+              ) : null}
               {a.kind === "stream" && (
                 <>
                   <dt>시간 규격</dt>

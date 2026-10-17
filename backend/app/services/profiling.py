@@ -60,7 +60,9 @@ _YM = re.compile(r"^(19|20)\d{2}(0[1-9]|1[0-2])$")
 _Y = re.compile(r"^(19|20)\d{2}$")
 
 _PII_NAME = re.compile(r"주민|성명|이름|전화|휴대|핸드폰|연락처|생년|생일|birth|이메일|email|e-mail|계좌|account|여권|passport|운전면허|차량번호|차대번호|VIN"
-                       r"|주소|addr|성별|gender|(?<![a-z])name(?![a-z])|_nm(?![a-z])|^nm$|owner|고객|환자|학생|신청인|민원인", re.I)
+                       r"|주소|addr|성별|gender|(?<![a-z])name(?![a-z])|_nm(?![a-z])|^nm$|owner|고객|환자|학생|신청인|민원인"
+                       # DB 컬럼은 영문 약어가 많다 (기관 DB 스키마 커넥터): 주민번호 · 전화 · 생년 등
+                       r"|resident|rrn|jumin|(?<![a-z])ssn(?![a-z])|phone|mobile|(?<![a-z])tel(?![a-z])|cell|(?<![a-z])dob(?![a-z])|patient|customer|cust_|applicant", re.I)
 _PII_VALUE: list[tuple[str, re.Pattern[str]]] = [
     ("주민등록번호", re.compile(r"^\d{6}-?[1-4]\d{6}$")),
     ("휴대전화", re.compile(r"^01[016789]-?\d{3,4}-?\d{4}$")),
@@ -540,6 +542,8 @@ def profile_summary(profile: dict[str, Any]) -> str:
         return "데이터 행 없음"
     if st == "stream":
         return f"스트림 스키마 {len(profile.get('tables', [{}])[0].get('columns', []))}필드 (등록값)"
+    if st == "dbschema":
+        return f"DB 스키마 {len(profile.get('tables', [{}])[0].get('columns', []))}컬럼 (구조만 · 행 미수집)"
     return "표 구조 프로파일 대상 아님"
 
 

@@ -175,6 +175,11 @@ export interface ColumnProfile {
   iso8601?: boolean;
   interval?: { seconds: number; label: string | null; duration: string | null };
   pii?: { kind: string; basis: string };
+  /** DB 스키마 커넥터에서 온 컬럼만: 원본 자료형 · 널 허용 · 기본키 · 주석 */
+  raw_type?: string;
+  nullable?: boolean;
+  pk?: boolean;
+  comment?: string;
 }
 
 export interface TableProfile {
@@ -188,7 +193,7 @@ export interface TableProfile {
 }
 
 export interface Profile {
-  status: "ok" | "error" | "empty" | "unsupported" | "stream";
+  status: "ok" | "error" | "empty" | "unsupported" | "stream" | "dbschema";
   tables: TableProfile[];
   warnings: string[];
   error?: string;
@@ -198,7 +203,8 @@ export interface Asset {
   id: number;
   name: string;
   kind: "dataset" | "stream";
-  source: "upload" | "stream";
+  source: "upload" | "stream" | "dbschema";
+  connector: { id: number; name: string; kind: string; deleted: boolean } | null;
   filename: string | null;
   ext: string | null;
   size: number | null;
@@ -1088,4 +1094,57 @@ export interface OrgGradeEntry {
   source_file: string | null;
   imported_at: string;
   candidates: { asset_id: number; name: string; filename: string | null; score: number }[];
+}
+
+/** 데이터 패브릭 외부 연계: 기관 DB 스키마 커넥터 (비밀번호는 응답에 없다) */
+export interface DbConnector {
+  id: number;
+  name: string;
+  kind: "postgresql" | "mysql";
+  kind_label: string;
+  host: string;
+  port: number;
+  database: string;
+  schema: string | null;
+  username: string;
+  org_id: number | null;
+  org?: { id: number; code: string; label: string } | null;
+  note: string | null;
+  status: "never" | "ok" | "error";
+  last_error: string | null;
+  last_tested_at: string | null;
+  last_synced_at: string | null;
+  table_count: number;
+  asset_count?: number;
+  created_at: string;
+}
+
+export interface ConnectorKind {
+  kind: "postgresql" | "mysql";
+  label: string;
+  port: number;
+  default_schema: string | null;
+}
+
+export interface ConnectorSyncResult {
+  schema: string | null;
+  tables: number;
+  created: string[];
+  updated: string[];
+  unchanged: number;
+  missing: string[];
+  connector: DbConnector;
+}
+
+/** 외부 연계 현황판 (읽기 전용) */
+export interface IntegrationItem {
+  key: "anthropic" | "mcp" | "connectors";
+  name: string;
+  direction: "outbound" | "inbound";
+  enabled: boolean;
+  status: "on" | "off" | "error";
+  detail: string;
+  last_at: string | null;
+  today: number | null;
+  scope: string;
 }

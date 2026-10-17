@@ -2,22 +2,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
-import { AssetProfileModal, StreamModal, UploadZone } from "../components/assets";
+import { Link } from "react-router-dom";
+import { AssetProfileModal } from "../components/assets";
+import { AssetKindBadge } from "../pages/Assets";
 import type { Asset, ComboSuggestion, Dataset, ProcessDetail } from "../types";
-import { Badge, Banner, Button, Card, ConfirmButton, Empty, KeyPill, Meter, QueryState, cx, useToast } from "../ui";
+import { Badge, Banner, Button, ConfirmButton, Empty, KeyPill, Meter, QueryState, cx, useToast } from "../ui";
 import { useStudio } from "./context";
 import { ReadOnlyNote, StepHeader } from "./shared";
 
-type KindFilter = "all" | "dataset" | "stream";
+type KindFilter = "all" | "dataset" | "dbschema" | "stream";
 type ViewMode = "card" | "list";
 
 const KIND_FILTERS: { key: KindFilter; label: string }[] = [
   { key: "all", label: "전체" },
   { key: "dataset", label: "파일" },
+  { key: "dbschema", label: "DB 스키마" },
   { key: "stream", label: "스트림" },
 ];
-
-const formLabel = (a: Asset) => (a.kind === "stream" ? "실시간 스트림" : a.data_form || "파일");
+const isKind = (a: Asset, k: KindFilter) => (k === "all" ? true : k === "dbschema" ? a.source === "dbschema" : k === "dataset" ? a.kind === "dataset" && a.source !== "dbschema" : a.kind === k);
 const sameSet = (a: number[], b: number[]) => a.length === b.length && a.every((x) => b.includes(x));
 const selectedAssetIds = (d: ProcessDetail) => d.datasets.filter((x) => x.selected).map((x) => x.asset.id);
 
@@ -56,7 +58,6 @@ export function Step1() {
   const [kind, setKind] = useState<KindFilter>("all");
   const [view, setView] = useState<ViewMode>("card");
   const [profileId, setProfileId] = useState<number | null>(null);
-  const [streamOpen, setStreamOpen] = useState(false);
   const [armedId, setArmedId] = useState<number | null>(null);
   const [selBusy, setSelBusy] = useState(false);
   const [comboBusy, setComboBusy] = useState<string | null>(null);
@@ -100,12 +101,6 @@ export function Step1() {
     });
   };
 
-  const addAssets = (created: Asset[]) => {
-    if (created.length === 0) return;
-    const ids = created.map((a) => a.id);
-    changeSelection((cur) => [...cur, ...ids], `이 프로세스 후보에 추가 — ${created.map((a) => a.name).join(", ")}`);
-  };
-
   const toggle = (a: Asset) => {
     const ds = byAsset.get(a.id);
     if (!ds) {
@@ -124,12 +119,12 @@ export function Step1() {
   // ── 목록 필터
   const assets = useMemo(() => assetsQ.data ?? [], [assetsQ.data]);
   const counts: Record<KindFilter, number> = useMemo(
-    () => ({ all: assets.length, dataset: assets.filter((a) => a.kind === "dataset").length, stream: assets.filter((a) => a.kind === "stream").length }),
+    () => ({ all: assets.length, dataset: assets.filter((a) => isKind(a, "dataset")).length, dbschema: assets.filter((a) => isKind(a, "dbschema")).length, stream: assets.filter((a) => isKind(a, "stream")).length }),
     [assets],
   );
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return assets.filter((a) => (kind === "all" || a.kind === kind) && (!q || a.name.toLowerCase().includes(q)));
+    return assets.filter((a) => isKind(a, kind) && (!q || a.name.toLowerCase().includes(q)));
   }, [assets, query, kind]);
   const filtered = visible.length !== assets.length;
   const visibleSelected = visible.filter((a) => byAsset.has(a.id));
@@ -188,24 +183,26 @@ export function Step1() {
   return (
     <div className="col gap-12">
       <div>
-        <StepHeader n={1} title="데이터셋 조합 추출" sub="파일을 올리면 컬럼을 실제로 프로파일링하고, 연계키 후보를 기준으로 조합을 추천합니다." />
+        <StepHeader n={1} title="데이터셋 조합 추출" sub="데이터 패브릭에 등록된 원천(파일 · DB 스키마 · 스트림) 가운데 후보를 고르면 연계키 후보를 기준으로 조합을 추천합니다." />
         <ReadOnlyNote />
       </div>
 
-      <div className="grid side">
-        <UploadZone onUploaded={addAssets} disabled={!editable} />
-        <Card title="스트림 등록" right={assetsQ.data ? <span className="small muted">등록된 스트림 {counts.stream}건</span> : undefined}>
-          <p className="small dim">
-            CCTV 영상 · 센서처럼 계속 흘러드는 데이터는 본체를 올리지 않습니다. 토픽 이름과 스키마, 시간 규격(시간 해상도 · event-time 컬럼)만 등록하면 필드 이름에서 연계키 후보를 계산합니다.
-          </p>
-          <p className="tiny muted mt-8">등록한 스트림은 dcat:DataService 로 다루며, 이 프로세스의 후보에 바로 추가됩니다.</p>
-          <div className="mt-12">
-            <Button variant="outline" disabled={!editable} onClick={() => setStreamOpen(true)}>
-              ＋ 스트림 등록
-            </Button>
-          </div>
-        </Card>
-      </div>
+      <Banner
+        tone="info"
+        right={
+          <Link className="btn outline sm" to="/assets" title="파일 업로드 · 스트림 등록 · 기관 DB 스키마 가져오기">
+            데이터 패브릭 관리로 →
+          </Link>
+        }
+      >
+        원천 등록은 <b>데이터 패브릭 관리</b>에서 합니다 (파일 업로드 · 스트림 등록 · 기관 DB 스키마 커넥터). 등록한 원천은 이 목록에 바로 나타납니다
+        {assetsQ.data && (
+          <span className="muted">
+            {" "}· 현재 파일 {counts.dataset} · DB 스키마 {counts.dbschema} · 스트림 {counts.stream}
+          </span>
+        )}
+        .
+      </Banner>
 
       {/* ── 후보 원천 */}
       <section>
@@ -390,7 +387,6 @@ export function Step1() {
         </div>
       </section>
 
-      {streamOpen && <StreamModal onClose={() => setStreamOpen(false)} onCreated={(a) => addAssets([a])} />}
       {profileId != null && <AssetProfileModal assetId={profileId} onClose={() => setProfileId(null)} />}
     </div>
   );
@@ -465,7 +461,7 @@ function AssetCard(p: ItemProps) {
   return (
     <div className={cx("card tight col gap-4", dataset && "selected")}>
       <div className="row wrap gap-4">
-        <Badge tone={a.kind === "stream" ? "purple" : "info"}>{formLabel(a)}</Badge>
+        <AssetKindBadge asset={a} />
         {a.size_label && <span className="tiny muted">{a.size_label}</span>}
         <StatusBadges asset={a} dataset={dataset} />
       </div>
@@ -511,7 +507,7 @@ function AssetRow(p: ItemProps) {
         )}
       </td>
       <td>
-        <Badge tone={a.kind === "stream" ? "purple" : "info"}>{formLabel(a)}</Badge>
+        <AssetKindBadge asset={a} />
       </td>
       <td className="num">{a.size_label || "—"}</td>
       <td className="muted">{a.profile_summary}</td>
