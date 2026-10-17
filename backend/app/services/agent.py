@@ -78,12 +78,33 @@ def entry_visibility(e: CatalogEntry) -> str:
     return "internal" if entry_grade(e) == "C" else "detail"
 
 
+def has_grant(e: CatalogEntry, key: AgentKey) -> bool:
+    """S2(제한 공유) 발행본에 대한 이 키의 유효한 건별 승인이 있는지."""
+    from sqlalchemy.orm import object_session
+
+    from ..models import AgentGrant
+
+    db = object_session(e) or object_session(key)
+    if db is None or key.id is None:
+        return False
+    now = utcnow()
+    for gr in db.scalars(select(AgentGrant).where(AgentGrant.key_id == key.id, AgentGrant.resource_id == e.resource_id)):
+        if gr.revoked_at is None and (gr.expires_at is None or gr.expires_at > now):
+            return True
+    return False
+
+
 def visible(e: CatalogEntry, key: AgentKey) -> bool:
-    """에이전트에게 상세를 보여도 되는 발행 항목인지: 발행 중 · C 등급 아님 · 키의 등급 범위 안 · 공개 수준 detail · 전송 제외 아님."""
+    """에이전트에게 상세를 보여도 되는 발행 항목인지: 발행 중 · C 등급 아님 · 키의 등급 범위 안 · 공개 수준 detail · 전송 제외 아님.
+    S2(제한 공유)는 키 등급에 더해 발행본 건별 승인(agent_grant)이 있어야 한다."""
     g = entry_grade(e)
     if (e.facets or {}).get("ai_excluded") or e.status != "published" or entry_visibility(e) != "detail":
         return False
-    return g != "C" and g in key_grades(key)
+    if g == "C" or g not in key_grades(key):
+        return False
+    if g == "S2" and not has_grant(e, key):
+        return False
+    return True
 
 
 def listable(e: CatalogEntry, key: AgentKey) -> bool:

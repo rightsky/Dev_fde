@@ -1337,6 +1337,14 @@ function AiTermsCard({ m, fields }: { m: FormModel; fields: MetaField[] }) {
         부록 4 양식 밖의 항목입니다. AI 학습 · 결합 · 자동화 접근 · 대량 호출 · 재배포를 허용하는지 밝혀 두면 정본에 ODRL 정책으로 들어가고, 데이터 카드 끝과 카탈로그, AI 에이전트(MCP)의 이용조건
         응답에 그대로 실립니다. 고르지 않은 항목은 "미정"으로 표시되고, 에이전트에게는 그 용도로 쓰지 말라고 안내합니다.
       </p>
+      {(() => {
+        const d = (m.dataset.meta as Record<string, unknown>)._ai_terms_defaulted as { grade?: string; fields?: string[]; by?: string; at?: string } | undefined;
+        return d?.fields?.length ? (
+          <div className="small mt-4" title="STEP 4 에서 등급을 정할 때 고르지 않았던 항목을 등급 기본값으로 채웠습니다. 바꿀 수 있습니다">
+            <Badge tone="info">등급 기본값</Badge> N²SF {d.grade} 등급 기본값으로 채운 항목 {d.fields.length}개 ({d.by} · {fmtDateTime(d.at ?? "")}). 담당자가 바꾸면 그 값이 우선합니다.
+          </div>
+        ) : null;
+      })()}
       <div className="col gap-8 mt-8">
         {terms.map((f) => {
           const v = String(m.valueOf(f));

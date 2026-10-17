@@ -869,7 +869,13 @@ def put_classification(did: int, body: ClassificationIn, db: Session = Depends(g
         if body.META_VISIBILITY not in grading.VISIBILITIES:
             raise HTTPException(422, f"메타데이터 공개 수준 값이 올바르지 않습니다: {body.META_VISIBILITY}")
         out[grading.VISIBILITY_KEY] = body.META_VISIBILITY
+    prev_grade = (pd.classification or {}).get("N2SF")
     pd.classification = out
+    if out.get("N2SF") and out.get("N2SF") != prev_grade:
+        filled = grading.apply_term_defaults(pd, out["N2SF"], user.name)  # 표 39 이용조건의 등급별 기본값 (고르지 않은 항목만)
+        if filled:
+            activity.log(db, "ai_terms_default", f"AI 이용조건 등급 기본값 적용 — {(pd.meta or {}).get('title') or pd.asset.name} ({grading.GRADE_LABEL[grading.normalize(out['N2SF']) or '']}: {len(filled)}항목)",
+                         user=user, process_id=pd.process_id, dataset_id=pd.id, payload={"fields": filled})
     pd.process.updated_at = utcnow()
     if pd.class_confirmed_at and not (out.get("F1") and out.get("F2")):
         pd.class_confirmed_at = None  # 필수 축이 비면 확정이 풀린다

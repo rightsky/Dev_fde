@@ -659,8 +659,8 @@ def test_13_mcp_agent_access(client):
     kid = r.json()["id"]
     assert k_open.startswith("fde_") and r.json()["prefix"] == k_open[:10]
     assert all("key" not in k for k in client.get("/api/agent-keys").json()), "키 원문은 발급할 때 한 번만 준다"
-    k_both = client.post("/api/agent-keys", json={"name": "내부 분석", "grades": ["O", "S1", "S2"], "tools": ["search_datasets"],
-                                                  "daily_limit": 3}).json()["key"]
+    kb = client.post("/api/agent-keys", json={"name": "내부 분석", "grades": ["O", "S1", "S2"], "tools": ["search_datasets"], "daily_limit": 3}).json()
+    k_both, kb_id = kb["key"], kb["id"]
 
     # 키 없이 · 틀린 키 · 일반 로그인 토큰은 401
     assert client.post("/api/mcp", json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
@@ -697,14 +697,31 @@ def test_13_mcp_agent_access(client):
     assert ai["terms"]["ai_redistribution"]["code"] == "prohibited" and ai["terms"]["ai_bulk_access"]["status"] == "미정"
     assert "재식별" in ai["conditions"]
 
-    # O·S 키 (검색 도구만, 하루 3건): C 는 어떤 키로도 안 보인다
+    # O·S1·S2 키 (검색 도구만, 하루 3건): S2 는 키 등급만으로 열리지 않고 발행본 건별 승인이 있어야 한다 (3.6.1 S2 사전 승인)
+    err, out = _tool(client, k_both, "search_datasets")
+    assert not err and {x["resource_id"] for x in out["results"]} == {"DST-000001"}, "승인 전에는 S2 가 보이지 않는다"
+    gl = client.get(f"/api/agent-keys/{kb_id}/grants").json()
+    assert gl["s2_allowed"] and any(c["resource_id"] == "DST-000002" for c in gl["candidates"])
+    assert client.post(f"/api/agent-keys/{kb_id}/grants", json={"resource_id": "DST-000002"}).status_code == 422, "승인 근거 필수"
+    assert client.post(f"/api/agent-keys/{kb_id}/grants", json={"resource_id": "DST-000001", "note": "O 등급"}).status_code == 422, "S2 에만 필요"
+    r = client.post(f"/api/agent-keys/{kb_id}/grants", json={"resource_id": "DST-000002", "note": "교통안전공단 협약 2026-07, 사고 원인 분석 목적", "expires_days": 30})
+    assert r.status_code == 200 and r.json()["state"] == "active", r.text
+    grant_id = r.json()["id"]
+    # 승인은 S2 등급이 없는 키에는 줄 수 없다
+    assert client.post(f"/api/agent-keys/{kid}/grants", json={"resource_id": "DST-000002", "note": "x" * 10}).status_code == 409
     err, out = _tool(client, k_both, "search_datasets")
     assert not err and {x["resource_id"] for x in out["results"]} == {"DST-000001", "DST-000002"}
+    assert next(k for k in client.get("/api/agent-keys").json() if k["id"] == kb_id)["s2_grants"] == 1
     err, msg = _tool(client, k_both, "get_dataset", resource_id="DST-000002")
     assert err and "get_dataset 도구를 쓸 수 없습니다" in msg
-    _tool(client, k_both, "search_datasets")
     err, msg = _tool(client, k_both, "search_datasets")
     assert err and "하루 호출 상한" in msg
+    # 승인 회수 → 다시 안 보인다 (상한 때문에 visible 로 확인)
+    assert client.post(f"/api/agent-keys/{kb_id}/grants/{grant_id}/revoke").json()["state"] == "revoked"
+    with SessionLocal() as db:
+        from app.models import AgentKey as _AK, CatalogEntry as _CE
+        from app.services import agent as _agent
+        assert not _agent.visible(db.query(_CE).filter_by(resource_id="DST-000002").one(), db.get(_AK, kb_id))
 
     # 이력: 거부 포함 모두 남는다
     calls = client.get("/api/agent-calls", params={"key_id": kid}).json()
@@ -725,7 +742,7 @@ def test_13_mcp_agent_access(client):
     assert p10["status"] == "pending", p10
     rows = {d["name"]: d["detail"] for d in p10["datasets"]}
     assert any("MCP 로 제공 중 — DST-000001" in v and "접근 가능 키 2개" in v and "AI 이용조건 3/5항목" in v for v in rows.values()), rows
-    assert len(p10["datasets"]) == 2, "C 등급 스트림은 에이전트에게 열리지 않는다"
+    assert len(p10["datasets"]) == 1, "C 등급 스트림과 승인이 회수된 S2 데이터셋은 에이전트에게 열려 있지 않다"
 
     # 폐기한 키는 바로 막힌다 · 폐기는 prov:Activity 로 남는다
     assert client.post(f"/api/agent-keys/{kid}/revoke").json()["state"] == "revoked"
@@ -1152,7 +1169,7 @@ def test_18_quality_followups(client, monkeypatch):
     from app import mcp_server
     from app.models import AgentKey, CatalogEntry
     with SessionLocal() as db:
-        e = db.query(CatalogEntry).filter(CatalogEntry.resource_id.like("DST-%")).order_by(CatalogEntry.id.desc()).first()
+        e = db.query(CatalogEntry).filter_by(resource_id="DST-000001").first()
         if e is not None:
             key = AgentKey(name="t", key_hash="x", grades=["O", "S1", "S2", "C"], tools=list(mcp_server.IMPLS), daily_limit=100, created_by=None)
             from app.services.agent import CallRecord
@@ -1257,15 +1274,17 @@ def test_19_n2sf_grading(client, monkeypatch):
         if e is not None:
             k_o = AgentKey(name="o", key_hash="h1", grades=["O"], tools=[], daily_limit=10)
             k_s = AgentKey(name="s", key_hash="h2", grades=["O", "S1", "S2"], tools=[], daily_limit=10)
-            e.facets = {**(e.facets or {}), "n2sf": "S2", "meta_visibility": "listing"}
+            e.facets = {**(e.facets or {}), "n2sf": "S1", "meta_visibility": "listing"}
             assert agent_svc.listable(e, k_o) and not agent_svc.visible(e, k_o)
             assert agent_svc.listable(e, k_s) and not agent_svc.visible(e, k_s), "listing 은 누구에게도 상세를 열지 않는다"
             e.facets = {**e.facets, "meta_visibility": "detail"}
             assert not agent_svc.listable(e, k_o) and agent_svc.visible(e, k_s)
+            e.facets = {**e.facets, "n2sf": "S2"}
+            assert not agent_svc.visible(e, k_s), "S2 는 키 등급만으로는 열리지 않는다 (건별 승인 필요)"
             e.facets = {**e.facets, "meta_visibility": "internal"}
             assert not agent_svc.listable(e, k_s)
-            # 세분화 전 키(S) 는 S1 · S2 를 모두 본다
-            e.facets = {**e.facets, "meta_visibility": "detail", "n2sf": "S"}
+            # 세분화 전 키(S) 는 S1 을 본다 (S 발행본은 S2 로 취급되어 건별 승인 대상)
+            e.facets = {**e.facets, "meta_visibility": "detail", "n2sf": "S1"}
             assert agent_svc.visible(e, AgentKey(name="l", key_hash="h3", grades=["O", "S"], tools=[], daily_limit=10))
             db.rollback()
     # 키 발급에 S 는 더 이상 쓸 수 없고 S1 · S2 를 쓴다
@@ -1364,3 +1383,27 @@ def test_20_n2sf_columns_combo_org(client):
     assert client.put(f"/api/datasets/{did}/dictionary", json={"entries": [{"table": col["table"], "column": col["column"], "personal_data": "", "clear_deid": True}]}).status_code == 200
     with SessionLocal() as db:
         assert grading.column_items(db.get(ProcessDataset, did)) == {}
+
+
+# ------------------------------------------------------------------ v0.15: AI 이용조건 등급별 기본값
+def test_21_ai_term_defaults(client):
+    pid, did = S["pid"], S["d_road"]
+    assert client.post(f"/api/processes/{pid}/reopen").status_code in (200, 409)
+    assert client.post(f"/api/datasets/{did}/classification/unconfirm").status_code in (200, 409)
+    base = client.get(f"/api/datasets/{did}").json()["classification"]
+    body = {k: base[k] for k in ("F1", "F2", "F3", "F4", "F5", "F6", "K") if k in base}
+    # 이용조건을 비우고 C 로 정하면 5항목 전부 불허 기본값, 담당자가 이미 고른 항목은 그대로
+    assert client.patch(f"/api/datasets/{did}/meta", json={"values": {"ai_training": None, "ai_combination": "permitted", "ai_automated_access": None, "ai_bulk_access": None, "ai_redistribution": None}}).status_code == 200
+    r = client.put(f"/api/datasets/{did}/classification", json={**body, "N2SF": "N2SF-C", "N2SF_BASIS": {"personal_data": "none", "reidentification": "low", "legal": "statutory"}})
+    assert r.status_code == 200, r.text
+    meta = r.json()["meta"]
+    assert meta["ai_training"] == "prohibited" and meta["ai_bulk_access"] == "prohibited" and meta["ai_combination"] == "permitted"
+    assert meta["_ai_terms_defaulted"]["grade"] == "C" and "ai_training" in meta["_ai_terms_defaulted"]["fields"] and "ai_combination" not in meta["_ai_terms_defaulted"]["fields"]
+    acts = [a["type"] for a in client.get("/api/activities").json()]
+    assert "ai_terms_default" in acts
+    # 같은 등급으로 다시 저장하면 다시 채우지 않는다 (등급이 바뀔 때만)
+    assert client.patch(f"/api/datasets/{did}/meta", json={"values": {"ai_bulk_access": None}}).status_code == 200
+    r = client.put(f"/api/datasets/{did}/classification", json={**body, "N2SF": "N2SF-C", "N2SF_BASIS": {"personal_data": "none", "reidentification": "low", "legal": "statutory"}})
+    assert r.json()["meta"].get("ai_bulk_access") is None
+    # 원복
+    assert client.put(f"/api/datasets/{did}/classification", json={**body, "N2SF": base.get("N2SF", "N2SF-O")}).status_code == 200

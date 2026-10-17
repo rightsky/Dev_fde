@@ -172,6 +172,9 @@ export const api = {
   // 원천
   assets: (params?: { kind?: string; q?: string }) => get<T.Asset[]>("/assets", params),
   asset: (id: number) => get<T.Asset>(`/assets/${id}`),
+  grants: (keyId: number) => get<{ items: T.AgentGrant[]; candidates: { resource_id: string; title: string | null; publisher: string | null }[]; s2_allowed: boolean }>(`/agent-keys/${keyId}/grants`),
+  createGrant: (keyId: number, body: { resource_id: string; note: string; expires_days: number | null }) => post<T.AgentGrant>(`/agent-keys/${keyId}/grants`, body),
+  revokeGrant: (keyId: number, gid: number) => post<T.AgentGrant>(`/agent-keys/${keyId}/grants/${gid}/revoke`),
   setComboGrade: (pid: number, body: { grade: string | null; reason?: string }) => put<T.ProcessDetail>(`/processes/${pid}/combo-grade`, body),
   orgGrades: () => get<{ items: T.OrgGradeEntry[]; total: number; matched: number; unmatched: number }>("/org-grades"),
   importOrgGrades: (file: File) => {

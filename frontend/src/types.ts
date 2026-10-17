@@ -870,7 +870,21 @@ export interface AgentKey {
   revoked_at: string | null;
   last_used_at: string | null;
   stats_30d: { ok: number; denied: number; error: number };
+  /** 유효한 S2 건별 승인 수 */
+  s2_grants?: number;
   key?: string; // 발급 응답에만 있다
+}
+export interface AgentGrant {
+  id: number;
+  key_id: number;
+  resource_id: string;
+  title: string | null;
+  note: string | null;
+  granted_by: string;
+  granted_at: string;
+  expires_at: string | null;
+  revoked_at: string | null;
+  state: "active" | "expired" | "revoked";
 }
 export interface AgentCall {
   id: number;
