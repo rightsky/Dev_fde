@@ -206,6 +206,7 @@ export const api = {
     endpoint_url?: string;
     timezone?: string;
     fields: { name: string; type: string }[];
+    sample_asset_id?: number | null;
   }) => post<T.Asset>("/assets/streams", body),
   updateAsset: (id: number, body: { name?: string; description?: string; org_id?: number | null }) => patch<T.Asset>(`/assets/${id}`, body),
   deleteAsset: (id: number, force = false) => del<{ ok: boolean; force: boolean; detached_processes: string[] }>(`/assets/${id}${force ? "?force=true" : ""}`),

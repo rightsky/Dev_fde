@@ -1,5 +1,5 @@
 // 원천(Asset) 관련 공용 부품: 업로드, 스트림 등록, 프로파일 보기. STEP 1 과 데이터 패브릭 관리 화면이 함께 쓴다.
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import { useAuth, useReference } from "../auth";
@@ -26,7 +26,8 @@ export function UploadZone({ onUploaded, disabled }: { onUploaded: (created: Ass
       setRejected(r.rejected);
       await qc.invalidateQueries({ queryKey: ["assets"] });
       if (r.created.length) {
-        toast.ok(`업로드 ${r.created.length}건 — 프로파일 완료`);
+        const streams = r.created.filter((a) => a.kind === "stream").length;
+        toast.ok(streams ? `업로드 ${r.created.length - streams}건 · 스키마 파일로 스트림 등록 ${streams}건` : `업로드 ${r.created.length}건 — 프로파일 완료`);
         onUploaded(r.created);
       }
     } catch (e) {
@@ -110,20 +111,71 @@ const STREAM_EXAMPLES: { label: string; name: string; description: string; resol
     fields: [{ name: "collected_at", type: "datetime" }, { name: "vds_id", type: "string" }, { name: "link_id", type: "string" }, { name: "volume", type: "integer" }, { name: "avg_speed", type: "number" }] },
 ];
 
-/** 스트림 등록. 스트림은 값을 읽지 않고 메타데이터(스키마·시간 규격)만 등록한다. */
-export function StreamModal({ onClose, onCreated }: { onClose: () => void; onCreated: (a: Asset) => void }) {
+/** 표본 파일(업로드한 표)의 프로파일 컬럼 → 스트림 필드 */
+function fieldsFromAsset(a: Asset): { name: string; type: string }[] {
+  const cols = a.profile?.tables?.[0]?.columns || [];
+  return cols.map((c) => ({ name: c.name, type: FIELD_TYPES.includes(c.type) ? c.type : "string" }));
+}
+
+/** 스트림 등록. 스트림은 값을 읽지 않고 메타데이터(스키마·시간 규격)만 등록한다.
+ *  세 가지 입구: 직접 입력 · 표본 파일(업로드한 JSON Lines · CSV)에서 가져오기 · 스키마 파일(*.schema.json) 불러오기 */
+export function StreamModal({ onClose, onCreated, sampleAsset }: { onClose: () => void; onCreated: (a: Asset) => void; sampleAsset?: Asset | null }) {
   const qc = useQueryClient();
   const toast = useToast();
   const orgs = useQuery({ queryKey: ["orgs"], queryFn: api.orgs });
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [orgId, setOrgId] = useState<string>("");
+  const datasets = useQuery({ queryKey: ["assets", { kind: "dataset" }], queryFn: () => api.assets({ kind: "dataset" }) });
+  const [name, setName] = useState(sampleAsset ? sampleAsset.name.replace(/[_\s]+/g, ".") : "");
+  const [description, setDescription] = useState(sampleAsset?.description || "");
+  const [orgId, setOrgId] = useState<string>(sampleAsset?.org ? String(sampleAsset.org.id) : "");
   const [resolution, setResolution] = useState("");
   const [eventTime, setEventTime] = useState("");
   const [endpoint, setEndpoint] = useState("");
   const [timezone, setTimezone] = useState("Asia/Seoul");
   const [fields, setFields] = useState<{ name: string; type: string }[]>([{ name: "", type: "datetime" }]);
+  const [sampleId, setSampleId] = useState<string>(sampleAsset ? String(sampleAsset.id) : "");
   const [busy, setBusy] = useState(false);
+  const schemaFile = useRef<HTMLInputElement>(null);
+
+  /** 표본 파일을 고르면 상세 프로파일을 받아 필드 · event-time 을 채운다 */
+  const useSample = async (id: string, quiet = false) => {
+    setSampleId(id);
+    if (!id) return;
+    try {
+      const a = await api.asset(Number(id));
+      const fs = fieldsFromAsset(a);
+      if (fs.length) {
+        setFields(fs);
+        setEventTime(fs.find((f) => f.type === "datetime")?.name || "");
+      }
+      if (!name.trim()) setName(a.name.replace(/[_\s]+/g, "."));
+      if (!description.trim() && a.description) setDescription(a.description);
+      if (!orgId && a.org) setOrgId(String(a.org.id));
+      if (!quiet) toast.ok(`표본 「${a.name}」 의 컬럼 ${fs.length}개를 필드로 가져왔습니다`);
+    } catch (e) {
+      toast.error(e);
+    }
+  };
+  useEffect(() => {
+    if (sampleAsset) void useSample(String(sampleAsset.id), true);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** *.schema.json (스튜디오 스키마 파일) 을 브라우저에서 읽어 양식을 채운다 (서버로는 보내지 않음) */
+  const loadSchemaFile = async (file: File) => {
+    try {
+      const doc = JSON.parse(await file.text());
+      if (!doc || !Array.isArray(doc.fields)) throw new Error("fields 배열이 없는 파일입니다");
+      setName(String(doc.name || name));
+      setDescription(String(doc.description || doc.title || description));
+      setResolution(String(doc.temporal_resolution || ""));
+      setEventTime(String(doc.event_time_column || ""));
+      setEndpoint(String(doc.endpoint_url || ""));
+      if (doc.timezone) setTimezone(String(doc.timezone));
+      setFields(doc.fields.filter((f: { name?: string }) => f && f.name).map((f: { name: string; type?: string }) => ({ name: String(f.name), type: FIELD_TYPES.includes(String(f.type)) ? String(f.type) : "string" })));
+      toast.ok(`스키마 파일에서 필드 ${doc.fields.length}개를 불러왔습니다`);
+    } catch (e) {
+      toast.error(e);
+    }
+  };
 
   const save = async () => {
     setBusy(true);
@@ -137,6 +189,7 @@ export function StreamModal({ onClose, onCreated }: { onClose: () => void; onCre
         endpoint_url: endpoint.trim() || undefined,
         timezone: timezone.trim() || undefined,
         fields: fields.filter((f) => f.name.trim()),
+        sample_asset_id: sampleId ? Number(sampleId) : null,
       });
       await qc.invalidateQueries({ queryKey: ["assets"] });
       toast.ok(`스트림 등록 — ${a.name}`);
@@ -164,9 +217,28 @@ export function StreamModal({ onClose, onCreated }: { onClose: () => void; onCre
         </>
       }
     >
-      <p className="small muted mb-8">
-        실시간 스트림은 데이터 본체를 올리지 않습니다. <b>이름만 있으면 등록</b>되고, 나머지는 나중에 STEP 3 에서 채워도 됩니다. 스키마 필드 이름에서 연계키 후보를 계산하니 필드는 적어 두는 게 좋습니다.
-      </p>
+      <Banner tone="info">
+        <b>파일 업로드와 스트림 등록은 다른 일입니다.</b> 업로드한 .jsonl · .csv 는 스트림의 <b>표본(덤프)</b>이고, 스트림 등록은 계속 흘러드는 <b>서비스(dcat:DataService) 선언</b>입니다.
+        표본을 올렸다면 아래 「표본 파일」에서 고르세요 — 컬럼이 필드로 들어오고 둘이 연결됩니다. <b>이름만 있으면 등록</b>되고 나머지는 STEP 3 에서 채워도 됩니다.
+      </Banner>
+      <div className="row wrap gap-4 mt-12 mb-8" style={{ alignItems: "center" }}>
+        <Field label="표본 파일 (업로드한 JSON Lines · CSV)" hint="고르면 컬럼을 필드로 가져오고, 스트림과 표본이 연결됩니다" style={{ minWidth: 340 }}>
+          <select className="select" value={sampleId} onChange={(e) => void useSample(e.target.value)}>
+            <option value="">— 표본 없이 직접 입력 —</option>
+            {(datasets.data || []).filter((a) => a.source !== "dbschema").map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name} ({a.ext || "파일"} · {a.column_count}컬럼)
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="스키마 파일" hint="*.schema.json 을 읽어 양식을 채웁니다 (서버 전송 없음)">
+          <div>
+            <input ref={schemaFile} type="file" accept=".json,application/json" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) void loadSchemaFile(f); e.target.value = ""; }} />
+            <Button size="sm" onClick={() => schemaFile.current?.click()}>스키마 파일 불러오기</Button>
+          </div>
+        </Field>
+      </div>
       <div className="row wrap gap-4 mb-12" style={{ alignItems: "center" }}>
         <span className="small dim">예시로 채우기:</span>
         {STREAM_EXAMPLES.map((ex) => (

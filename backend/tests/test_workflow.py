@@ -1732,3 +1732,37 @@ def test_27_jsonl_upload(client):
     assert cols["plate"].get("pii") and cols["plate"]["samples"] == [], "번호판은 개인정보 의심 — 예시값 저장 안 함"
     assert "K5" in a["keys"] and "K7" in a["keys"], "링크 ID · 시각이 연계키 후보"
     assert client.delete(f"/api/assets/{a['id']}").status_code == 200
+
+
+def test_28_stream_from_sample_and_schema_file(client):
+    """스트림 등록 입구 정리: 표본 파일에서 필드 가져오기(sample_asset_id) · 스키마 파일(*.schema.json) 업로드는 스트림으로 등록."""
+    import json
+
+    rows = ['{"obs_time":"2026-10-16T17:41:00+09:00","station_id":"AWS-401","temp_c":30.0,"rain_mm_h":12.0}',
+            '{"obs_time":"2026-10-16T17:42:00+09:00","station_id":"AWS-401","temp_c":30.1,"rain_mm_h":11.5}']
+    r = client.post("/api/assets/upload", files=[("files", ("kma_aws_obs_v1.jsonl", ("\n".join(rows) + "\n").encode(), "application/x-ndjson"))])
+    sample = r.json()["created"][0]
+    # 표본에서: 필드를 비우면 표본 컬럼으로, event-time 은 첫 datetime
+    r = client.post("/api/assets/streams", json={"name": "kma.aws.obs.v1", "temporal_resolution": "PT1M", "fields": [], "sample_asset_id": sample["id"]})
+    assert r.status_code == 200, r.text
+    st = r.json()
+    assert st["kind"] == "stream" and [f["name"] for f in st["stream"]["fields"]] == ["obs_time", "station_id", "temp_c", "rain_mm_h"]
+    assert st["stream"]["event_time_column"] == "obs_time" and st["stream"]["sample_asset_id"] == sample["id"] and st["stream"]["sample_filename"] == "kma_aws_obs_v1.jsonl"
+    assert "K7" in st["keys"]
+    assert client.post("/api/assets/streams", json={"name": "x.y", "fields": [], "sample_asset_id": 999999}).status_code == 422
+    # 스키마 파일 업로드 → 표가 아니라 스트림으로
+    spec = {"name": "vds.traffic.volume.v1", "title": "VDS 5분 집계", "temporal_resolution": "PT5M", "event_time_column": "collected_at", "endpoint_url": "kafka://b:9092/vds",
+            "fields": [{"name": "collected_at", "type": "datetime"}, {"name": "link_id", "type": "string"}, {"name": "volume", "type": "integer"}]}
+    r = client.post("/api/assets/upload", files=[("files", ("vds_traffic_volume_v1.schema.json", json.dumps(spec, ensure_ascii=False).encode(), "application/json"))])
+    assert r.status_code == 200, r.text
+    created = r.json()["created"]
+    assert len(created) == 1 and created[0]["kind"] == "stream" and created[0]["name"] == "vds.traffic.volume.v1"
+    assert created[0]["stream"]["registered_via"] == "schema_file" and created[0]["stream"]["temporal_resolution"] == "PT5M" and created[0]["profile_status"] == "stream"
+    # 같은 이름을 다시 올리면 거부 사유에 설명이 붙는다
+    r = client.post("/api/assets/upload", files=[("files", ("vds_traffic_volume_v1.schema.json", json.dumps(spec).encode(), "application/json"))])
+    assert r.json()["created"] == [] and "스트림 스키마 파일" in r.json()["rejected"][0]["reason"]
+    # 일반 JSON 표(레코드 배열)는 여전히 표로
+    r = client.post("/api/assets/upload", files=[("files", ("plain.json", json.dumps([{"a": 1, "b": "x"}, {"a": 2, "b": "y"}]).encode(), "application/json"))])
+    assert r.json()["created"][0]["kind"] == "dataset" and r.json()["created"][0]["row_count"] == 2
+    for a in (sample, st, created[0], r.json()["created"][0]):
+        client.delete(f"/api/assets/{a['id']}")

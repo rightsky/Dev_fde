@@ -294,6 +294,14 @@ async def upload_assets(files: list[UploadFile] = File(...), db: Session = Depen
         if not data:
             rejected.append({"filename": filename, "reason": "빈 파일입니다"})
             continue
+        if ext == "json" and (filename.endswith(".schema.json") or len(data) < 64 * 1024):
+            spec = _parse_stream_schema(data)
+            if spec is not None:  # 스트림 스키마 파일은 표로 프로파일하지 않고 스트림(dcat:DataService)으로 등록한다
+                try:
+                    created.append(_create_stream(db, spec, user, via="schema_file"))
+                except HTTPException as exc:
+                    rejected.append({"filename": filename, "reason": f"스트림 스키마 파일로 인식했지만 등록 실패 — {exc.detail}"})
+                continue
         key, digest = await run_in_threadpool(storage.save, data)
         res = await run_in_threadpool(profiling.profile_file, storage.path_of(key), filename, s.profile_max_rows)  # 프로파일링이 다른 요청을 막지 않게
         name = filename.rsplit(".", 1)[0] if "." in filename else filename
@@ -304,9 +312,10 @@ async def upload_assets(files: list[UploadFile] = File(...), db: Session = Depen
         db.add(asset)
         db.flush()
         created.append(asset)
-    if created:
-        activity.log(db, "upload", f"파일 업로드 {len(created)}건 — " + ", ".join(a.filename or a.name for a in created[:5]),
-                     user=user, payload={"asset_ids": [a.id for a in created]})
+    uploaded = [a for a in created if a.kind != "stream"]
+    if uploaded:
+        activity.log(db, "upload", f"파일 업로드 {len(uploaded)}건 — " + ", ".join(a.filename or a.name for a in uploaded[:5]),
+                     user=user, payload={"asset_ids": [a.id for a in uploaded]})
     db.commit()
     return {"created": [asset_out(a) for a in created], "rejected": rejected}
 
@@ -325,10 +334,11 @@ class StreamIn(BaseModel):
     endpoint_url: str | None = None
     timezone: str | None = "Asia/Seoul"
     fields: list[StreamField] = []
+    sample_asset_id: int | None = None  # 이 스트림의 표본 덤프(업로드한 JSON Lines · CSV). 필드를 비우면 표본 컬럼으로 채운다
 
 
-@router.post("/assets/streams")
-def register_stream(body: StreamIn, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+def _create_stream(db: Session, body: StreamIn, user: User, *, via: str = "form") -> Asset:
+    """스트림(dcat:DataService) 선언을 원천 자산으로 만든다. 표본 파일(sample_asset_id)이 있고 필드를 비웠으면 표본의 컬럼으로 채운다."""
     name = body.name.strip()
     if db.scalar(select(Asset).where(Asset.name == name, Asset.kind == "stream", Asset.deleted_at.is_(None))):
         raise HTTPException(409, "같은 이름의 스트림이 이미 등록되어 있습니다")
@@ -339,19 +349,53 @@ def register_stream(body: StreamIn, db: Session = Depends(get_db), user: User = 
     if body.endpoint_url and not re.match(r"^[a-z][a-z0-9+.-]*://\S+$", body.endpoint_url.strip(), re.I):
         raise HTTPException(422, "엔드포인트는 URL 형식이어야 합니다 (예: kafka://broker:9092/topic)")
     fields = [f.model_dump() for f in body.fields if f.name.strip()]
+    sample = None
+    if body.sample_asset_id is not None:
+        sample = db.get(Asset, body.sample_asset_id)
+        if sample is None or sample.deleted_at is not None or sample.kind != "dataset":
+            raise HTTPException(422, "표본 파일을 찾을 수 없습니다")
+        if not fields:
+            cols = ((sample.profile or {}).get("tables") or [{}])[0].get("columns", [])
+            fields = [{"name": c["name"], "type": c.get("type") or "string"} for c in cols]
+    event_time = (body.event_time_column or "").strip() or next((f["name"] for f in fields if f["type"] == "datetime"), None)
     res = profiling.profile_stream(fields)
     asset = Asset(name=name, kind="stream", source="stream", data_form="실시간 스트림", description=body.description,
-                  org_id=body.org_id, profile=res.profile, key_candidates=res.key_candidates, key_samples={},
-                  stream={"temporal_resolution": (body.temporal_resolution or "").strip() or None,
-                          "event_time_column": (body.event_time_column or "").strip() or None,
-                          "endpoint_url": (body.endpoint_url or "").strip() or None,
-                          "timezone": body.timezone, "fields": fields},
+                  org_id=body.org_id if body.org_id else (sample.org_id if sample else None), profile=res.profile, key_candidates=res.key_candidates, key_samples={},
+                  stream={"temporal_resolution": (body.temporal_resolution or "").strip() or None, "event_time_column": event_time,
+                          "endpoint_url": (body.endpoint_url or "").strip() or None, "timezone": body.timezone, "fields": fields,
+                          "sample_asset_id": sample.id if sample else None, "sample_filename": sample.filename if sample else None,
+                          "registered_via": via},
                   created_by=user.id)
     db.add(asset)
     db.flush()
-    activity.log(db, "stream_register", f"스트림 등록 — {name}", user=user, payload={"asset_id": asset.id})
+    activity.log(db, "stream_register", f"스트림 등록 — {name}" + (f" (표본: {sample.filename})" if sample else "") + (" (스키마 파일)" if via == "schema_file" else ""),
+                 user=user, payload={"asset_id": asset.id, "sample_asset_id": sample.id if sample else None, "via": via})
+    return asset
+
+
+@router.post("/assets/streams")
+def register_stream(body: StreamIn, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    asset = _create_stream(db, body, user)
     db.commit()
     return asset_out(asset, detail=True)
+
+
+def _parse_stream_schema(data: bytes) -> StreamIn | None:
+    """스튜디오 스트림 스키마 파일(*.schema.json: name + fields[{name,type}]) 이면 StreamIn 으로, 아니면 None."""
+    import json
+
+    try:
+        doc = json.loads(data.decode("utf-8-sig"))
+    except (UnicodeDecodeError, ValueError):
+        return None
+    if not isinstance(doc, dict) or not isinstance(doc.get("fields"), list) or not doc.get("name"):
+        return None
+    fields = [StreamField(name=str(f.get("name", "")).strip(), type=str(f.get("type") or "string")) for f in doc["fields"] if isinstance(f, dict) and f.get("name")]
+    if not fields:
+        return None
+    return StreamIn(name=str(doc["name"]), description=doc.get("description") or doc.get("title"), temporal_resolution=doc.get("temporal_resolution") or None,
+                    event_time_column=doc.get("event_time_column") or None, endpoint_url=doc.get("endpoint_url") or None,
+                    timezone=doc.get("timezone") or "Asia/Seoul", fields=fields)
 
 
 @router.get("/assets/{asset_id}")

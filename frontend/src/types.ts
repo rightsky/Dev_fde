@@ -222,6 +222,10 @@ export interface Asset {
     endpoint_url?: string | null;
     timezone?: string | null;
     fields?: { name: string; type: string }[];
+    /** 표본 덤프 파일(업로드한 JSON Lines · CSV) 과의 연결 */
+    sample_asset_id?: number | null;
+    sample_filename?: string | null;
+    registered_via?: "form" | "schema_file";
   };
   profile_status: Profile["status"] | null;
   profile_summary: string;
