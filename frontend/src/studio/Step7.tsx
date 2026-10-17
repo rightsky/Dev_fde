@@ -1,5 +1,5 @@
 // STEP 7 — 직렬화 · 발행 포맷 변환 + 파생 자가검증 + 카탈로그 발행
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, api, downloadFile, downloads } from "../api";
@@ -143,7 +143,7 @@ export function Step7() {
                   )
                 }
               >
-                <b>↺ 지난 결과입니다</b> — {latest.stale}. 열람은 되지만 발행·완료에는 쓸 수 없습니다.
+                <b>↺ 최신 결과가 아닙니다</b> — {latest.stale}. 열람은 되지만 발행·완료에는 쓸 수 없습니다.
               </Banner>
             )}
 
@@ -511,6 +511,11 @@ function PublishCard({ run, blocked }: { run: SerializationRun | null; blocked: 
   const pr = prQ.data;
   const [rejected, setRejected] = useState<string[]>([]);
   const [justPublished, setJustPublished] = useState<CatalogEntry[]>([]);
+  useEffect(() => {
+    if (justPublished.length === 0) return;
+    const t = setTimeout(() => setJustPublished([]), 60_000); // "방금 발행" 표시는 1분 뒤 보통 목록으로 합쳐진다
+    return () => clearTimeout(t);
+  }, [justPublished]);
   // 이 프로세스에서 발행되어 카탈로그에 게시 중인 항목
   const cat = useQuery({ queryKey: ["catalog", "process", pid], queryFn: () => api.catalog(), select: (d) => d.items.filter((e) => e.process_id === pid) });
 

@@ -16,6 +16,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..config import get_settings
 from ..models import Attestation, CatalogEntry, Process, ReviewRequest, SerializationRun, User, utcnow
 from . import activity, canonical, catalog, diagnosis, gates, serialize, validation
 
@@ -182,6 +183,8 @@ def approve(db: Session, rr: ReviewRequest, user: User, note: str | None, acknow
         raise ReviewError(422, "고위험 신호를 모두 확인해야 승인할 수 있습니다", "ACK_REQUIRED", {"missing": missing})
     note = (note or "").strip()
     self_ok = rr.requested_by == user.id
+    if self_ok and get_settings().review_self_approve == "deny":
+        raise ReviewError(403, "본인이 요청한 발행은 승인할 수 없습니다 (FDE_REVIEW_SELF_APPROVE=deny) — 다른 관리자에게 넘기세요", "SELF_APPROVAL_DENIED")
     if self_ok and rr.risk_level == "high" and len(note) < 10:
         raise ReviewError(422, "본인이 요청한 고위험 발행을 직접 승인하려면 사유를 10자 이상 적으세요", "SELF_APPROVAL_NOTE")
     p = db.get(Process, rr.process_id)

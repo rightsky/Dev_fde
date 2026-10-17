@@ -213,7 +213,8 @@ export const api = {
 
   // STEP 3
   dataset: (did: number) => get<T.Dataset>(`/datasets/${did}`),
-  patchMeta: (did: number, body: { values?: Record<string, unknown>; approve?: string[]; unapprove?: string[]; extra_classes?: string[] }) =>
+  patchMeta: (did: number, body: { values?: Record<string, unknown>; approve?: string[]; unapprove?: string[]; extra_classes?: string[];
+                                   ai_assisted?: Record<string, { model: string; drafted_at: string; draft_text: string | string[] }> }) =>
     patch<T.Dataset>(`/datasets/${did}/meta`, body),
   confirmMeta: (did: number) => post<T.Dataset>(`/datasets/${did}/meta/confirm`),
   unconfirmMeta: (did: number) => post<T.Dataset>(`/datasets/${did}/meta/unconfirm`),

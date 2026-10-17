@@ -60,6 +60,8 @@ def current_user(
     user = db.get(User, uid)
     if user is None or not user.active:
         raise unauthorized
+    if user.password_changed_at is not None and int(data.get("iat", 0)) < int(user.password_changed_at.timestamp()):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "비밀번호가 바뀌어 다시 로그인해야 합니다")
     return user
 
 

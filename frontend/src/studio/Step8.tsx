@@ -158,7 +158,7 @@ function Diagnosis({ data }: { data: DiagLatest }) {
 
       {run && stale && (
         <Banner tone="warn" right={<div className="row">{rerunButton}<RerunButton variant="dark" /></div>}>
-          <b>⚠ 지난 결과입니다</b> — {stale}. 열람은 되지만 발행·완료에는 쓸 수 없습니다. 상류도 바뀌었으면 오른쪽 [검증 → 변환 → 진단 다시 실행] 을 쓰세요.
+          <b>⚠ 최신 결과가 아닙니다</b> — {stale}. 열람은 되지만 발행·완료에는 쓸 수 없습니다. 상류도 바뀌었으면 오른쪽 [검증 → 변환 → 진단 다시 실행] 을 쓰세요.
         </Banner>
       )}
       {run && run.ruleset_version !== ruleset.version && (

@@ -5,6 +5,7 @@ import re
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -50,8 +51,9 @@ def change_password(body: PasswordIn, user: User = Depends(current_user), db: Se
     if not verify_password(body.current_password, user.password_hash):
         raise HTTPException(400, "현재 비밀번호가 올바르지 않습니다")
     user.password_hash = hash_password(body.new_password)
+    user.password_changed_at = utcnow()  # 이전 토큰 무효. 이 요청의 토큰도 포함되므로 화면은 다시 로그인시킨다
     db.commit()
-    return {"ok": True}
+    return {"ok": True, "relogin": True}
 
 
 # ------------------------------------------------------------------ 참조 데이터
@@ -216,6 +218,7 @@ def update_user(user_id: int, body: UserPatch, db: Session = Depends(get_db), ad
             setattr(u, f, v)
     if body.password:
         u.password_hash = hash_password(body.password)
+        u.password_changed_at = utcnow()
     db.commit()
     return user_out(u)
 
@@ -265,7 +268,7 @@ def list_assets(kind: str | None = None, q: str | None = None, db: Session = Dep
     if kind in ("dataset", "stream"):
         stmt = stmt.where(Asset.kind == kind)
     if q:
-        stmt = stmt.where(func.lower(Asset.name).contains(q.lower()))
+        stmt = stmt.where(func.lower(Asset.name).contains(q.lower(), autoescape=True))
     return [asset_out(a) for a in db.scalars(stmt)]
 
 
@@ -291,8 +294,8 @@ async def upload_assets(files: list[UploadFile] = File(...), db: Session = Depen
         if not data:
             rejected.append({"filename": filename, "reason": "빈 파일입니다"})
             continue
-        key, digest = storage.save(data)
-        res = profiling.profile_file(storage.path_of(key), filename, s.profile_max_rows)
+        key, digest = await run_in_threadpool(storage.save, data)
+        res = await run_in_threadpool(profiling.profile_file, storage.path_of(key), filename, s.profile_max_rows)  # 프로파일링이 다른 요청을 막지 않게
         name = filename.rsplit(".", 1)[0] if "." in filename else filename
         asset = Asset(name=name, kind="dataset", source="upload", filename=filename, ext=ext, size=len(data),
                       sha256=digest, media_type=res.media_type, storage_key=key, data_form=res.data_form,

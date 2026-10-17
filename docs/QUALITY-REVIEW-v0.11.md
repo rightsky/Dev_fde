@@ -35,7 +35,29 @@
 - "외부 AI 전송 제외" 변경 뒤 프로세스 · 카탈로그 질의 무효화(화면이 옛 상태로 남던 문제)
 - `ConfirmButton` 에 `title` 전달, 없던 `.gap-8` 클래스 추가
 
-## 보통 · 낮음 (남겨 둔 것, 우선순위 순)
+## v0.12 에서 마저 반영한 것 (남겨 둔 목록 처리 결과)
+
+| 항목 | 조치 |
+|---|---|
+| AI 호출 속도 제한 | 사용자별 분당(`FDE_AI_RATE_PER_MINUTE`, 기본 6) · 일일(`FDE_AI_RATE_PER_DAY`, 기본 200) 상한. 초안 제안 + 시뮬레이션 합산, 넘으면 429 + Retry-After |
+| 자기 승인 정책 | `FDE_REVIEW_SELF_APPROVE=note|deny`. deny 면 본인 요청 승인 403, 화면에 사유 표시 |
+| 대용량 업로드가 이벤트 루프를 막음 | 저장·프로파일링을 스레드풀에서 실행 |
+| 비밀번호 변경 뒤 기존 토큰 유효 | `password_changed_at`(이관 0005) 이전 발급 토큰 401, 화면은 변경 직후 재로그인 |
+| MCP 401 시도 미기록 | "(인증 실패)" 호출 기록 (IP · 키 앞 8자 · 키 유무) |
+| 표준 세부 | `dcterms:spatial` → `dcterms:Location`, `dcterms:conformsTo` 이름 → `dcterms:Standard`, 언어 이름 → `dcterms:LinguisticSystem`, `dcterms:format` → `dcterms:MediaTypeOrExtent`, 공공누리 공식 URL(`skos:exactMatch`) + Croissant `license` URL/CreativeWork, Croissant `contentUrl` 절대 IRI, CSVW `name` 퍼센트 인코딩 + `titles` 원문 |
+| 목록 N+1 | 프로세스 목록에 selectinload (데이터셋·자산·관계) |
+| 일일 상한 UTC 기준 | `FDE_TIMEZONE`(기본 Asia/Seoul) 자정 기준 |
+| 시뮬레이션 삭제 권한·로그 | 작성자 또는 관리자만, 활동 로그 `ai_simulate_delete` |
+| 휴지통 프로세스 담당자 확인(attest) | 409 |
+| 검색어 `%` `_` | autoescape |
+| C 등급·전송 제외 데이터셋 제목이 AI 문맥에 포함 | 조합 문맥에서 제외 |
+| 접근성 | Tabs 화살표·Home·End 이동과 roving tabindex, Modal 포커스 가둠·복귀 |
+| 용어 통일 | "최신 아님" 계열로 통일 (배너 "최신 결과가 아닙니다", 사이드바 "최신 아님 · 열람 가능") |
+| 기타 | `PATCH current_step` 응답이 캐시를 덮던 것 → current_step 만 합침, "방금 발행" 배지 1분 뒤 해제, MCP 연결 안내 빈 상태 |
+
+남은 것: SQLite 시퀀스 경쟁(개발용 DB 한정), UTCDateTime 정규화 재검토, `/api/docs` 공개 여부(운영 시 프록시에서 차단 권고), 전체 용어 사전 정리.
+
+## 보통 · 낮음 (v0.11 시점에 남겨 두었던 목록)
 
 1. **AI 호출 속도 제한 없음**: 초안 제안 · 시뮬레이션 엔드포인트에 사용자별 분당 상한이 없어 비용 폭주 가능. 관리자 설정값으로 두는 것을 권함.
 2. **자기 승인 정책**: 고위험 발행을 요청자 본인이 승인할 수 있음(사유 10자 + "자기 승인" 표기로 기록만 남김). 조직에 따라 금지 옵션이 필요.

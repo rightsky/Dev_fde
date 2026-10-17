@@ -104,7 +104,10 @@ export function StudioLayout() {
       const s = qs.toString();
       nav(`/studio/${pid}/step/${n}${s ? `?${s}` : ""}`);
       if (canWrite && detail.process.status === "active" && detail.process.current_step !== n) {
-        api.updateProcess(pid, { current_step: n }).then((d) => qc.setQueryData(["process", pid], d)).catch(() => undefined);
+        // 응답 전체로 캐시를 덮으면 그 사이 저장된 변경(메타데이터 등)이 옛 값으로 돌아갈 수 있어 current_step 만 합친다
+        api.updateProcess(pid, { current_step: n })
+          .then((d) => qc.setQueryData(["process", pid], (old: unknown) => (old && typeof old === "object" ? { ...(old as object), process: { ...(old as { process: object }).process, current_step: d.process.current_step } } : d)))
+          .catch(() => undefined);
       }
     },
     [nav, pid, toast, canWrite, qc],
@@ -169,13 +172,13 @@ export function StudioLayout() {
                 key={s.n}
                 className={cx("step-row", s.n === step && "current", g.done && "done", stale && "stale", !g.can_enter && "locked")}
                 onClick={() => go(s.n)}
-                title={!g.can_enter ? g.reason : stale ? `${staleOf[s.n] || ""} (지난 결과는 볼 수 있습니다)` : ""}
+                title={!g.can_enter ? g.reason : stale ? `${staleOf[s.n] || ""} (최신 아님 · 열람 가능)` : ""}
               >
                 <span className="step-dot">{!g.can_enter ? "🔒" : g.done ? "✓" : stale ? "!" : s.n}</span>
                 <span>
                   <div className="step-n">STEP {s.n}</div>
                   <div className="step-label">{s.label}</div>
-                  {(stale || g.progress) && <div className="step-progress">{stale ? "재실행 필요 · 열람 가능" : g.progress}</div>}
+                  {(stale || g.progress) && <div className="step-progress">{stale ? "최신 아님 · 열람 가능" : g.progress}</div>}
                 </span>
               </button>
             );

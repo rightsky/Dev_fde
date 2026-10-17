@@ -35,6 +35,18 @@ class Settings(BaseSettings):
     ai_model: str = "claude-opus-5-5"
     ai_max_tokens: int = 4000
     ai_timeout_seconds: int = 90
+    # 사용자 한 명이 외부 모델을 부를 수 있는 횟수 (초안 제안 + 시뮬레이션 합산). 0 이면 제한 없음.
+    ai_rate_per_minute: int = 6
+    ai_rate_per_day: int = 200
+    # AI 초안을 채택한 칸을 데이터 카드·카탈로그에 "AI 보조 작성"으로 표시할지 (정본 그래프의 이력은 항상 남는다)
+    ai_assist_notice: bool = True
+
+    # --- 발행 검수 ---
+    # note: 요청자 본인이 승인할 수 있되 사유 10자 이상 + '자기 승인' 기록 (기본). deny: 본인 승인 금지.
+    review_self_approve: str = "note"
+
+    # --- 시간대 --- 하루 호출 상한 · 일일 집계의 '하루' 기준
+    timezone: str = "Asia/Seoul"
 
     # --- 기타 ---
     cors_origins: str = ""

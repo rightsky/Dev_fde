@@ -26,7 +26,7 @@ def list_catalog(q: str | None = None, kind: str | None = None, theme: str | Non
     if kind in ("dataset", "stream"):
         stmt = stmt.where(CatalogEntry.kind == kind)
     for term in (q or "").lower().split():
-        stmt = stmt.where(CatalogEntry.search_text.contains(term))
+        stmt = stmt.where(CatalogEntry.search_text.contains(term, autoescape=True))
     rows = db.scalars(stmt).all()
     # 패싯 집계는 필터 적용 전 결과 기준으로 한다 (선택지를 좁히지 않기 위함)
     themes: dict[str, int] = {}

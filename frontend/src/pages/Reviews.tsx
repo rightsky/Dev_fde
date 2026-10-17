@@ -110,6 +110,7 @@ function Detail({ id }: { id: number }) {
         const allAcked = high.every((c) => checked.has(c));
         const self = r.requested_by_id === user.id;
         const needSelfNote = self && r.risk_level === "high" && note.trim().length < 10;
+        const selfDenied = self && r.self_approve_policy === "deny";
         const pending = r.status === "pending";
         return (
           <div className="col gap-12">
@@ -190,8 +191,8 @@ function Detail({ id }: { id: number }) {
                       <Button
                         variant="primary"
                         busy={busy === "approve"}
-                        disabled={!allAcked || needSelfNote || !!r.stale}
-                        title={r.stale ? r.stale : !allAcked ? "고위험 신호를 모두 확인하세요" : needSelfNote ? "자기 승인 사유를 10자 이상 적으세요" : undefined}
+                        disabled={!allAcked || needSelfNote || !!r.stale || selfDenied}
+                        title={selfDenied ? "본인이 요청한 발행은 승인할 수 없습니다 (기관 정책) — 다른 관리자에게 넘기세요" : r.stale ? r.stale : !allAcked ? "고위험 신호를 모두 확인하세요" : needSelfNote ? "자기 승인 사유를 10자 이상 적으세요" : undefined}
                         onClick={() =>
                           void act("approve", async () => {
                             const res = await api.approveReview(id, { note, acknowledged: [...checked] });
@@ -203,6 +204,7 @@ function Detail({ id }: { id: number }) {
                       </Button>
                     </div>
                     {!allAcked && <div className="small t-warn">확인하지 않은 고위험 신호 {high.filter((c) => !checked.has(c)).length}건</div>}
+                    {selfDenied && <div className="small t-warn">본인이 요청한 발행입니다 — 기관 정책(FDE_REVIEW_SELF_APPROVE=deny)에 따라 다른 관리자가 승인해야 합니다.</div>}
                   </div>
                 ) : (
                   <div className="small dim">승인 · 반려는 관리자가 합니다.</div>

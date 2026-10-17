@@ -68,6 +68,8 @@ def publish(db: Session, process: Process, user: User, vr: ValidationRun, sr: Se
             "ai_terms": rec.get("aiUsageTerms", {}),
             "ai_excluded": bool((pd.meta or {}).get("_ai_excluded")),  # 담당자의 외부 AI 전송 제외 표시 (MCP·시뮬레이션에서 숨김)
             "ai_conditions": rec.get("aiUsageConditions"),
+            "ai_assisted": [a["label"] for a in rec.get("aiAssisted", [])] if rec.get("aiAssistedNotice") else [],
+            "ai_act_overview": f"{rec['aiActOverview']['filled']}/{rec['aiActOverview']['total']}" if rec.get("aiActOverview") else None,
             "keys": rec.get("joinKeys", []),
             "keywords": rec.get("keywords", []),
             "media_type": (rec.get("distribution") or {}).get("mediaType"),

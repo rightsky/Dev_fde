@@ -79,7 +79,9 @@ def list_requests(status: str = "pending", limit: int = 100, db: Session = Depen
 
 @router.get("/review-requests/{rid}")
 def get_request(rid: int, db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
-    return review.out(db, _request(db, rid), check=True)
+    from ..config import get_settings
+
+    return {**review.out(db, _request(db, rid), check=True), "self_approve_policy": get_settings().review_self_approve}
 
 
 class ApproveIn(BaseModel):

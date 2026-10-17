@@ -19,6 +19,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..models import AgentCall, AgentKey, CatalogEntry, utcnow
+from . import ratelimit
 
 GRADES = ["O", "S"]  # 키에 줄 수 있는 등급. C(통제)는 에이전트 접근 대상이 아니다
 TOOLS = ["search_datasets", "get_dataset", "get_metadata", "get_schema", "get_data_card", "get_usage_terms"]
@@ -70,7 +71,7 @@ def visible(e: CatalogEntry, key: AgentKey) -> bool:
 
 
 def calls_today(db: Session, key: AgentKey) -> int:
-    start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    start = ratelimit.local_day_start()  # FDE_TIMEZONE 기준 자정 (기본 Asia/Seoul)
     return db.scalar(select(func.count(AgentCall.id)).where(AgentCall.key_id == key.id, AgentCall.at >= start)) or 0
 
 

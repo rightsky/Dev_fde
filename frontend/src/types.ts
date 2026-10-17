@@ -745,6 +745,10 @@ export interface CatalogEntry {
     /** AI 활용 이용조건 (3.4.5 표 39): 항목 이름 → permitted | conditional | prohibited. 없는 항목은 미정 */
     ai_terms?: Record<string, string>;
     ai_conditions?: string | null;
+    /** AI 초안을 채택해 담당자가 확정한 칸 이름들 (FDE_AI_ASSIST_NOTICE 가 켜져 있을 때만) */
+    ai_assisted?: string[];
+    /** AI 기본법 제34조 학습용데이터 개요 대응 작성률 "n/8" */
+    ai_act_overview?: string | null;
     keys?: { key: string; label: string; column?: string; table?: string }[];
     keywords?: string[];
     media_type?: string | null;
@@ -858,6 +862,8 @@ export interface ReviewAssessment {
   pii_checked: boolean;
 }
 export interface ReviewRequest {
+  /** 상세 조회에만 있음: note(본인 승인 가능, 사유 필수) | deny(본인 승인 금지) */
+  self_approve_policy?: "note" | "deny";
   id: number;
   process_id: number;
   process_name: string | null;

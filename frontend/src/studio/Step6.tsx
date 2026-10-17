@@ -123,7 +123,7 @@ export function Step6() {
                   </div>
                 }
               >
-                <b>↺ 지난 결과입니다</b> — {latest.stale}. 열람은 되지만 발행·완료에는 쓸 수 없습니다.
+                <b>↺ 최신 결과가 아닙니다</b> — {latest.stale}. 열람은 되지만 발행·완료에는 쓸 수 없습니다.
               </Banner>
             )}
 

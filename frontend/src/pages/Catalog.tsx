@@ -415,6 +415,23 @@ function EntryView({ e }: { e: CatalogEntry }) {
             <dd>
               <N2sfBadge grade={f.n2sf} />
             </dd>
+            {(f.ai_assisted?.length || f.ai_act_overview) && (
+              <>
+                <dt>AI 기본법</dt>
+                <dd>
+                  {f.ai_act_overview && (
+                    <span title="제34조제1항제2호 학습용데이터 개요로 인용할 수 있는 설명 요소의 작성 현황 (참고). 데이터 카드 '부가' 절에 항목별 근거가 있습니다">
+                      학습용데이터 개요 {f.ai_act_overview}
+                    </span>
+                  )}
+                  {f.ai_assisted && f.ai_assisted.length > 0 && (
+                    <div className="small muted" title="생성형 AI 초안을 담당자가 검토·확정한 칸 (제31조제2항 취지의 표시). 정본 그래프에 fde:aiAssisted 이력으로 남습니다">
+                      AI 보조 작성 · 담당자 확정: {f.ai_assisted.join(" · ")}
+                    </div>
+                  )}
+                </dd>
+              </>
+            )}
             <dt>형태 · 미디어타입</dt>
             <dd>
               {f.form || "—"}
