@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import { Link } from "react-router-dom";
 import { AssetProfileModal, StreamModal, UploadZone } from "../components/assets";
+import { TaxonomySetPicker } from "../components/taxsets";
 import { AssetKindBadge } from "../pages/Assets";
 import type { Asset, ComboSuggestion, Dataset, ProcessDetail } from "../types";
 import { Badge, Banner, Button, ConfirmButton, Empty, KeyPill, Meter, QueryState, cx, useToast } from "../ui";
@@ -211,6 +212,9 @@ export function Step1() {
             </Link>
           </div>
           {assetsQ.data && <p className="tiny muted mt-8">현재 파일 {counts.dataset} · DB 스키마 {counts.dbschema} · 스트림 {counts.stream}. 여기서 올리거나 등록한 원천은 이 프로세스 후보에 바로 들어갑니다.</p>}
+          <div className="mt-12" style={{ borderTop: "1px solid var(--line, #e5e7eb)", paddingTop: 10 }}>
+            <TaxonomySetPicker pid={pid} current={detail.taxonomy_set} disabled={!editable || detail.datasets.some((d) => !!d.class_confirmed_at)} onChanged={refresh} />
+          </div>
         </div>
       </div>
 

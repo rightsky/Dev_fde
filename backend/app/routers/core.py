@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..db import get_db
-from ..models import (Activity, Asset, MintRecord, Organization, ProcessDataset, Process, TaxonomyAxis, TaxonomyCode,
+from ..models import (Activity, Asset, MintRecord, Organization, ProcessDataset, Process, TaxonomyAxis, TaxonomyCode, TaxonomySet,
                       User, utcnow)
 from ..security import (create_token, current_user, hash_password, require_admin, require_writer, verify_password)
 from ..serializers import activity_out, asset_out, axis_out, mint_out, org_out, user_out
@@ -119,45 +119,197 @@ def update_org(org_id: int, body: OrgIn, db: Session = Depends(get_db), _: User 
 
 # ------------------------------------------------------------------ 분류체계
 @router.get("/taxonomy")
-def taxonomy(db: Session = Depends(get_db), _: User = Depends(current_user)) -> list[dict[str, Any]]:
-    return [axis_out(a) for a in db.scalars(select(TaxonomyAxis).order_by(TaxonomyAxis.position))]
+def taxonomy(set_id: int | None = None, process_id: int | None = None, db: Session = Depends(get_db), _: User = Depends(current_user)) -> list[dict[str, Any]]:
+    """축 · 코드 목록. set_id 또는 process_id 로 세트를 고르고, 없으면 기본 세트. F1~F6 은 그 세트 코드만, K · N2SF 는 공통."""
+    from ..services import taxsets
+
+    try:
+        if set_id is not None:
+            tset = taxsets.get(db, set_id)
+        else:
+            tset = taxsets.set_of(db, db.get(Process, process_id) if process_id else None)
+    except taxsets.TaxError as exc:
+        raise HTTPException(exc.status, exc.message) from exc
+    return taxsets.axes_for(db, tset)
 
 
 class CodeIn(BaseModel):
     label: str = Field(min_length=1, max_length=100)
     definition: str | None = None
     active: bool = True
+    set_id: int | None = None  # 비우면 기본 세트
+
+
+def _set_for_edit(db: Session, user: User, set_id: int | None):
+    from ..services import taxsets
+
+    try:
+        tset = taxsets.get(db, set_id) if set_id else taxsets.default_set(db)
+    except taxsets.TaxError as exc:
+        raise HTTPException(exc.status, exc.message) from exc
+    if not taxsets.can_edit(user, tset):
+        raise HTTPException(403, "기본 세트는 관리자만, 커스텀 세트는 만든 사람(담당자)과 관리자만 고칠 수 있습니다")
+    return tset
 
 
 @router.post("/taxonomy/{axis_code}/codes")
-def add_code(axis_code: str, body: CodeIn, db: Session = Depends(get_db), user: User = Depends(require_admin)) -> dict[str, Any]:
+def add_code(axis_code: str, body: CodeIn, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    from ..services import taxsets
+
+    tset = _set_for_edit(db, user, body.set_id)
     axis = db.get(TaxonomyAxis, axis_code)
     if axis is None:
         raise HTTPException(404, "분류 축을 찾을 수 없습니다")
-    if axis_code in ("K", "N2SF"):
-        raise HTTPException(422, "연계키·보안등급 축은 코드 체계가 고정되어 있어 추가할 수 없습니다")
-    if any(c.label == body.label.strip() for c in axis.codes):
-        raise HTTPException(409, "같은 이름의 코드가 이미 있습니다")
-    nums = [int(m.group(1)) for c in axis.codes if (m := re.search(r"-(\d+)$", c.code))]
-    code = TaxonomyCode(code=f"{axis_code}-{(max(nums) if nums else 0) + 1:02d}", label=body.label.strip(),
-                        definition=body.definition, position=len(axis.codes), active=body.active)
-    axis.codes.append(code)
-    activity.log(db, "taxonomy_change", f"분류체계 코드 추가 — {axis_code} {axis.name}: {code.label} ({code.code})", user=user)
+    try:
+        code = taxsets.add_code(db, tset, axis_code, body.label, body.definition)
+    except taxsets.TaxError as exc:
+        raise HTTPException(exc.status, exc.message) from exc
+    code.active = body.active
+    activity.log(db, "taxonomy_change", f"분류체계 코드 추가 — [{tset.name}] {axis_code} {axis.name}: {code.label} ({code.code})", user=user, payload={"set_id": tset.id, "code": code.code})
     db.commit()
-    return axis_out(axis)
+    return next(a for a in taxsets.axes_for(db, tset) if a["code"] == axis_code)
 
 
 @router.patch("/taxonomy/codes/{code_id}")
-def update_code(code_id: int, body: CodeIn, db: Session = Depends(get_db), user: User = Depends(require_admin)) -> dict[str, Any]:
+def update_code(code_id: int, body: CodeIn, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    from ..services import taxsets
+
     code = db.get(TaxonomyCode, code_id)
     if code is None:
         raise HTTPException(404, "코드를 찾을 수 없습니다")
+    if code.axis_code in ("K", "N2SF"):
+        if user.role != "admin":
+            raise HTTPException(403, "연계키 · 보안등급 코드는 관리자만 고칠 수 있습니다")
+        tset = taxsets.default_set(db)
+    else:
+        tset = _set_for_edit(db, user, code.set_id)
     was = code.active
     code.label, code.definition, code.active = body.label.strip(), body.definition, body.active
     if was != body.active:
-        activity.log(db, "taxonomy_change", f"분류체계 코드 {'복원' if body.active else '폐기'} — {code.code} {code.label}", user=user)
+        activity.log(db, "taxonomy_change", f"분류체계 코드 {'복원' if body.active else '폐기'} — [{tset.name}] {code.code} {code.label}", user=user, payload={"set_id": tset.id, "code": code.code})
     db.commit()
-    return axis_out(code.axis)
+    return next(a for a in taxsets.axes_for(db, tset) if a["code"] == code.axis_code)
+
+
+# ------------------------------------------------------------------ 분류체계 세트 (v0.20)
+class TaxSetIn(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    scope: str | None = Field(default=None, max_length=120)
+    description: str | None = None
+    base_set_id: int | None = None  # 복제 원본 (비우면 빈 세트)
+    slug: str | None = Field(default=None, max_length=16, pattern=r"^[A-Za-z0-9-]*$")
+    empty: bool = False
+
+
+class TaxSetPatch(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    scope: str | None = None
+    description: str | None = None
+    is_default: bool | None = None
+    locked: bool | None = None
+
+
+@router.get("/taxonomy-sets")
+def list_taxonomy_sets(db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
+    from ..services import taxsets
+
+    rows = db.scalars(select(TaxonomySet).where(TaxonomySet.deleted_at.is_(None)).order_by(TaxonomySet.is_default.desc(), TaxonomySet.id)).all()
+    return {"items": [taxsets.out(db, s) for s in rows], "axes": list(taxsets.SET_AXES)}
+
+
+@router.post("/taxonomy-sets", status_code=201)
+def create_taxonomy_set(body: TaxSetIn, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    from ..services import taxsets
+
+    try:
+        new = taxsets.clone(db, user, name=body.name, scope=body.scope, description=body.description, base_set_id=body.base_set_id, slug=body.slug, empty=body.empty)
+    except taxsets.TaxError as exc:
+        raise HTTPException(exc.status, exc.message) from exc
+    base = db.get(TaxonomySet, new.base_set_id) if new.base_set_id else None
+    activity.log(db, "taxonomy_set", f"분류체계 세트 생성 — {new.name}" + (f" (복제: {base.name})" if base and not body.empty else " (빈 세트)"), user=user,
+                 payload={"set_id": new.id, "base_set_id": new.base_set_id, "slug": new.slug})
+    db.commit()
+    return taxsets.out(db, new)
+
+
+@router.patch("/taxonomy-sets/{set_id}")
+def update_taxonomy_set(set_id: int, body: TaxSetPatch, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    from ..services import taxsets
+
+    tset = _set_for_edit(db, user, set_id)
+    if body.name is not None:
+        tset.name = body.name.strip()
+    if "scope" in body.model_fields_set:
+        tset.scope = (body.scope or "").strip() or None
+    if "description" in body.model_fields_set:
+        tset.description = (body.description or "").strip() or None
+    if body.is_default is not None or body.locked is not None:
+        if user.role != "admin":
+            raise HTTPException(403, "기본 세트 지정 · 잠금은 관리자만 할 수 있습니다")
+        if body.is_default:
+            for other in db.scalars(select(TaxonomySet).where(TaxonomySet.is_default.is_(True))):
+                other.is_default = False
+            tset.is_default = True
+            activity.log(db, "taxonomy_set", f"기본 분류체계 세트 지정 — {tset.name}", user=user, payload={"set_id": tset.id})
+        if body.locked is not None:
+            tset.locked = body.locked
+    tset.updated_at = utcnow()
+    db.commit()
+    return taxsets.out(db, tset)
+
+
+@router.delete("/taxonomy-sets/{set_id}")
+def delete_taxonomy_set(set_id: int, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    from ..services import taxsets
+
+    tset = _set_for_edit(db, user, set_id)
+    if tset.is_default or tset.slug == "base":
+        raise HTTPException(409, "기본 세트는 삭제할 수 없습니다")
+    n = taxsets.usage(db, tset)
+    if n:
+        raise HTTPException(409, f"이 세트를 쓰는 프로세스가 {n}개 있어 삭제할 수 없습니다 — 프로세스의 세트를 먼저 바꾸세요")
+    tset.deleted_at = utcnow()
+    activity.log(db, "taxonomy_set", f"분류체계 세트 삭제 — {tset.name}", user=user, payload={"set_id": tset.id})
+    db.commit()
+    return {"ok": True}
+
+
+@router.get("/taxonomy-sets/{set_id}/export")
+def export_taxonomy_set(set_id: int, db: Session = Depends(get_db), _: User = Depends(current_user)):
+    from urllib.parse import quote
+
+    from fastapi import Response
+
+    from ..services import taxsets
+
+    try:
+        tset = taxsets.get(db, set_id)
+    except taxsets.TaxError as exc:
+        raise HTTPException(exc.status, exc.message) from exc
+    name = f"분류체계_{tset.name}.csv"
+    return Response(taxsets.export_csv(db, tset).encode("utf-8"), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f"attachment; filename=\"taxonomy_{tset.slug}.csv\"; filename*=UTF-8''{quote(name)}"})
+
+
+@router.post("/taxonomy-sets/{set_id}/import")
+async def import_taxonomy_set(set_id: int, file: UploadFile = File(...), replace: bool = False, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    from ..services import taxsets
+
+    tset = _set_for_edit(db, user, set_id)
+    data = await file.read()
+    if len(data) > 2 * 1024 * 1024:
+        raise HTTPException(413, "2MB 이하의 CSV 만 받습니다")
+    try:
+        text = data.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = data.decode("cp949", errors="replace")
+    try:
+        res = taxsets.import_csv(db, tset, text, replace=replace)
+    except taxsets.TaxError as exc:
+        raise HTTPException(exc.status, exc.message) from exc
+    activity.log(db, "taxonomy_set", f"분류체계 세트 CSV 가져오기 — {tset.name}: 추가 {res['added']} · 갱신 {res['updated']} · 폐기 {res['retired']}", user=user, payload={"set_id": tset.id, **res})
+    db.commit()
+    return {**res, "set": taxsets.out(db, tset)}
 
 
 # ------------------------------------------------------------------ 사용자

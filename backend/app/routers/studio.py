@@ -59,9 +59,12 @@ def _mode(p: Process) -> str:
 
 
 def _detail(db: Session, p: Process) -> dict[str, Any]:
+    from ..services import taxsets
+
     mode = _mode(p)
+    tset = taxsets.set_of(db, p)
     return {"process": process_out(p), "datasets": [dataset_out(db, d, mode) for d in p.datasets],
-            "state": gates.state(db, p)}
+            "state": gates.state(db, p), "taxonomy_set": {"id": tset.id, "slug": tset.slug, "name": tset.name, "scope": tset.scope, "is_default": tset.is_default}}
 
 
 # ------------------------------------------------------------------ 프로세스
@@ -137,6 +140,7 @@ class ProcessPatch(BaseModel):
     current_step: int | None = Field(default=None, ge=1, le=8)
     pub_mode: bool | None = None
     owner_id: int | None = None  # 담당자 배정 (관리자만). 작업자는 자기 프로세스만 보므로 배정하면 그 작업자 목록에 나타난다
+    taxonomy_set_id: int | None = None  # 분류체계 세트 (분류 확정 전까지)
 
 
 @router.patch("/processes/{pid}")
@@ -154,6 +158,16 @@ def update_process(pid: int, body: ProcessPatch, db: Session = Depends(get_db), 
     if body.pub_mode is not None and body.pub_mode != p.pub_mode:
         p.pub_mode = body.pub_mode
         activity.log(db, "pub_mode", f"발행 모드 {'전환' if p.pub_mode else '해제'} — {p.name}", user=user, process_id=p.id)
+    if "taxonomy_set_id" in body.model_fields_set and body.taxonomy_set_id != p.taxonomy_set_id:
+        from ..services import taxsets
+
+        try:
+            new_set = taxsets.get(db, body.taxonomy_set_id) if body.taxonomy_set_id else taxsets.default_set(db)
+            res = taxsets.switch_process_set(db, p, new_set)
+        except taxsets.TaxError as exc:
+            raise HTTPException(exc.status, exc.message) from exc
+        activity.log(db, "taxonomy_set", f"분류체계 세트 지정 — {p.name}: {new_set.name}" + (f" (코드 이동 {res['moved']} · 제거 {res['dropped']})" if res["moved"] or res["dropped"] else ""),
+                     user=user, process_id=p.id, payload={"set_id": new_set.id, **res})
     if "owner_id" in body.model_fields_set and body.owner_id != p.created_by:
         if user.role != "admin":
             raise HTTPException(403, "담당자 배정은 관리자만 할 수 있습니다")
@@ -774,7 +788,9 @@ def diagnosis_preview(did: int, db: Session = Depends(get_db), _: User = Depends
 @router.get("/datasets/{did}/classification/suggestions")
 def classification_suggestions(did: int, db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
     pd = _dataset(db, did, editable=False)
-    return {"suggestions": suggest.classification_suggestions(pd),
+    from ..services import taxsets
+
+    return {"suggestions": taxsets.map_suggestions(db, taxsets.set_of(db, pd.process), suggest.classification_suggestions(pd)),
             "method": "규칙 기반 (LLM 미사용) — 이름·컬럼명 키워드, 컬럼 타입, 관측 간격, 연계키 후보로 계산",
             "thresholds": {"strong": 80, "review": 40, "low": 15}}
 
@@ -817,14 +833,18 @@ class ClassificationIn(BaseModel):
 @router.put("/datasets/{did}/classification")
 def put_classification(did: int, body: ClassificationIn, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
     pd = _dataset(db, did)
+    from ..services import taxsets
+
+    tset = taxsets.set_of(db, pd.process)
     axes = {a.code: a for a in db.scalars(select(TaxonomyAxis))}
-    valid = {c.code: c for c in db.scalars(select(TaxonomyCode).where(TaxonomyCode.active.is_(True)))}
+    # F1~F6 은 이 프로세스의 세트 코드만, K · N2SF 는 공통 코드
+    valid = {c.code: c for c in db.scalars(select(TaxonomyCode).where(TaxonomyCode.active.is_(True), (TaxonomyCode.set_id == tset.id) | (TaxonomyCode.set_id.is_(None))))}
     out: dict[str, Any] = {}
     for axis in ("F1", "F2", "F3", "F4", "F5", "F6"):
         codes = list(dict.fromkeys(getattr(body, axis)))
         bad = [c for c in codes if c not in valid or valid[c].axis_code != axis]
         if bad:
-            raise HTTPException(422, f"{axis} 축에 없는 코드입니다: {bad}")
+            raise HTTPException(422, f"{axis} 축에 없는 코드입니다 (세트 「{tset.name}」 기준): {bad}")
         if not axes[axis].multi and len(codes) > 1:
             raise HTTPException(422, f"{axis} {axes[axis].name} 축은 1개만 선택할 수 있습니다")
         if codes:

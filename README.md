@@ -222,6 +222,7 @@ v0.18 에서 「데이터 카탈로그」 메뉴를 「ARD 관리」로 바꿨�
 - **권한**: 열람 전용(viewer) 계정은 **O(공개) 등급 산출물만** 내려받습니다. 조합에 S1 이상이 있으면 ZIP · 보고서도 막힙니다. 담당자 이상은 전부. 모든 내려받기는 활동 로그 `artifact_download` · `package_download` 에 파일명 · 크기 · 체크섬 · 등급과 함께 남습니다.
 - **버전 비교** (v0.19): 산출물 보관함의 JSON-LD 행 「비교」, 발행본 상세의 「발행본 ↔ 변환 회차 비교」. 두 판의 JSON-LD 를 rdflib 로 읽어 트리플 단위로 비교하고(빈 노드는 정규화), 속성별 추가 · 삭제 · 변경을 표로 보입니다. 재발행 전 "무엇이 바뀌었나" 확인용. `GET /api/ard/datasets/{id}/versions`, `/diff?from_ref&to_ref`.
 - **공유 링크** (v0.19): 산출물 보관함의 「공유」로 수요처가 **로그인 없이** 내려받는 만료형 링크를 만듭니다 (`/share/{토큰}`). **O · S1 등급만**, 유효 기간 1~90일, 최대 1~100회, 받는 곳 · 메모. 토큰은 해시만 저장하고 원문은 만들 때 한 번만 보입니다. 만든 뒤 등급이 올라가면 자동으로 막히고, 「공유 링크」 탭에서 회수합니다(본인 또는 관리자). 내려받기마다 `share_download` 이력(파일 · 체크섬 · IP · 받는 곳). 받는 쪽 화면은 파일명 · 등급 · 만료 · 남은 횟수를 보여 줍니다.
+- **외부 정본 검사** (v0.19): 「외부 정본 검사」 탭에 스튜디오 밖에서 만든 Turtle · JSON-LD 를 올리면 STEP 6 과 같은 게이트 0(① 파서 · ② prefix 완결 · ③ UTF-8 · ④ 임시 ID · ⑤ 정체성)을 돌리고, ①~③ 을 통과한 파일만 SHACL(초안 · 발행 규칙 선택)까지 검사합니다. 파일은 저장하지 않고 요약만 활동 로그 `external_check` 에 남습니다. 타 기관 · 타 도구 산출물 사전 점검과 "정본 통과 · 오류본 차단" 시연용. `POST /api/ard/check-external`.
 - **보존 정책**: 프로세스당 최신 `FDE_ARTIFACT_KEEP_RUNS`(기본 5)회차의 변환만 보관하고, 새 변환을 실행할 때 넘치는 회차를 자동 삭제합니다. 발행본이 참조하는 회차는 지우지 않습니다. 관리자는 요약의 「보존 정리」로 바로 실행할 수 있고 `retention_apply` 로그가 남습니다.
 
 API: `GET /api/ard/summary` · `/filters` · `/artifacts` · `/published` · `/history(?format=csv)` · `/retention` · `/share-links`, `GET /api/ard/download?kind&id[&dataset_id]`, `GET /api/ard/datasets/{id}/package[/manifest]` · `/versions` · `/diff`, `POST /api/ard/share-links` · `/share-links/{id}/revoke`, `POST /api/ard/retention/apply`(관리자). 공개: `GET /api/share/{토큰}` · `/download`. 발행본 상세 · 원문 · 철회 · 복원은 `/api/catalog/{발행ID}…` 그대로.
@@ -299,6 +300,17 @@ API: `GET /api/ard/summary` · `/filters` · `/artifacts` · `/published` · `/h
     - 동기화는 구조 지문(컬럼 이름 · 자료형 · 널 · PK 해시)이 바뀐 표만 갱신하고, 원천에서 사라진 표는 지우지 않고 경고만 붙입니다. 상한은 커넥터당 표 500개 · 컬럼 2,000개.
     - 읽기 권한만 있는 DB 계정을 쓰고, 스튜디오 서버에서 DB 포트가 닿도록 방화벽 · 보안그룹을 여십시오. 모든 등록 · 시험 · 동기화 · 삭제는 활동 로그(`connector_*`)에 남습니다.
     - Oracle · MS SQL 은 아직 없습니다 (드라이버 추가로 확장 가능).
+
+## 분류체계 세트 (v0.20)
+
+F1~F6 분류 코드를 **세트**로 묶어 따로 저장하고 불러 씁니다 (예: "국토교통부 ARD 분류체계 (기본)", "현대제철 분류체계"). K 연계키 · N²SF 등급 축은 시스템 공통이라 세트 밖입니다.
+
+- **세트 관리** (시스템 관리 › 분류체계): 세트 칩으로 전환, 「세트 만들기 (복제)」로 비슷한 세트를 복제해 시작(코드가 `F1-HS-01` 처럼 접두를 달고 복사되며 `source_code` 로 원본과 연결), 빈 세트로 시작, 세트별 코드 추가 · 수정 · 폐기, **CSV 내보내기 · 가져오기**(열 `axis,label,definition[,code,active]`, `replace=true` 면 파일에 없는 코드는 폐기), 기본 세트 지정(관리자), 삭제(기본 세트 · 사용 중 세트는 불가). 기본 세트는 관리자만, 커스텀 세트는 만든 담당자와 관리자가 고칩니다.
+- **프로세스에서 고르기**: STEP 1 카드와 STEP 4 머리의 「분류체계 세트」 선택. 「복제해서 커스텀」은 지금 세트를 복제해 바로 이 프로세스에 적용합니다. STEP 4 의 F1~F6 은 그 세트 코드만 보이고, 서버도 세트 밖 코드를 거부합니다(422). 세트를 바꾸면 이미 배정한 코드는 뿌리가 같은 코드로 따라가고(기본 ↔ 복제 양방향) 대응이 없는 코드는 지웁니다. **분류를 확정한 데이터셋이 있으면 바꿀 수 없습니다**(409).
+- **추천**: 규칙 기반 추천은 기본 세트 코드로 계산한 뒤 세트의 `source_code` 매핑으로 바꿔 보입니다. 새로 만든 코드(원본 없음)는 추천되지 않고 직접 고릅니다.
+- **기존 데이터**: 이관 0011 이 기존 F1~F6 코드를 전부 기본 세트(`base`)에 귀속시키므로 바뀌는 것이 없습니다. 정본 그래프의 개념 IRI 는 코드 그대로(`…/def/concept/F1-HS-01`), 스킴은 축 단위로 같습니다.
+
+API: `GET /api/taxonomy?set_id|process_id`, `GET/POST /api/taxonomy-sets`, `PATCH/DELETE /api/taxonomy-sets/{id}`, `GET …/export`, `POST …/import?replace=`, `POST /api/taxonomy/{axis}/codes` (`set_id`), `PATCH /api/processes/{id}` (`taxonomy_set_id`). 활동 로그 `taxonomy_set` · `taxonomy_change`.
 
 ## N²SF 등급 · 판단 근거 · 표 41 · 메타데이터 공개 수준 (STEP 4)
 

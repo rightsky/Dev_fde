@@ -26,7 +26,7 @@ def axis_out(a: TaxonomyAxis) -> dict[str, Any]:
             "rdf_property": a.rdf_property, "description": a.description,
             "scheme_iri": minting.scheme_iri(a.code),
             "codes": [{"id": c.id, "code": c.code, "label": c.label, "definition": c.definition, "active": c.active,
-                       "extra": c.extra or {}, "iri": minting.concept_iri(c.code)} for c in a.codes]}
+                       "extra": c.extra or {}, "iri": minting.concept_iri(c.code), "set_id": c.set_id} for c in a.codes]}
 
 
 def asset_out(a: Asset, detail: bool = False) -> dict[str, Any]:
@@ -86,6 +86,7 @@ def process_out(p: Process) -> dict[str, Any]:
             "created_at": p.created_at, "updated_at": p.updated_at, "completed_at": p.completed_at,
             "trashed_at": p.trashed_at,
             "owner": {"id": p.owner.id, "name": p.owner.name, "org": p.owner.org_label} if getattr(p, "owner", None) else None,
+            "taxonomy_set_id": p.taxonomy_set_id,
             "combo_grading": grading.combo_grade(p)}
 
 

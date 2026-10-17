@@ -138,8 +138,22 @@ export const api = {
   orgs: () => get<T.Org[]>("/orgs"),
   createOrg: (body: { code?: string; label: string; note?: string }) => post<T.Org>("/orgs", body),
   updateOrg: (id: number, body: { label: string; note?: string | null; active: boolean }) => patch<T.Org>(`/orgs/${id}`, body),
-  taxonomy: () => get<T.TaxAxis[]>("/taxonomy"),
-  addTaxCode: (axis: string, body: { label: string; definition?: string }) => post<T.TaxAxis>(`/taxonomy/${axis}/codes`, body),
+  taxonomy: (params?: { set_id?: number; process_id?: number }) => get<T.TaxAxis[]>("/taxonomy", params),
+  taxonomySets: () => get<{ items: T.TaxonomySet[]; axes: string[] }>("/taxonomy-sets"),
+  createTaxonomySet: (body: { name: string; scope?: string | null; description?: string | null; base_set_id?: number | null; slug?: string | null; empty?: boolean }) =>
+    post<T.TaxonomySet>("/taxonomy-sets", body),
+  updateTaxonomySet: (id: number, body: { name?: string; scope?: string | null; description?: string | null; is_default?: boolean; locked?: boolean }) =>
+    patch<T.TaxonomySet>(`/taxonomy-sets/${id}`, body),
+  deleteTaxonomySet: (id: number) => del<{ ok: boolean }>(`/taxonomy-sets/${id}`),
+  importTaxonomySet: async (id: number, file: File, replace: boolean) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`/api/taxonomy-sets/${id}/import?replace=${replace}`, { method: "POST", body: fd, headers: auth.token ? { Authorization: `Bearer ${auth.token}` } : {} });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new ApiError(res.status, body.detail?.message || body.detail || `가져오기 실패 (${res.status})`);
+    return body as { added: number; updated: number; retired: number; set: T.TaxonomySet };
+  },
+  addTaxCode: (axis: string, body: { label: string; definition?: string; set_id?: number | null }) => post<T.TaxAxis>(`/taxonomy/${axis}/codes`, body),
   updateTaxCode: (id: number, body: { label: string; definition?: string | null; active: boolean }) => patch<T.TaxAxis>(`/taxonomy/codes/${id}`, body),
   users: () => get<T.User[]>("/users"),
   createUser: (body: { username: string; name: string; password: string; role: T.Role; org_label?: string; email?: string }) => post<T.User>("/users", body),
@@ -217,7 +231,7 @@ export const api = {
   processes: (status?: "active" | "completed" | "trashed") => get<T.Process[]>("/processes", { status }),
   createProcess: (name?: string) => post<T.ProcessDetail>("/processes", { name }),
   process: (pid: number) => get<T.ProcessDetail>(`/processes/${pid}`),
-  updateProcess: (pid: number, body: { name?: string; current_step?: number; pub_mode?: boolean; owner_id?: number | null }) => patch<T.ProcessDetail>(`/processes/${pid}`, body),
+  updateProcess: (pid: number, body: { name?: string; current_step?: number; pub_mode?: boolean; owner_id?: number | null; taxonomy_set_id?: number | null }) => patch<T.ProcessDetail>(`/processes/${pid}`, body),
   completeProcess: (pid: number) => post<T.ProcessDetail>(`/processes/${pid}/complete`),
   reopenProcess: (pid: number) => post<T.ProcessDetail>(`/processes/${pid}/reopen`),
   trashProcess: (pid: number) => post<T.Process>(`/processes/${pid}/trash`),
@@ -333,6 +347,14 @@ export const api = {
   createShareLink: (body: { kind: string; target_id: number; dataset_id?: number | null; days: number; max_downloads: number; recipient?: string | null; note?: string | null }) =>
     post<T.ShareLink & { url: string; token: string }>("/ard/share-links", body),
   revokeShareLink: (id: number) => post<T.ShareLink>(`/ard/share-links/${id}/revoke`, {}),
+  checkExternal: async (files: File[], mode: "draft" | "publish") => {
+    const fd = new FormData();
+    for (const f of files) fd.append("files", f);
+    fd.append("mode", mode);
+    const res = await fetch("/api/ard/check-external", { method: "POST", body: fd, headers: auth.token ? { Authorization: `Bearer ${auth.token}` } : {} });
+    if (!res.ok) throw new ApiError(res.status, `검사 요청 실패 (${res.status})`);
+    return (await res.json()) as T.ExternalCheckResponse;
+  },
   shareInfo: (token: string) => get<T.ShareInfo>(`/share/${encodeURIComponent(token)}`),
   catalogEntry: (rid: string) => get<T.CatalogEntry>(`/catalog/${encodeURIComponent(rid)}`),
   withdraw: (rid: string) => post<T.CatalogEntry>(`/catalog/${encodeURIComponent(rid)}/withdraw`),
@@ -343,6 +365,7 @@ export const api = {
 export const downloads = {
   ard: (kind: string, id: number, datasetId?: number | null) => `/ard/download?kind=${kind}&id=${id}${datasetId != null ? `&dataset_id=${datasetId}` : ""}`,
   ardPackage: (did: number) => `/ard/datasets/${did}/package`,
+  taxonomySetCsv: (id: number) => `/taxonomy-sets/${id}/export`,
   shareDownload: (token: string) => `/share/${encodeURIComponent(token)}/download`,
   ardHistoryCsv: (params: string) => `/ard/history?format=csv${params ? "&" + params : ""}`,
   artifact: (aid: number) => `/artifacts/${aid}?download=true`,
