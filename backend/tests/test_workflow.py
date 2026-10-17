@@ -1710,3 +1710,25 @@ def test_26_process_scope_and_assignment(client):
     # 원래 담당자(worker1)에게 되돌린다 (뒤 테스트가 worker1 으로 이 프로세스를 쓴다)
     w1id = next(u["id"] for u in client.get("/api/users").json() if u["username"] == "worker1")
     assert client.patch(f"/api/processes/{pid}", json={"owner_id": w1id}).status_code == 200
+
+
+def test_27_jsonl_upload(client):
+    """스트림 표본 덤프(JSON Lines) 업로드: 줄 단위 레코드 → 표 1개, 중첩 객체는 점 표기 컬럼, 번호판은 개인정보 의심."""
+    rows = [
+        '{"event_time":"2026-10-17T14:02:01+09:00","cctv_id":"CCTV-0417","link_id":"LNK-58-0031","plate":"58로1234","speed_kmh":100.2,"flags":{"hard_brake":false}}',
+        '{"event_time":"2026-10-17T14:02:02+09:00","cctv_id":"CCTV-0417","link_id":"LNK-58-0031","plate":"12가5678","speed_kmh":64.0,"flags":{"hard_brake":false}}',
+        "not json at all",
+        '{"event_time":"2026-10-17T14:05:03+09:00","cctv_id":"CCTV-0417","link_id":"LNK-58-0031","plate":"58로1234","speed_kmh":12.4,"flags":{"hard_brake":true}}',
+    ]
+    r = client.post("/api/assets/upload", files=[("files", ("cctv_vehicle_det_v1_관측.jsonl", ("\n".join(rows) + "\n").encode("utf-8"), "application/x-ndjson"))])
+    assert r.status_code == 200, r.text
+    a = r.json()["created"][0]
+    assert a["ext"] == "jsonl" and a["data_form"] == "반정형" and a["profile_status"] == "ok" and a["row_count"] == 3, a
+    assert any("건너뛰었습니다" in w for w in a["warnings"])
+    d = client.get(f"/api/assets/{a['id']}").json()
+    cols = {c["name"]: c for c in d["profile"]["tables"][0]["columns"]}
+    assert {"event_time", "cctv_id", "link_id", "plate", "speed_kmh", "flags.hard_brake"} <= set(cols)
+    assert cols["event_time"]["type"] == "datetime" and cols["speed_kmh"]["type"] == "number" and cols["flags.hard_brake"]["type"] == "boolean"
+    assert cols["plate"].get("pii") and cols["plate"]["samples"] == [], "번호판은 개인정보 의심 — 예시값 저장 안 함"
+    assert "K5" in a["keys"] and "K7" in a["keys"], "링크 ID · 시각이 연계키 후보"
+    assert client.delete(f"/api/assets/{a['id']}").status_code == 200

@@ -25,6 +25,8 @@ MEDIA_TYPES = {
     "tsv": "text/tab-separated-values",
     "txt": "text/plain",
     "json": "application/json",
+    "jsonl": "application/x-ndjson",
+    "ndjson": "application/x-ndjson",
     "parquet": "application/vnd.apache.parquet",
     "xml": "application/xml",
     "pdf": "application/pdf",
@@ -33,9 +35,9 @@ MEDIA_TYPES = {
 }
 DATA_FORMS = {
     "xlsx": "정형", "xls": "정형", "csv": "정형", "tsv": "정형", "parquet": "정형",
-    "json": "반정형", "xml": "반정형", "txt": "비정형", "pdf": "비정형", "hwp": "비정형", "hwpx": "비정형",
+    "json": "반정형", "jsonl": "반정형", "ndjson": "반정형", "xml": "반정형", "txt": "비정형", "pdf": "비정형", "hwp": "비정형", "hwpx": "비정형",
 }
-TABULAR_EXTS = {"xlsx", "xls", "csv", "tsv", "json", "parquet"}
+TABULAR_EXTS = {"xlsx", "xls", "csv", "tsv", "json", "jsonl", "ndjson", "parquet"}
 BLOCKED_EXTS = {"mp4", "avi", "ts", "pcap", "bag", "exe", "dll", "sh", "bat"}
 
 MISSING_MARKERS = {"-", "--", "null", "NULL", "Null", "N/A", "n/a", "NA", "nan", "NaN", "없음", "미상", "해당없음",
@@ -62,7 +64,8 @@ _Y = re.compile(r"^(19|20)\d{2}$")
 _PII_NAME = re.compile(r"주민|성명|이름|전화|휴대|핸드폰|연락처|생년|생일|birth|이메일|email|e-mail|계좌|account|여권|passport|운전면허|차량번호|차대번호|VIN"
                        r"|주소|addr|성별|gender|(?<![a-z])name(?![a-z])|_nm(?![a-z])|^nm$|owner|고객|환자|학생|신청인|민원인"
                        # DB 컬럼은 영문 약어가 많다 (기관 DB 스키마 커넥터): 주민번호 · 전화 · 생년 등
-                       r"|resident|rrn|jumin|(?<![a-z])ssn(?![a-z])|phone|mobile|(?<![a-z])tel(?![a-z])|cell|(?<![a-z])dob(?![a-z])|patient|customer|cust_|applicant", re.I)
+                       r"|resident|rrn|jumin|(?<![a-z])ssn(?![a-z])|phone|mobile|(?<![a-z])tel(?![a-z])|cell|(?<![a-z])dob(?![a-z])|patient|customer|cust_|applicant"
+                       r"|plate|vehicle_?no|차량번호판|번호판", re.I)
 _PII_VALUE: list[tuple[str, re.Pattern[str]]] = [
     ("주민등록번호", re.compile(r"^\d{6}-?[1-4]\d{6}$")),
     ("휴대전화", re.compile(r"^01[016789]-?\d{3,4}-?\d{4}$")),
@@ -75,7 +78,8 @@ KEY_RULES: list[dict[str, Any]] = [
     {"code": "K1", "name": re.compile(r"행정구역|시도|시군구|읍면동|행정동|법정동|SIDO|SGG|SIGUNGU|EMD|ADM_?CD|ADM_?DR|BJD|지역코드|관할", re.I),
      "value": "admin_code", "label": "행정구역"},
     {"code": "K2", "name": re.compile(r"주소|소재지|도로명|지번|ADDR|ADRES", re.I), "value": "address", "label": "주소"},
-    {"code": "K3", "name": re.compile(r"위도|경도|좌표|LAT|LON|LNG|X좌표|Y좌표|X_?CRD|Y_?CRD|GEOM|WKT|XCOORD|YCOORD", re.I),
+    # LAT · LON 은 단어 경계로만 (plate · long_name 같은 오탐 방지)
+    {"code": "K3", "name": re.compile(r"위도|경도|좌표|(?<![a-z])LAT(?:ITUDE)?(?![a-z])|(?<![a-z])LON(?:G|GITUDE)?(?![a-z])|(?<![a-z])LNG(?![a-z])|X좌표|Y좌표|X_?CRD|Y_?CRD|GEOM|WKT|XCOORD|YCOORD", re.I),
      "value": "coordinate", "label": "좌표"},
     {"code": "K4", "name": re.compile(r"건축물|건물(ID|번호|관리)|BLDG|BULD|PNU|필지", re.I), "value": None, "label": "건축물ID"},
     {"code": "K5", "name": re.compile(r"링크|LINK|노드|NODE|도로(ID|번호|코드)|ROAD_?(ID|NO|CD)|노선(ID|번호|코드)", re.I),
@@ -136,9 +140,32 @@ def _read_excel(path: Path, ext: str, max_rows: int) -> tuple[list[tuple[str, pd
 
 def _read_json(path: Path, max_rows: int, stem: str) -> tuple[list[tuple[str, pd.DataFrame]], list[str]]:
     text, _ = _decode(path.read_bytes())
-    data = json.loads(text)
     tables: list[tuple[str, pd.DataFrame]] = []
     warnings: list[str] = []
+    # JSON Lines(.jsonl · .ndjson, 스트림 표본 덤프): 한 줄이 레코드 하나. 일반 .json 도 첫 파싱이 실패하면 줄 단위로 다시 시도한다
+    stripped = text.strip()
+    try:
+        data = json.loads(stripped) if stripped else []
+    except json.JSONDecodeError:
+        data = None
+    if data is None or path.suffix.lower() in (".jsonl", ".ndjson"):
+        rows: list[Any] = []
+        bad = 0
+        for i, line in enumerate(stripped.splitlines()):
+            if not line.strip():
+                continue
+            if i >= max_rows:
+                warnings.append(f"JSON Lines 를 {max_rows:,}줄까지만 읽었습니다")
+                break
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                bad += 1
+        if bad:
+            warnings.append(f"JSON 으로 읽히지 않는 줄 {bad}개를 건너뛰었습니다")
+        if not rows and data is None:
+            raise ValueError("JSON 문서도, JSON Lines 도 아닙니다")
+        data = rows if rows else data
 
     def to_frame(name: str, rows: list[Any]) -> None:
         recs = [r for r in rows[:max_rows] if isinstance(r, dict)]
@@ -183,7 +210,7 @@ def _read_tables(path: Path, ext: str, max_rows: int, stem: str) -> tuple[list[t
         return _read_excel(path, ext, max_rows)
     if ext in ("csv", "tsv"):
         return _read_delimited(path, ext, max_rows, stem)
-    if ext == "json":
+    if ext in ("json", "jsonl", "ndjson"):
         return _read_json(path, max_rows, stem)
     return _read_parquet(path, max_rows, stem)
 

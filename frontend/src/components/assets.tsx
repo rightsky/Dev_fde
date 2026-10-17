@@ -53,7 +53,7 @@ export function UploadZone({ onUploaded, disabled }: { onUploaded: (created: Ass
         }}
       >
         <div className="bold" style={{ fontSize: 14 }}>
-          엑셀 · CSV · JSON · Parquet 파일을 끌어다 놓으세요
+          엑셀 · CSV · JSON · JSON Lines · Parquet 파일을 끌어다 놓으세요
         </div>
         <div className="muted mt-4">
           여러 파일을 한 번에 올릴 수 있습니다 · 파일당 최대 {ref.max_upload_mb}MB · 또는{" "}
