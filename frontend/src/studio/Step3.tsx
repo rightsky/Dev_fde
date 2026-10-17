@@ -8,6 +8,7 @@ import { api } from "../api";
 import type { CardItem, Dataset, DictRow, MetaField, Org, Preview, Reference, Severity } from "../types";
 import { Badge, Banner, Button, Card, CodeBlock, ConfirmButton, Empty, QueryState, Tabs, cx, errText, fmtDateTime, fmtNum, shortHash, useToast } from "../ui";
 import { AiDraftButton, AiExclusionBox } from "./AiDraft";
+import { InstantDiag } from "./InstantDiag";
 import { useStudio } from "./context";
 import { DatasetList, Gate0List, ProfileTable, ReadOnlyNote, ReadinessBadge, StepHeader, ValidationRows } from "./shared";
 
@@ -417,6 +418,9 @@ export function Step3() {
         <div className="col" style={sideStyle}>
           <div style={narrow ? undefined : { overflowY: "auto", minHeight: 0, flex: "1 1 auto" }}>
             <PreviewPanel key={dataset.id} pid={pid} dataset={dataset} fields={fields} dirtyCount={dirtyCount} onFocus={requestFocus} />
+            <div className="mt-12">
+              <InstantDiag key={`d${dataset.id}`} did={dataset.id} step={3} onFocus={requestFocus} />
+            </div>
           </div>
           <ConfirmBox dataset={dataset} editable={editable} busy={busy} dirtyCount={dirtyCount} onConfirm={confirmMeta} onUnconfirm={unconfirmMeta} />
         </div>

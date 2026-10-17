@@ -1,7 +1,9 @@
 // 여러 STEP 이 함께 쓰는 부품
+import { useState } from "react";
 import type { ReactNode } from "react";
+import { api } from "../api";
 import type { Asset, Dataset, Gate0Check, TableProfile, ValidationRow } from "../types";
-import { Badge, Button, KeyPill, SeverityBadge, cx, fmtNum, fmtPct } from "../ui";
+import { Badge, Button, KeyPill, SeverityBadge, cx, fmtNum, fmtPct, useToast } from "../ui";
 import { useStudio } from "./context";
 
 /** 단계 제목 줄 */
@@ -178,4 +180,36 @@ export function ReadOnlyNote() {
   const { editable } = useStudio();
   if (editable) return null;
   return <div className="small muted">조회 전용 상태입니다 — 변경하려면 진행 중인 프로세스와 쓰기 권한이 필요합니다.</div>;
+}
+
+/** 검증 → 변환 → 진단을 한 번에 다시 실행하는 버튼. 미흡 항목을 여러 개 고친 뒤 한 번만 누른다. */
+export function RerunButton({ size = "sm", variant = "primary", label, afterGo }: { size?: "sm" | "md"; variant?: "primary" | "dark" | "outline" | "default"; label?: string; afterGo?: number }) {
+  const { pid, editable, refresh, go, detail } = useStudio();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const st = detail.state;
+  const fresh = st.validation.done && st.serialization.done && st.diagnosis.done;
+  const run = async () => {
+    setBusy(true);
+    try {
+      const r = await api.rerun(pid);
+      await refresh();
+      if (r.stopped) {
+        toast(`중단 — ${r.stopped}`);
+      } else {
+        const d = r.diagnosis!;
+        toast.ok(`검증 통과 ${r.validation!.pass_count}/${r.validation!.total} · 변환 ${r.serialization!.ok_count}건 · 진단 ${d.score}/${d.max_score}점`);
+        if (afterGo) go(afterGo);
+      }
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Button size={size} variant={variant} busy={busy} disabled={!editable} title={fresh ? "결과가 모두 최신입니다. 다시 실행해도 됩니다" : "상류가 바뀌어 최신이 아닌 결과를 한 번에 갱신합니다"} onClick={run}>
+      {label ?? "검증 → 변환 → 진단 다시 실행"}
+    </Button>
+  );
 }

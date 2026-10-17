@@ -7,6 +7,7 @@ import { api } from "../api";
 import type { Classification, ClassSuggestion, Dataset, TaxAxis, TaxCode } from "../types";
 import { Badge, Banner, Button, Empty, KeyPill, QueryState, cx, errText, fmtDateTime, useToast } from "../ui";
 import { useStudio } from "./context";
+import { InstantDiag } from "./InstantDiag";
 import { DatasetList, ReadOnlyNote, StepHeader } from "./shared";
 
 // ───────────── 모델
@@ -623,7 +624,10 @@ function Workbench(props: {
         </div>
       </div>
 
-      <SummaryCard ds={ds} tax={tax} current={current} onJump={props.onJump} />
+      <div className="col gap-12" style={{ minWidth: 0 }}>
+        <SummaryCard ds={ds} tax={tax} current={current} onJump={props.onJump} />
+        <InstantDiag did={ds.id} step={4} onFocus={(name) => props.onJump(name)} />
+      </div>
     </>
   );
 }

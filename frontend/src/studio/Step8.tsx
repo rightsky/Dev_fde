@@ -99,8 +99,8 @@ function Diagnosis({ data }: { data: DiagLatest }) {
     ? "열람 전용 계정은 진단을 실행할 수 없습니다"
     : detail.process.status === "trashed"
       ? "휴지통에 있는 프로세스입니다"
-      : g8 && !g8.can_enter
-        ? `STEP 8 잠김 — ${g8.reason}`
+      : g8 && !g8.can_run
+        ? `진단 불가 — ${g8.run_reason}`
         : null;
 
   const runDiagnosis = async () => {

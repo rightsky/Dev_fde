@@ -7,6 +7,7 @@ import { useReference } from "../auth";
 import type { DiagItem, DiagStatus } from "../types";
 import { Badge, Button, cx } from "../ui";
 import type { GoOptions } from "./context";
+import { RerunButton } from "./shared";
 
 const STATUS: Record<DiagStatus, { label: string; tone: "ok" | "warn" | "err" | "muted" | "info" }> = {
   met: { label: "충족", tone: "ok" },
@@ -69,9 +70,10 @@ export function FixGuide(props: { pid: number; itemId: string; datasetId: number
               다음 항목 {next.id}
             </Button>
           )}
-          <Button size="sm" variant="dark" onClick={() => go(8, { focus: item.id })}>
-            STEP 8 로 돌아가 재진단
+          <Button size="sm" onClick={() => go(8, { focus: item.id })}>
+            STEP 8 로 돌아가기
           </Button>
+          <RerunButton variant="dark" label="다 고쳤으면: 검증 → 변환 → 진단 재실행" afterGo={8} />
         </div>
       </div>
       {!collapsed && (
@@ -107,7 +109,7 @@ export function FixGuide(props: { pid: number; itemId: string; datasetId: number
             <div className="fixguide-k">할 일</div>
             <div className="fixguide-v">
               {item.remedy || "값을 채우고 저장한 뒤 STEP 8 에서 재진단합니다"}
-              <div className="small muted">저장하면 검증·변환 결과가 "최신 아님"이 되므로 STEP 6 재검증 → STEP 7 재변환 → STEP 8 재진단 순으로 다시 실행합니다.</div>
+              <div className="small muted">저장하면 검증·변환·진단이 "최신 아님"이 됩니다. 여러 항목을 다 고친 뒤 오른쪽 위 [재실행] 한 번으로 세 단계를 다시 돌립니다.</div>
             </div>
           </div>
         </div>
