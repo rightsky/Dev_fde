@@ -515,3 +515,17 @@ class OrgGradeEntry(Base):
     source_sha256: Mapped[str | None] = mapped_column(String(64), default=None)
     imported_by: Mapped[int | None] = mapped_column(ForeignKey("app_user.id"), default=None)
     imported_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class AgentGrant(Base):
+    """에이전트 키에 대한 S2(제한 공유) 데이터셋 건별 승인. S2 는 키 등급만으로 열리지 않고 발행본마다 승인을 받아야 한다 (3.6.1 S2: 사전 승인 · 접근통제)."""
+    __tablename__ = "agent_grant"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    key_id: Mapped[int] = mapped_column(ForeignKey("agent_key.id", ondelete="CASCADE"), index=True)
+    resource_id: Mapped[str] = mapped_column(String(40), index=True)  # 발행 식별자 (DST-000002 등)
+    note: Mapped[str | None] = mapped_column(Text, default=None)  # 승인 근거 (협약 번호, 목적 등)
+    granted_by: Mapped[int | None] = mapped_column(ForeignKey("app_user.id"), default=None)
+    granted_label: Mapped[str] = mapped_column(String(100), default="")
+    granted_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    expires_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    revoked_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)

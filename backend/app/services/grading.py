@@ -247,3 +247,33 @@ def combo_grade(process: Any) -> dict[str, Any]:
             "grade_label": GRADE_LABEL.get((chosen or floor) or "", None), "explicit": chosen is not None,
             "below_floor": below, "reason": reason, "unset": [((d.meta or {}).get("title") or d.asset.name) for d, g in members if not g],
             "mixed": len(set(graded)) > 1}
+
+
+# ---------------------------------------------------------------- AI 이용조건(표 39) 등급별 기본값 (N²SF 기획안 4절)
+AI_TERM_DEFAULTS: dict[str, dict[str, str]] = {
+    "O": {},
+    "S1": {"ai_training": "conditional", "ai_combination": "conditional", "ai_redistribution": "prohibited"},
+    "S2": {"ai_training": "prohibited", "ai_combination": "conditional", "ai_automated_access": "conditional", "ai_bulk_access": "prohibited", "ai_redistribution": "prohibited"},
+    "C": {"ai_training": "prohibited", "ai_combination": "prohibited", "ai_automated_access": "prohibited", "ai_bulk_access": "prohibited", "ai_redistribution": "prohibited"},
+}
+AI_TERM_DEFAULT_KEY = "_ai_terms_defaulted"
+
+
+def apply_term_defaults(pd: ProcessDataset, grade: str | None, by: str) -> list[str]:
+    """등급을 정하면 아직 고르지 않은 이용조건 항목을 등급 기본값으로 채운다. 담당자가 이미 고른 항목은 건드리지 않는다. 채운 항목 이름을 돌려준다."""
+    g = normalize(grade)
+    if not g or g not in AI_TERM_DEFAULTS:
+        return []
+    meta = dict(pd.meta or {})
+    filled = []
+    for name, status in AI_TERM_DEFAULTS[g].items():
+        if not meta.get(name):
+            meta[name] = status
+            filled.append(name)
+    if filled:
+        from datetime import datetime, timezone
+
+        meta[AI_TERM_DEFAULT_KEY] = {"grade": g, "fields": sorted(set(filled) | set((meta.get(AI_TERM_DEFAULT_KEY) or {}).get("fields", []))),
+                                     "by": by, "at": datetime.now(timezone.utc).replace(microsecond=0).isoformat()}
+        pd.meta = meta
+    return filled

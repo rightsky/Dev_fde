@@ -40,7 +40,7 @@ INSTRUCTIONS = (
 )
 RAI = Namespace("http://mlcommons.org/croissant/RAI/")
 
-server = MCPServer(name="fde-data-studio", title="FDE Data Studio 카탈로그", instructions=INSTRUCTIONS, version="0.14.0")
+server = MCPServer(name="fde-data-studio", title="FDE Data Studio 카탈로그", instructions=INSTRUCTIONS, version="0.15.0")
 
 
 def _entry(db, key, resource_id: str, rec: agent.CallRecord) -> CatalogEntry:

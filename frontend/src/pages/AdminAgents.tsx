@@ -30,7 +30,7 @@ export function AgentsTab() {
     <div className="col gap-12">
       <Banner tone="info">
         AI 에이전트(Claude 등)가 <b>발행된 카탈로그</b>를 MCP 로 조회합니다. 도구는 모두 <b>읽기 전용</b>이고 데이터 파일 자체는 내주지 않습니다 (메타데이터 · 컬럼 구조 · 데이터
-        카드 · 이용조건). 키마다 볼 수 있는 보안등급(N²SF O · S)과 도구를 정하며, <b>C(통제) 등급은 어떤 키로도 열리지 않습니다</b>. 모든 호출은 거부된 것까지 이력에 남고, STEP 8 원칙
+        카드 · 이용조건). 키마다 볼 수 있는 보안등급(N²SF O · S1 · S2)과 도구를 정하며, S2 는 발행본마다 건별 승인이 더 필요하고 <b>C(비공개) 등급은 어떤 키로도 열리지 않습니다</b>. 모든 호출은 거부된 것까지 이력에 남고, STEP 8 원칙
         10(MCP 연계 관리)의 증빙으로 쓰입니다.
       </Banner>
 
@@ -81,6 +81,7 @@ export function AgentsTab() {
 }
 
 function KeyTable({ keys, selected, onSelect }: { keys: AgentKey[]; selected: number | null; onSelect: (id: number) => void }) {
+  const [grantKey, setGrantKey] = useState<AgentKey | null>(null);
   const qc = useQueryClient();
   const toast = useToast();
   const [busy, setBusy] = useState<number | null>(null);
@@ -97,6 +98,7 @@ function KeyTable({ keys, selected, onSelect }: { keys: AgentKey[]; selected: nu
     }
   };
   return (
+    <>
     <div className="table-wrap">
       <table className="table">
         <thead>
@@ -144,6 +146,11 @@ function KeyTable({ keys, selected, onSelect }: { keys: AgentKey[]; selected: nu
                   <Button size="sm" onClick={() => onSelect(k.id)}>
                     {selected === k.id ? "이력 전체" : "이력"}
                   </Button>
+                  {k.grades.some((g) => g === "S2" || g === "S") && (
+                    <Button size="sm" onClick={() => setGrantKey(k)} title="S2(제한 공유) 발행본은 키 등급에 더해 건별 승인이 있어야 열립니다">
+                      S2 승인 {k.s2_grants ?? 0}
+                    </Button>
+                  )}
                   {k.state === "active" && (
                     <ConfirmButton size="sm" variant="danger" confirmLabel="정말 폐기" busy={busy === k.id} onConfirm={() => void revoke(k)}>
                       폐기
@@ -156,6 +163,12 @@ function KeyTable({ keys, selected, onSelect }: { keys: AgentKey[]; selected: nu
         </tbody>
       </table>
     </div>
+      {grantKey && (
+        <Modal title={`S2 건별 승인 — ${grantKey.name}`} onClose={() => setGrantKey(null)} wide>
+          <GrantsPanel k={grantKey} />
+        </Modal>
+      )}
+    </>
   );
 }
 
@@ -394,5 +407,98 @@ function CallLog({ keyId, keys, onClear }: { keyId: number | null; keys: AgentKe
         )}
       </QueryState>
     </Card>
+  );
+}
+
+
+/** S2(제한 공유) 발행본 건별 승인 — 3.6.1 S2 "사전 승인 · 접근통제 및 이력 관리" */
+function GrantsPanel({ k }: { k: AgentKey }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const q = useQuery({ queryKey: ["agent-grants", k.id], queryFn: () => api.grants(k.id) });
+  const [rid, setRid] = useState("");
+  const [note, setNote] = useState("");
+  const [days, setDays] = useState<number | "">(180);
+  const [busy, setBusy] = useState<string | null>(null);
+  const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: ["agent-grants", k.id] }), qc.invalidateQueries({ queryKey: ["agent-keys"] })]);
+  const add = async () => {
+    setBusy("add");
+    try {
+      await api.createGrant(k.id, { resource_id: rid, note, expires_days: days === "" ? null : Number(days) });
+      await refresh();
+      setRid(""); setNote("");
+      toast.ok(`${rid} 접근을 승인했습니다`);
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      setBusy(null);
+    }
+  };
+  const revoke = async (gid: number) => {
+    setBusy(`r${gid}`);
+    try {
+      await api.revokeGrant(k.id, gid);
+      await refresh();
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <div className="col gap-12">
+      <p className="small muted">
+        S2(제한 공유) 데이터셋은 키에 S2 등급이 있어도 <b>발행본마다 승인</b>을 받아야 에이전트에게 열립니다 (가이드라인 3.6.1: 기관 간 협약 · 사전 승인 · 접근통제와 이력 관리).
+        승인 근거(협약 · 목적 · 문서 번호)와 기한을 적으면 활동 로그에 남고, 회수하면 바로 막힙니다. S1 은 키 등급만으로 열립니다.
+      </p>
+      <QueryState q={q}>
+        {q.data && (
+          <>
+            {!q.data.s2_allowed && <Banner tone="warn">이 키에는 S2 등급이 없어 승인을 줄 수 없습니다. S2 가 필요하면 키를 새로 발급하세요.</Banner>}
+            {q.data.s2_allowed && k.state === "active" && (
+              <Card title="승인 추가">
+                <div className="grid" style={{ gridTemplateColumns: "minmax(220px, 1fr) 2fr 120px auto", gap: 8, alignItems: "end" }}>
+                  <Field label="S2 발행본">
+                    <select className="input" value={rid} onChange={(e) => setRid(e.target.value)}>
+                      <option value="">선택</option>
+                      {q.data.candidates.map((c) => (
+                        <option key={c.resource_id} value={c.resource_id}>{c.resource_id} · {c.title ?? ""}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="승인 근거 (필수)">
+                    <input className="input" value={note} maxLength={1000} placeholder="예: 교통안전공단 협약 2026-07, 사고 원인 분석 목적" onChange={(e) => setNote(e.target.value)} />
+                  </Field>
+                  <Field label="기한 (일)">
+                    <input className="input" type="number" min={1} max={3650} value={days} placeholder="없음" onChange={(e) => setDays(e.target.value === "" ? "" : Number(e.target.value))} />
+                  </Field>
+                  <Button variant="primary" busy={busy === "add"} disabled={!rid || note.trim().length === 0} onClick={() => void add()}>승인</Button>
+                </div>
+                {q.data.candidates.length === 0 && <div className="small muted mt-4">승인할 수 있는 S2 발행본이 없습니다 (이미 모두 승인됐거나 S2 발행본이 없음)</div>}
+              </Card>
+            )}
+            {q.data.items.length === 0 ? (
+              <Empty>승인 기록이 없습니다</Empty>
+            ) : (
+              <table className="table">
+                <thead><tr><th>발행본</th><th>근거</th><th>승인</th><th>기한</th><th>상태</th><th /></tr></thead>
+                <tbody>
+                  {q.data.items.map((g) => (
+                    <tr key={g.id}>
+                      <td><span className="mono">{g.resource_id}</span>{g.title && <div className="small dim">{g.title}</div>}</td>
+                      <td className="small">{g.note}</td>
+                      <td className="small nowrap">{g.granted_by} · {fmtDateTime(g.granted_at)}</td>
+                      <td className="small nowrap">{g.expires_at ? fmtDateTime(g.expires_at) : "없음"}</td>
+                      <td><Badge tone={g.state === "active" ? "ok" : "muted"}>{g.state === "active" ? "유효" : g.state === "expired" ? "만료" : "회수"}</Badge></td>
+                      <td>{g.state === "active" && <ConfirmButton size="sm" confirmLabel="정말 회수" busy={busy === `r${g.id}`} onConfirm={() => void revoke(g.id)}>회수</ConfirmButton>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </>
+        )}
+      </QueryState>
+    </div>
   );
 }
