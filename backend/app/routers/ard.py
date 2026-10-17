@@ -9,9 +9,9 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import ProcessDataset, User
+from ..models import Process, ProcessDataset, User
 from ..security import current_user, require_admin
-from ..services import activity, ard
+from ..services import activity, ard, scope
 
 router = APIRouter()
 
@@ -38,6 +38,9 @@ def artifacts(page: int = 1, size: int = 20, q: str | None = None, process_id: i
               actor_id: int | None = None, org: str | None = None, sort: str = "created", db: Session = Depends(get_db), user: User = Depends(current_user)) -> dict[str, Any]:
     page, size = ard.page_args(page, size)
     items = ard.artifact_items(db, process_id=process_id, kind=kind, q=q, latest_only=latest_only, actor_id=actor_id, org=org, sort=sort)
+    allowed = scope.visible_process_ids(db, user)
+    if allowed is not None:  # 작업자는 자기 프로세스의 산출물만
+        items = [i for i in items if i["process"]["id"] in allowed]
     if user.role == "viewer":
         for i in items:
             i["can_download"] = i["viewer_allowed"]
@@ -53,6 +56,8 @@ def download(kind: str, id: int, dataset_id: int | None = None, db: Session = De
     if got is None:
         raise HTTPException(404, "내려받을 산출물이 없습니다")
     content, filename, media_type, meta = got
+    if not scope.visible(user, db.get(Process, meta["process_id"]) if meta.get("process_id") else None):
+        raise HTTPException(404, "내려받을 산출물이 없습니다")
     if user.role == "viewer" and not ard.viewer_allowed(meta.get("grade")):
         raise HTTPException(403, "열람 전용 계정은 O(공개) 등급 산출물만 내려받을 수 있습니다")
     activity.log(db, "artifact_download", f"산출물 다운로드 — {filename}", user=user, process_id=meta.get("process_id"), dataset_id=meta.get("dataset_id"),
@@ -64,7 +69,7 @@ def download(kind: str, id: int, dataset_id: int | None = None, db: Session = De
 @router.get("/ard/datasets/{did}/package")
 def package(did: int, db: Session = Depends(get_db), user: User = Depends(current_user)) -> Response:
     pd = db.get(ProcessDataset, did)
-    if pd is None:
+    if pd is None or not scope.visible(user, pd.process):
         raise HTTPException(404, "데이터셋을 찾을 수 없습니다")
     got = ard.build_package(db, pd)
     if got is None:
@@ -79,9 +84,9 @@ def package(did: int, db: Session = Depends(get_db), user: User = Depends(curren
 
 
 @router.get("/ard/datasets/{did}/package/manifest")
-def package_manifest(did: int, db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
+def package_manifest(did: int, db: Session = Depends(get_db), user: User = Depends(current_user)) -> dict[str, Any]:
     pd = db.get(ProcessDataset, did)
-    if pd is None:
+    if pd is None or not scope.visible(user, pd.process):
         raise HTTPException(404, "데이터셋을 찾을 수 없습니다")
     got = ard.build_package(db, pd)
     if got is None:
@@ -98,8 +103,11 @@ def published(page: int = 1, size: int = 20, q: str | None = None, status: str |
 
 @router.get("/ard/history")
 def history(page: int = 1, size: int = 20, type: str | None = None, actor_id: int | None = None, org: str | None = None, q: str | None = None,
-            sort: str = "created", format: str | None = None, db: Session = Depends(get_db), _: User = Depends(current_user)):
+            sort: str = "created", format: str | None = None, db: Session = Depends(get_db), user: User = Depends(current_user)):
     items = ard.history_items(db, type_=type, actor_id=actor_id, org=org, q=q, sort=sort)
+    allowed = scope.visible_process_ids(db, user)
+    if allowed is not None:  # 작업자는 자기 프로세스 · 자기 활동만
+        items = [i for i in items if (i["process_id"] in allowed) or i["actor"].get("id") == user.id]
     if format == "csv":
         return _download(ard.history_csv(items).encode("utf-8"), "ARD_배포이력.csv", "text/csv")
     page, size = ard.page_args(page, size)

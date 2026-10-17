@@ -85,6 +85,7 @@ def process_out(p: Process) -> dict[str, Any]:
             "dataset_count": len(p.combo), "selected_count": sum(1 for d in p.datasets if d.selected),
             "created_at": p.created_at, "updated_at": p.updated_at, "completed_at": p.completed_at,
             "trashed_at": p.trashed_at,
+            "owner": {"id": p.owner.id, "name": p.owner.name, "org": p.owner.org_label} if getattr(p, "owner", None) else None,
             "combo_grading": grading.combo_grade(p)}
 
 

@@ -329,6 +329,7 @@ function ProcessListModal({ currentId, onClose }: { currentId: number; onClose: 
   const toast = useToast();
   const [tab, setTab] = useState<"open" | "trashed">("open");
   const q = useQuery({ queryKey: ["processes", tab], queryFn: () => api.processes(tab === "trashed" ? "trashed" : undefined) });
+  const users = useQuery({ queryKey: ["users"], queryFn: api.users, enabled: isAdmin });
   const [busy, setBusy] = useState(false);
 
   const act = async (fn: () => Promise<unknown>, msg: string) => {
@@ -389,6 +390,7 @@ function ProcessListModal({ currentId, onClose }: { currentId: number; onClose: 
                   <th>상태</th>
                   <th>진행</th>
                   <th>조합</th>
+                  <th>담당자</th>
                   <th>최근 변경</th>
                   <th />
                 </tr>
@@ -409,6 +411,31 @@ function ProcessListModal({ currentId, onClose }: { currentId: number; onClose: 
                       STEP {p.current_step} <span className="muted tiny">· 완료 {(p.steps_done || []).length}/8</span>
                     </td>
                     <td className="num">{p.dataset_count}건</td>
+                    <td className="nowrap">
+                      {isAdmin && users.data ? (
+                        <select
+                          className="select"
+                          style={{ width: 150 }}
+                          value={p.owner?.id ?? ""}
+                          title="담당자를 바꾸면 그 작업자의 프로세스 목록으로 옮겨집니다 (작업자는 자기 담당 프로세스만 봅니다)"
+                          aria-label="담당자 배정"
+                          onChange={(e) => act(() => api.updateProcess(p.id, { owner_id: e.target.value ? Number(e.target.value) : null }), "담당자를 배정했습니다")}
+                        >
+                          <option value="">— 없음 —</option>
+                          {users.data.filter((u) => u.active && u.role !== "viewer").map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.name}
+                              {u.org_label ? ` (${u.org_label})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <>
+                          {p.owner?.name || <span className="muted">—</span>}
+                          {p.owner?.org && <div className="tiny muted">{p.owner.org}</div>}
+                        </>
+                      )}
+                    </td>
                     <td className="nowrap">{fmtDateTime(p.updated_at)}</td>
                     <td className="nowrap right">
                       {tab === "open" ? (

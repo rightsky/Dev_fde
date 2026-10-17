@@ -244,6 +244,8 @@ export interface Process {
   name: string;
   status: "active" | "completed" | "trashed";
   current_step: number;
+  /** 담당자 (만든 사람 또는 관리자가 배정). 작업자는 자기 담당 프로세스만 본다 */
+  owner?: { id: number; name: string; org: string | null } | null;
   combo_title: string | null;
   combo_description: string | null;
   combo_source: "manual" | "suggestion" | null;

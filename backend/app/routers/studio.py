@@ -5,7 +5,7 @@ import re
 from typing import Any
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
@@ -16,11 +16,16 @@ from ..models import (Artifact, Asset, Attestation, DiagnosisRun, Organization, 
 from ..security import current_user, require_admin, require_writer
 from ..serializers import (activity_out, dataset_out, diagnosis_out, mint_out, process_out, serialization_out,
                            validation_out)
-from ..services import (activity, canonical, catalog, diagnosis, gates, grading, lineage, minting, ratelimit, serialize, suggest,
+from ..services import (activity, canonical, catalog, diagnosis, gates, grading, lineage, minting, ratelimit, scope, serialize, suggest,
                         validation)
 from ..services.reference import guideline_rules, vocab
 
-router = APIRouter()
+def _scope(request: Request, db: Session = Depends(get_db), user: User = Depends(current_user)) -> None:
+    scope.enforce(request, db, user)
+
+
+# 작업자는 자기 프로세스만: 모든 스튜디오 경로에 범위 검사를 건다 (services/scope.py)
+router = APIRouter(dependencies=[Depends(_scope)])
 
 
 # ------------------------------------------------------------------ 공통 조회
@@ -65,8 +70,8 @@ class ProcessIn(BaseModel):
 
 
 @router.get("/processes")
-def list_processes(status: str | None = None, db: Session = Depends(get_db), _: User = Depends(current_user)) -> list[dict[str, Any]]:
-    stmt = select(Process).order_by(Process.updated_at.desc())
+def list_processes(status: str | None = None, db: Session = Depends(get_db), user: User = Depends(current_user)) -> list[dict[str, Any]]:
+    stmt = scope.restrict(select(Process).order_by(Process.updated_at.desc()), user)  # 작업자는 자기 프로세스만
     if status == "trashed":
         stmt = stmt.where(Process.status == "trashed")
     elif status in ("active", "completed"):
@@ -131,11 +136,14 @@ class ProcessPatch(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     current_step: int | None = Field(default=None, ge=1, le=8)
     pub_mode: bool | None = None
+    owner_id: int | None = None  # 담당자 배정 (관리자만). 작업자는 자기 프로세스만 보므로 배정하면 그 작업자 목록에 나타난다
 
 
 @router.patch("/processes/{pid}")
 def update_process(pid: int, body: ProcessPatch, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
-    p = _editable(db, pid)
+    # 담당자 배정만 하는 요청은 종료 · 휴지통 프로세스에도 허용한다 (관리자 정리 작업)
+    only_owner = body.model_fields_set == {"owner_id"}
+    p = _process(db, pid) if only_owner else _editable(db, pid)
     if body.name is not None:
         p.name = body.name.strip()
     if body.current_step is not None and body.current_step != p.current_step:
@@ -146,6 +154,16 @@ def update_process(pid: int, body: ProcessPatch, db: Session = Depends(get_db), 
     if body.pub_mode is not None and body.pub_mode != p.pub_mode:
         p.pub_mode = body.pub_mode
         activity.log(db, "pub_mode", f"발행 모드 {'전환' if p.pub_mode else '해제'} — {p.name}", user=user, process_id=p.id)
+    if "owner_id" in body.model_fields_set and body.owner_id != p.created_by:
+        if user.role != "admin":
+            raise HTTPException(403, "담당자 배정은 관리자만 할 수 있습니다")
+        new_owner = db.get(User, body.owner_id) if body.owner_id is not None else None
+        if body.owner_id is not None and (new_owner is None or not new_owner.active):
+            raise HTTPException(422, "배정할 사용자를 찾을 수 없습니다")
+        prev = db.get(User, p.created_by) if p.created_by else None
+        p.created_by = body.owner_id
+        activity.log(db, "process_assign", f"담당자 배정 — {p.name}: {prev.name if prev else '없음'} → {new_owner.name if new_owner else '없음'}", user=user, process_id=p.id,
+                     payload={"from": p.created_by and prev.id if prev else None, "to": body.owner_id})
     p.updated_at = utcnow()
     db.commit()
     return _detail(db, p)

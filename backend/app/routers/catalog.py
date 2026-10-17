@@ -89,11 +89,14 @@ def restore(resource_id: str, db: Session = Depends(get_db), user: User = Depend
 
 
 @router.get("/dashboard")
-def dashboard(db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
+def dashboard(db: Session = Depends(get_db), user: User = Depends(current_user)) -> dict[str, Any]:
+    from ..services import scope
+
     def count(model, *where) -> int:  # noqa: ANN001
         return db.scalar(select(func.count()).select_from(model).where(*where)) or 0
 
-    procs = db.scalars(select(Process).where(Process.status != "trashed").order_by(Process.updated_at.desc()).limit(8)).all()
+    mine = [] if scope.sees_all(user) else [Process.created_by == user.id]  # 작업자는 자기 프로세스만 센다
+    procs = db.scalars(scope.restrict(select(Process).where(Process.status != "trashed"), user).order_by(Process.updated_at.desc()).limit(8)).all()
     recent = []
     for p in procs:
         st = gates.state(db, p)
@@ -105,8 +108,8 @@ def dashboard(db: Session = Depends(get_db), _: User = Depends(current_user)) ->
         "counts": {
             "assets": count(Asset, Asset.deleted_at.is_(None)),
             "streams": count(Asset, Asset.deleted_at.is_(None), Asset.kind == "stream"),
-            "processes_active": count(Process, Process.status == "active"),
-            "processes_completed": count(Process, Process.status == "completed"),
+            "processes_active": count(Process, Process.status == "active", *mine),
+            "processes_completed": count(Process, Process.status == "completed", *mine),
             "catalog_published": count(CatalogEntry, CatalogEntry.status == "published"),
             "minted": count(MintRecord),
             "activities": count(Activity),

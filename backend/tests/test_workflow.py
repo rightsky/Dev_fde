@@ -432,6 +432,11 @@ def test_10_publish_requires_mint(client):
                                            "role": "worker"}).status_code == 200
     wtok = client.post("/api/auth/login", json={"username": "worker1", "password": "worker-pass-1"}).json()["access_token"]
     wh = {"Authorization": f"Bearer {wtok}"}
+    # 작업자는 자기 담당 프로세스만 본다 (v0.18.1): 관리자가 이 프로세스를 담당자에게 배정한다
+    assert client.get(f"/api/processes/{pid}", headers=wh).status_code == 404
+    w1id = next(u["id"] for u in client.get("/api/users").json() if u["username"] == "worker1")
+    assert client.patch(f"/api/processes/{pid}", json={"owner_id": w1id}).status_code == 200
+    assert client.get(f"/api/processes/{pid}", headers=wh).status_code == 200
     assert client.post(f"/api/processes/{pid}/publish", headers=wh).status_code == 403, "발행은 관리자만"
     rq = client.post(f"/api/processes/{pid}/review-requests", json={"message": "도로·사고 결합 데이터 발행 요청"}, headers=wh)
     assert rq.status_code == 200, rq.text
@@ -1665,3 +1670,43 @@ def test_25_column_samples_and_force_delete(client):
     assert any(m["asset_id"] == road for m in client.get("/api/mint-registry").json()["records"]), "민팅 대장은 남는다"
     acts = client.get("/api/activities", params={"limit": 5}).json()
     assert any(a["type"] == "asset_delete" and "강제" in a["text"] for a in acts)
+
+
+def test_26_process_scope_and_assignment(client):
+    """작업자는 자기 프로세스만 (새 작업자는 빈 목록), 관리자 · 열람은 전부. 관리자가 담당자를 배정하면 그 작업자에게 보인다."""
+    pid = S["pid"]
+    r = client.post("/api/users", json={"username": "worker2", "name": "신규담당", "password": "worker-pass-2", "role": "worker", "org_label": "교통정책과"})
+    assert r.status_code in (200, 201), r.text
+    w2 = client.post("/api/auth/login", json={"username": "worker2", "password": "worker-pass-2"}).json()["access_token"]
+    wh = {"Authorization": f"Bearer {w2}"}
+    assert client.get("/api/processes", headers=wh).json() == [], "새 작업자는 빈 목록"
+    assert client.get(f"/api/processes/{pid}", headers=wh).status_code == 404, "남의 프로세스는 존재도 안 보임"
+    assert client.get(f"/api/processes/{pid}/graph", headers=wh).status_code == 404
+    assert client.get(f"/api/datasets/{S['d_acc']}", headers=wh).status_code == 404
+    assert client.get("/api/ard/artifacts", headers=wh).json()["total"] == 0
+    dash = client.get("/api/dashboard", headers=wh).json()
+    assert dash["recent_processes"] == [] and dash["counts"]["processes_active"] == 0
+    # 관리자 · 열람은 전부
+    assert any(p["id"] == pid for p in client.get("/api/processes").json())
+    vtok = client.post("/api/auth/login", json={"username": "viewer1", "password": "viewer-pass-1"}).json()["access_token"]
+    assert any(p["id"] == pid for p in client.get("/api/processes", headers={"Authorization": f"Bearer {vtok}"}).json())
+    # 작업자 자신이 만든 프로세스는 보인다
+    mine = client.post("/api/processes", json={"name": "신규담당 작업"}, headers=wh).json()["process"]["id"]
+    assert [p["id"] for p in client.get("/api/processes", headers=wh).json()] == [mine]
+    assert client.get(f"/api/processes/{mine}", headers=wh).status_code == 200
+    # 배정: 작업자는 못 하고 관리자만. 배정하면 그 작업자 목록에 나타나고 원래 사람은 못 본다
+    assert client.patch(f"/api/processes/{pid}", json={"owner_id": None}, headers=wh).status_code in (403, 404)
+    w2id = next(u["id"] for u in client.get("/api/users").json() if u["username"] == "worker2")
+    r = client.patch(f"/api/processes/{pid}", json={"owner_id": w2id})
+    assert r.status_code == 200 and r.json()["process"]["owner"]["id"] == w2id, r.text
+    ids = {p["id"] for p in client.get("/api/processes", headers=wh).json()}
+    assert ids == {mine, pid}
+    assert client.get(f"/api/processes/{pid}", headers=wh).status_code == 200
+    assert client.get("/api/ard/artifacts", headers=wh).json()["total"] > 0, "배정받은 프로세스의 산출물도 보인다"
+    w1 = client.post("/api/auth/login", json={"username": "worker1", "password": "worker-pass-1"}).json()["access_token"]
+    assert client.get(f"/api/processes/{pid}", headers={"Authorization": f"Bearer {w1}"}).status_code == 404
+    acts = client.get("/api/activities", params={"limit": 5}).json()
+    assert any(a["type"] == "process_assign" for a in acts)
+    # 원래 담당자(worker1)에게 되돌린다 (뒤 테스트가 worker1 으로 이 프로세스를 쓴다)
+    w1id = next(u["id"] for u in client.get("/api/users").json() if u["username"] == "worker1")
+    assert client.patch(f"/api/processes/{pid}", json={"owner_id": w1id}).status_code == 200
