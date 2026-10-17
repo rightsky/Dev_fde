@@ -1318,3 +1318,22 @@ export interface ShareInfo {
   reason: string | null;
   notice: string;
 }
+
+/** 외부 정본 검사 (v0.20) */
+export interface ExternalCheck {
+  filename: string;
+  error?: string;
+  format?: string | null;
+  mode?: "draft" | "publish";
+  gate0?: { key: string; name: string; ok: boolean; skipped?: boolean; detail: string }[];
+  gate0_passed?: boolean;
+  blocked_before_shacl?: boolean;
+  triples?: number;
+  shapes_version?: string;
+  shacl?: { conforms: boolean; violations: number; warnings: number; infos: number; rows: ValidationRow[]; truncated: boolean } | null;
+  verdict?: string;
+}
+export interface ExternalCheckResponse {
+  mode: "draft" | "publish";
+  results: ExternalCheck[];
+}

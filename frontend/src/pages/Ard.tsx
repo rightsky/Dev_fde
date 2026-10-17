@@ -1,14 +1,14 @@
 // ARD 관리 — ARD 스튜디오가 만든 산출물의 보관 · 배포 · 이력 (v0.18, 데이터 카탈로그 화면을 대체)
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, downloadFile, downloads } from "../api";
 import { useAuth } from "../auth";
-import type { ArdArtifact, ArdDiff, ArdFilters, ArdHistory, ArdKind, ArdPublished, ArdSummary, ArdVersion, ShareLink } from "../types";
+import type { ArdArtifact, ArdDiff, ArdFilters, ArdHistory, ArdKind, ArdPublished, ArdSummary, ArdVersion, ExternalCheck, ShareLink } from "../types";
 import { Badge, Banner, Button, ConfirmButton, Empty, Field, Modal, Pager, QueryState, Tabs, cx, fmtBytes, fmtDateTime, fmtNum, shortHash, useToast } from "../ui";
 
-type Tab = "artifacts" | "published" | "history" | "shares";
+type Tab = "artifacts" | "published" | "history" | "shares" | "check";
 type GroupBy = "" | "actor" | "org";
 
 const TABS: { key: Tab; label: string }[] = [
@@ -16,6 +16,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "published", label: "발행본" },
   { key: "history", label: "배포 이력" },
   { key: "shares", label: "공유 링크" },
+  { key: "check", label: "외부 정본 검사" },
 ];
 const GROUPS: { key: GroupBy; label: string }[] = [
   { key: "", label: "구분 없음" },
@@ -71,6 +72,7 @@ export function ArdPage() {
           {tab === "published" && <PublishedTab filters={filters.data} sizes={summary.data?.page_sizes} />}
           {tab === "history" && <HistoryTab filters={filters.data} sizes={summary.data?.page_sizes} />}
           {tab === "shares" && <SharesTab />}
+          {tab === "check" && <CheckTab />}
         </>
       )}
     </div>
@@ -906,6 +908,120 @@ function SharesTab() {
           </div>
         )}
       </QueryState>
+    </div>
+  );
+}
+
+
+// ───────────── 외부 정본 검사 (v0.20)
+function CheckTab() {
+  const toast = useToast();
+  const input = useRef<HTMLInputElement>(null);
+  const [mode, setMode] = useState<"draft" | "publish">("publish");
+  const [busy, setBusy] = useState(false);
+  const [results, setResults] = useState<ExternalCheck[]>([]);
+  const [over, setOver] = useState(false);
+  const run = async (files: File[]) => {
+    if (!files.length) return;
+    setBusy(true);
+    try {
+      const r = await api.checkExternal(files.slice(0, 10), mode);
+      setResults(r.results);
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="col gap-12">
+      <Banner tone="info">
+        스튜디오 밖에서 만든 <b>Turtle(.ttl) · JSON-LD(.jsonld)</b> 정본을 올리면 STEP 6 과 같은 <b>게이트 0</b>(① 파서 · ② prefix 완결 · ③ UTF-8 · ④ 임시 ID · ⑤ 정체성)을 돌리고, 게이트 0 을 통과한 파일만 <b>SHACL</b> 까지 검사합니다.
+        파일은 저장하지 않고 결과 요약만 활동 로그에 남습니다. 타 기관 · 타 도구 산출물의 사전 점검과 "정본 통과 · 오류본 차단" 시연에 씁니다.
+      </Banner>
+      <div className="row wrap gap-8" style={{ alignItems: "center" }}>
+        <span className="small bold dim">검사 모드</span>
+        <button type="button" className={cx("chip", mode === "draft" && "on")} aria-pressed={mode === "draft"} onClick={() => setMode("draft")}>초안 (공통 규칙)</button>
+        <button type="button" className={cx("chip", mode === "publish" && "on")} aria-pressed={mode === "publish"} onClick={() => setMode("publish")}>발행 (공통 + 발행 규칙 · 임시 ID 검사)</button>
+      </div>
+      <div
+        className={cx("dropzone", over && "over")}
+        onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(e) => { e.preventDefault(); setOver(false); void run(Array.from(e.dataTransfer.files)); }}
+        style={{ padding: 28, textAlign: "center" }}
+      >
+        <input ref={input} type="file" multiple accept=".ttl,.turtle,.jsonld,.json,.nt,.rdf,.xml,.trig" style={{ display: "none" }} onChange={(e) => { void run(Array.from(e.target.files || [])); e.target.value = ""; }} />
+        <div className="bold">정본 파일을 끌어다 놓으세요 (.ttl · .jsonld · .nt · .rdf)</div>
+        <div className="small muted mt-4">
+          한 번에 10개 · 파일당 5MB · 또는{" "}
+          <button type="button" className="link-btn" onClick={() => input.current?.click()}>
+            파일 선택
+          </button>
+        </div>
+        {busy && <div className="small mt-8"><span className="spinner" /> 검사 중…</div>}
+      </div>
+      {results.map((r) => (
+        <div key={r.filename} className="card">
+          <div className="row between wrap" style={{ alignItems: "center" }}>
+            <div>
+              <span className="bold">{r.filename}</span>
+              {r.format && <span className="kbd" style={{ marginLeft: 6 }}>{r.format}</span>}
+              {r.triples != null && <span className="small muted"> · {fmtNum(r.triples)} 트리플</span>}
+              {r.shapes_version && <span className="small muted"> · 규칙 {r.shapes_version}</span>}
+            </div>
+            {r.error ? <Badge tone="err">{r.error}</Badge> : <Badge tone={r.verdict?.startsWith("통과") ? "ok" : r.verdict?.startsWith("차단") ? "err" : "warn"}>{r.verdict}</Badge>}
+          </div>
+          {r.gate0 && (
+            <div className="mt-8">
+              <div className="small bold dim mb-4">게이트 0</div>
+              <div className="col gap-4">
+                {r.gate0.map((c) => (
+                  <div key={c.key} className="row small" style={{ gap: 8, alignItems: "flex-start" }}>
+                    <Badge tone={c.skipped ? "muted" : c.ok ? "ok" : "err"}>{c.skipped ? "생략" : c.ok ? "PASS" : "FAIL"}</Badge>
+                    <span className="bold nowrap">{c.name}</span>
+                    <span className="muted" style={{ wordBreak: "break-all" }}>{c.detail}</span>
+                  </div>
+                ))}
+              </div>
+              {r.blocked_before_shacl && <div className="small t-err bold mt-4">→ 게이트 0 ①~③ 실패: SHACL 도달 전 반려 (STEP 6 과 같은 규칙)</div>}
+            </div>
+          )}
+          {r.shacl && (
+            <div className="mt-8">
+              <div className="small bold dim mb-4">
+                SHACL — {r.shacl.conforms ? <span className="t-ok">적합</span> : <span className="t-err">위반 {r.shacl.violations}건</span>} · 경고 {r.shacl.warnings} · 정보 {r.shacl.infos}
+              </div>
+              {r.shacl.rows.length > 0 && (
+                <div className="table-wrap" style={{ maxHeight: 360, overflow: "auto" }}>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>심각도</th>
+                        <th>Shape</th>
+                        <th>메시지</th>
+                        <th>초점 · 경로</th>
+                        <th>값</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {r.shacl.rows.filter((x) => x.severity !== "Info").map((x, i) => (
+                        <tr key={i}>
+                          <td><Badge tone={x.severity === "Violation" ? "err" : "warn"}>{x.severity}</Badge></td>
+                          <td className="mono small">{x.shape}</td>
+                          <td className="small">{x.message}</td>
+                          <td className="mono tiny muted">{x.focus}{x.path && ` · ${x.path}`}</td>
+                          <td className="tiny muted" style={{ maxWidth: 240, wordBreak: "break-all" }}>{x.value || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }

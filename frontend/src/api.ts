@@ -333,6 +333,14 @@ export const api = {
   createShareLink: (body: { kind: string; target_id: number; dataset_id?: number | null; days: number; max_downloads: number; recipient?: string | null; note?: string | null }) =>
     post<T.ShareLink & { url: string; token: string }>("/ard/share-links", body),
   revokeShareLink: (id: number) => post<T.ShareLink>(`/ard/share-links/${id}/revoke`, {}),
+  checkExternal: async (files: File[], mode: "draft" | "publish") => {
+    const fd = new FormData();
+    for (const f of files) fd.append("files", f);
+    fd.append("mode", mode);
+    const res = await fetch("/api/ard/check-external", { method: "POST", body: fd, headers: auth.token ? { Authorization: `Bearer ${auth.token}` } : {} });
+    if (!res.ok) throw new ApiError(res.status, `검사 요청 실패 (${res.status})`);
+    return (await res.json()) as T.ExternalCheckResponse;
+  },
   shareInfo: (token: string) => get<T.ShareInfo>(`/share/${encodeURIComponent(token)}`),
   catalogEntry: (rid: string) => get<T.CatalogEntry>(`/catalog/${encodeURIComponent(rid)}`),
   withdraw: (rid: string) => post<T.CatalogEntry>(`/catalog/${encodeURIComponent(rid)}/withdraw`),

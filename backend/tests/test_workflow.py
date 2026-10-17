@@ -1832,3 +1832,24 @@ def test_29_version_diff_and_share_links(client):
     assert client.get(f"/api/share/{r3['token']}/download", headers=noauth).status_code == 200
     acts = client.get("/api/activities", params={"limit": 30}).json()
     assert {"share_create", "share_revoke", "share_download"} <= {a["type"] for a in acts}
+
+
+def test_30_external_check(client):
+    """외부 정본 검사: 스튜디오 발행본 Turtle 은 게이트 0 + SHACL 통과, prefix 누락 · 임시 ID 파일은 SHACL 도달 전 차단."""
+    good = client.get("/api/catalog/DST-000001/raw", params={"format": "ttl"}).text
+    broken = ('@prefix dcat: <http://www.w3.org/ns/dcat#> .\n@prefix dcterms: <http://purl.org/dc/terms/> .\n'
+              '<https://x/id/dataset/DST-신규-0001> a dcat:Dataset ; dcterms:title "t" ; prov:wasGeneratedBy <https://x/id/activity/ACT-초안-1> .\n')
+    r = client.post("/api/ard/check-external", data={"mode": "publish"},
+                    files=[("files", ("good.ttl", good.encode(), "text/turtle")), ("files", ("broken.ttl", broken.encode(), "text/turtle")), ("files", ("x.bin", b"\xff\xfe", "application/octet-stream"))])
+    assert r.status_code == 200, r.text
+    res = {x["filename"]: x for x in r.json()["results"]}
+    g, b, x = res["good.ttl"], res["broken.ttl"], res["x.bin"]
+    assert g["verdict"].startswith("통과") and g["shacl"]["conforms"] and g["triples"] > 100 and all(c["ok"] for c in g["gate0"])
+    assert b["blocked_before_shacl"] and b["shacl"] is None and b["verdict"].startswith("차단")
+    g0 = {c["key"]: c for c in b["gate0"]}
+    assert g0["parse"]["ok"] is False and g0["prefix"]["ok"] is False and "prov" in g0["prefix"]["detail"] and g0["mint"]["ok"] is False
+    assert x["blocked_before_shacl"] and {c["key"]: c["ok"] for c in x["gate0"]}["utf8"] is False
+    # 초안 모드면 ④ 는 생략
+    r = client.post("/api/ard/check-external", data={"mode": "draft"}, files=[("files", ("good.ttl", good.encode(), "text/turtle"))]).json()["results"][0]
+    assert next(c for c in r["gate0"] if c["key"] == "mint")["skipped"] is True
+    assert any(a["type"] == "external_check" for a in client.get("/api/activities", params={"limit": 5}).json())

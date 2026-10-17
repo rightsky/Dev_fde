@@ -5,7 +5,8 @@ import re
 from typing import Any
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -247,3 +248,28 @@ def share_download(token: str, request: Request, db: Session = Depends(get_db)) 
                  payload={"share_id": link.id, "filename": filename, "size": len(content), "sha256": ard.sha256(content), "ip": ip, "recipient": link.recipient}, software=True)
     db.commit()
     return _download(content, filename, media_type)
+
+
+# ----------------------------------------------------------------- 외부 정본 검사 (v0.20)
+@router.post("/ard/check-external")
+async def check_external(files: list[UploadFile] = File(...), mode: str = Form("draft"), db: Session = Depends(get_db), user: User = Depends(current_user)) -> dict[str, Any]:
+    """스튜디오 밖에서 만든 Turtle · JSON-LD 를 게이트 0 + SHACL 로 검사한다. 파일은 저장하지 않고 결과 요약만 활동 로그에 남긴다."""
+    from ..services import extcheck
+
+    mode = "publish" if mode == "publish" else "draft"
+    results = []
+    for f in files[:10]:
+        name = (f.filename or "upload").replace("\\", "/").rsplit("/", 1)[-1]
+        data = await f.read()
+        if len(data) > extcheck.MAX_BYTES:
+            results.append({"filename": name, "error": "5MB 를 초과합니다"})
+            continue
+        try:
+            results.append(await run_in_threadpool(extcheck.check, name, data, mode))
+        except Exception as exc:  # noqa: BLE001
+            results.append({"filename": name, "error": f"{type(exc).__name__}: {exc}"[:300]})
+    activity.log(db, "external_check", "외부 정본 검사 — " + ", ".join(f"{r['filename']}: {r.get('verdict') or r.get('error')}" for r in results)[:400], user=user,
+                 payload={"mode": mode, "results": [{"filename": r["filename"], "verdict": r.get("verdict"), "error": r.get("error"), "triples": r.get("triples"),
+                                                      "violations": (r.get("shacl") or {}).get("violations") if r.get("shacl") else None} for r in results]})
+    db.commit()
+    return {"mode": mode, "results": results}
