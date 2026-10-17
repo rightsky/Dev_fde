@@ -538,6 +538,71 @@ function ConfirmCard({ draft, errorCount, comboBusy }: { draft: { title: string;
         </div>
         {detail.state.validation.stale && <div className="tiny t-warn">현재 상태: {detail.state.validation.stale}</div>}
       </div>
+      {combo.length > 0 && <ComboGradeCard />}
+    </div>
+  );
+}
+
+// ───────────── 조합(결합) 등급 (가이드라인 3.6.1 결합 후 재검토)
+const GRADE_LABELS: Record<string, string> = { O: "O · 공개", S1: "S1 · 조건부 공유", S2: "S2 · 제한 공유", C: "C · 비공개" };
+const GRADE_ORDER = ["O", "S1", "S2", "C"];
+
+function ComboGradeCard() {
+  const { pid, detail, editable, refresh } = useStudio();
+  const toast = useToast();
+  const cg = detail.process.combo_grading;
+  const [grade, setGrade] = useState<string>(cg?.explicit ? cg.grade ?? "" : "");
+  const [reason, setReason] = useState(cg?.reason ?? "");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    setGrade(cg?.explicit ? cg.grade ?? "" : "");
+    setReason(cg?.reason ?? "");
+  }, [cg?.grade, cg?.explicit, cg?.reason]);
+  if (!cg) return null;
+  const chosen = grade || cg.floor;
+  const below = !!cg.floor && !!grade && GRADE_ORDER.indexOf(grade) < GRADE_ORDER.indexOf(cg.floor);
+  const dirty = grade !== (cg.explicit ? cg.grade ?? "" : "") || reason.trim() !== (cg.reason ?? "");
+  const save = async () => {
+    setBusy(true);
+    try {
+      await api.setComboGrade(pid, { grade: grade || null, reason: reason.trim() || undefined });
+      await refresh();
+      toast.ok(grade ? `조합 등급 ${GRADE_LABELS[grade]} 로 저장했습니다` : "조합 등급을 기본값(구성 최고 등급)으로 되돌렸습니다");
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="card" data-focus="combo_grade">
+      <div className="row between wrap">
+        <b>조합(결합) 등급</b>
+        <span className="small muted">가이드라인 3.6.1 · 결합하면 민감도가 오를 수 있어 구성 데이터셋 최고 등급이 기본값입니다</span>
+      </div>
+      <div className="row wrap gap-8 mt-8" style={{ alignItems: "center" }}>
+        <span className="small">구성 최고 등급</span>
+        {cg.floor ? <Badge tone={cg.floor === "O" ? "ok" : cg.floor === "C" ? "err" : "warn"}>{cg.floor_label}</Badge> : <Badge tone="muted">미지정 (STEP 4 에서 등급을 정하면 계산됩니다)</Badge>}
+        {cg.mixed && <span className="small muted">· 등급이 섞인 조합 (공개 + 제한공유 결합은 S2 이상 권장)</span>}
+        {cg.unset.length > 0 && <span className="small t-warn">· 등급 미지정 {cg.unset.length}건</span>}
+      </div>
+      <div className="row wrap gap-8 mt-8" style={{ alignItems: "center" }}>
+        <span className="small">조합 등급</span>
+        <select className="input" style={{ width: 220 }} value={grade} disabled={!editable || busy} onChange={(e) => setGrade(e.target.value)}>
+          <option value="">기본값 = 구성 최고 등급{cg.floor ? ` (${cg.floor_label})` : ""}</option>
+          {GRADE_ORDER.map((g) => <option key={g} value={g}>{GRADE_LABELS[g]}</option>)}
+        </select>
+        {chosen && <Badge tone={chosen === "O" ? "ok" : chosen === "C" ? "err" : "warn"}>{GRADE_LABELS[chosen]}</Badge>}
+        {dirty && <Button size="sm" variant="primary" busy={busy} disabled={!editable} onClick={save}>저장</Button>}
+      </div>
+      {below && (
+        <div className="mt-8">
+          <Banner tone="warn">구성 데이터셋보다 낮은 등급입니다. 결합 결과가 왜 덜 민감한지(집계만 제공, 식별 컬럼 제외 등) 20자 이상 적어야 저장되고, 검수 큐에 신호로 올라갑니다.</Banner>
+          <textarea className="textarea mt-8" rows={2} value={reason} disabled={!editable || busy} maxLength={1000}
+            placeholder="예: 결합 결과는 읍면동 월별 집계만 제공하고 개별 기록은 반출하지 않음" onChange={(e) => setReason(e.target.value)} />
+        </div>
+      )}
+      {cg.explicit && cg.below_floor && !dirty && <div className="small muted mt-4">사유: {cg.reason}</div>}
     </div>
   );
 }

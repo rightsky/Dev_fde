@@ -85,6 +85,12 @@ export interface DictRow {
   samples: string[];
   pii: string | null;
   key: string | null;
+  /** 컬럼 민감 항목: 담당자가 표시한 개인정보 유형 (none · pseudonymized · personal · sensitive) */
+  personal_data: string | null;
+  /** 자동 후보 (표시하지 않은 컬럼에만) */
+  personal_suggested: string | null;
+  personal_suggested_why: string | null;
+  deid: { method: string; note: string | null; by?: string; at?: string } | null;
 }
 
 export interface DictPayload {
@@ -92,6 +98,8 @@ export interface DictPayload {
   rows: DictRow[];
   described: number;
   total: number;
+  sensitive: { marked: number; deid: number; suggested_count: number; needs_deid: string[]; dataset_personal_data: string | null; dataset_personal_label: string | null };
+  options: { personal_data: Record<string, string>; deid_methods: Record<string, string> };
 }
 
 export interface CardItem {
@@ -235,6 +243,8 @@ export interface Process {
   pub_mode: boolean;
   lineage_waiver_reason: string | null;
   lineage_waived_at: string | null;
+  /** 조합 등급 (3.6.1 결합 후 재검토): floor = 구성 최고 등급, explicit = 담당자가 직접 정함 */
+  combo_grading?: { floor: string | null; floor_label: string | null; grade: string | null; grade_label: string | null; explicit: boolean; below_floor: boolean; reason: string | null; unset: string[]; mixed: boolean };
   dataset_count: number;
   selected_count: number;
   created_at: string;
@@ -296,6 +306,11 @@ export interface GradingState {
   basis_complete: boolean;
   below_suggested: boolean;
   below_reason: string | null;
+  /** 기관 등급표에서 이 자산에 매칭된 가장 높은 등급 */
+  org_grade: { grade: string; label: string | null; name: string; system: string | null; entries: number; legal_basis: string | null; personal_data: string | null } | null;
+  org_conflict: boolean;
+  /** 데이터 사전 컬럼 민감 항목 요약 */
+  columns: { marked: number; deid: number; suggested_count: number; needs_deid: string[]; dataset_personal_data: string | null; dataset_personal_label: string | null };
   prohibited: { types: string[]; labels: string[]; auto: Record<string, string>; overrides: Record<string, string>; manual: string[]; blocked: boolean; mode: "block" | "review" };
   visibility: MetaVisibility;
   visibility_explicit: boolean;
@@ -1041,4 +1056,22 @@ export interface DiagPreview {
   regressed: DiagPreviewItem[];
   provisional_note: string | null;
   dataset_id: number | null;
+}
+
+export interface OrgGradeEntry {
+  id: number;
+  kind: string;
+  name: string;
+  system: string | null;
+  department: string | null;
+  grade: string;
+  grade_label: string | null;
+  personal_data: string | null;
+  legal_basis: string | null;
+  note: string | null;
+  asset_id: number | null;
+  match_score: number;
+  source_file: string | null;
+  imported_at: string;
+  candidates: { asset_id: number; name: string; filename: string | null; score: number }[];
 }

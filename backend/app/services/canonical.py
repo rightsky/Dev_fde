@@ -503,9 +503,11 @@ def build(db: Session, pd: ProcessDataset, mode: str = "draft") -> Canonical:
             g.add((svc, DCAT.endpointURL, _iri(meta["endpoint_url"])))
             g.add((svc, DCAT.servesDataset, ds))
             d_rec["accessService"] = {"@id": str(svc), "endpointURL": meta["endpoint_url"]}
-        if "csvw:Table" in (pd.extra_classes or []) or dictionary(pd):
+        from . import grading as _grading
+
+        if "csvw:Table" in (pd.extra_classes or []) or dictionary(pd) or _grading.column_items(pd):
             # 데이터 사전을 적었으면 csvw:Table 을 고르지 않았어도 컬럼 구조를 정본에 넣는다 (정의가 정본에 남아야 산출물과 어긋나지 않는다)
-            _add_table_schema(g, dist, asset.profile, dictionary(pd))
+            _add_table_schema(g, dist, asset.profile, dictionary(pd), pd.meta or {})
         record["distribution"] = d_rec
     if not is_stream and meta.get("accrual_periodicity"):
         v = str(meta["accrual_periodicity"]).strip()
@@ -547,7 +549,7 @@ def build(db: Session, pd: ProcessDataset, mode: str = "draft") -> Canonical:
             g.add((ds, FDE.lateDataPolicy, _lit(meta["late_policy"])))
             record["lateDataPolicy"] = meta["late_policy"]
         if dictionary(pd):
-            _add_columns(g, ds, URIRef(f"{ds}#schema"), (asset.profile.get("tables") or [{}])[0], dictionary(pd))
+            _add_columns(g, ds, URIRef(f"{ds}#schema"), (asset.profile.get("tables") or [{}])[0], dictionary(pd), pd.meta or {})
 
     # ---- 분류 (STEP 4)
     cls = pd.classification or {}
@@ -864,7 +866,8 @@ def dictionary(pd: ProcessDataset) -> dict[str, dict[str, dict[str, str]]]:
 _TYPE_MAP = {"integer": XSD.integer, "number": XSD.decimal, "datetime": XSD.dateTime, "boolean": XSD.boolean, "string": XSD.string}
 
 
-def _add_columns(g: Graph, owner: URIRef, schema: URIRef, table: dict[str, Any], dic: dict[str, dict[str, dict[str, str]]]) -> None:
+def _add_columns(g: Graph, owner: URIRef, schema: URIRef, table: dict[str, Any], dic: dict[str, dict[str, dict[str, str]]],
+                 owner_meta: dict[str, Any] | None = None) -> None:
     g.add((owner, CSVW.tableSchema, schema))
     g.add((schema, RDF.type, CSVW.Schema))
     entries = dic.get(table.get("name", ""), {})
@@ -884,13 +887,30 @@ def _add_columns(g: Graph, owner: URIRef, schema: URIRef, table: dict[str, Any],
             g.add((c, SDO.unitText, _lit(ent["unit"])))
         if ent.get("codes"):
             g.add((c, fde().codeValues, _lit(ent["codes"])))
+        # 컬럼 민감 항목: 개인정보 유형과 비식별 처리 기록 (가이드라인 생애주기 표 "항목 단위 비식별 처리 기록")
+        raw_ent = (((owner_meta or {}).get("_dictionary") or {}).get(table.get("name", ""), {}) or {}).get(col["name"], {}) or {}
+        if raw_ent.get("personal_data"):
+            g.add((c, fde().personalDataType, Literal(raw_ent["personal_data"])))
+        de = raw_ent.get("deid")
+        if isinstance(de, dict) and de.get("method"):
+            dn = URIRef(f"{c}#deid")
+            g.add((c, fde().deidentification, dn))
+            g.add((dn, RDF.type, fde().Deidentification))
+            g.add((dn, fde().method, Literal(de["method"])))
+            if de.get("note"):
+                g.add((dn, RDFS.comment, _lit(de["note"])))
+            if de.get("by"):
+                g.add((dn, fde().by, _lit(de["by"])))
+            if de.get("at"):
+                g.add((dn, PROV.endedAtTime, Literal(str(de["at"])[:19], datatype=XSD.dateTime)))
 
 
-def _add_table_schema(g: Graph, dist: URIRef, profile: dict[str, Any], dic: dict[str, dict[str, dict[str, str]]] | None = None) -> None:
+def _add_table_schema(g: Graph, dist: URIRef, profile: dict[str, Any], dic: dict[str, dict[str, dict[str, str]]] | None = None,
+                      owner_meta: dict[str, Any] | None = None) -> None:
     """프로파일된 표 구조를 CSVW 로 기술한다. 데이터 사전 입력값(정의·단위·코드값)이 있으면 컬럼에 붙인다."""
     for ti, table in enumerate(profile.get("tables", []), start=1):
         t = URIRef(f"{dist}#table-{ti}")
         g.add((dist, CSVW.table, t))
         g.add((t, RDF.type, CSVW.Table))
         g.add((t, DCTERMS.title, _lit(table["name"])))
-        _add_columns(g, t, URIRef(f"{dist}#table-{ti}-schema"), table, dic or {})
+        _add_columns(g, t, URIRef(f"{dist}#table-{ti}-schema"), table, dic or {}, owner_meta)

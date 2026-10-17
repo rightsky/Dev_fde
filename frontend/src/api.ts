@@ -172,6 +172,15 @@ export const api = {
   // 원천
   assets: (params?: { kind?: string; q?: string }) => get<T.Asset[]>("/assets", params),
   asset: (id: number) => get<T.Asset>(`/assets/${id}`),
+  setComboGrade: (pid: number, body: { grade: string | null; reason?: string }) => put<T.ProcessDetail>(`/processes/${pid}/combo-grade`, body),
+  orgGrades: () => get<{ items: T.OrgGradeEntry[]; total: number; matched: number; unmatched: number }>("/org-grades"),
+  importOrgGrades: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file, file.name);
+    return request<{ imported: number; auto_matched: number; skipped: string[]; columns: Record<string, number> }>("POST", "/org-grades/import", fd);
+  },
+  matchOrgGrade: (id: number, asset_id: number | null) => patch<T.OrgGradeEntry>(`/org-grades/${id}`, { asset_id }),
+  clearOrgGrades: () => del<{ deleted: number }>("/org-grades"),
   uploadAssets: (files: File[]) => {
     const fd = new FormData();
     files.forEach((f) => fd.append("files", f, f.name));
@@ -220,7 +229,8 @@ export const api = {
   unconfirmMeta: (did: number) => post<T.Dataset>(`/datasets/${did}/meta/unconfirm`),
   preview: (did: number) => get<T.Preview>(`/datasets/${did}/preview`),
   dictionary: (did: number) => get<T.DictPayload>(`/datasets/${did}/dictionary`),
-  putDictionary: (did: number, entries: { table: string; column: string; description: string; unit: string; codes: string }[]) =>
+  putDictionary: (did: number, entries: { table: string; column: string; description?: string; unit?: string; codes?: string; personal_data?: string | null;
+                                           deid?: { method: string; note?: string } | null; clear_deid?: boolean }[]) =>
     put<T.DictPayload>(`/datasets/${did}/dictionary`, { entries }),
   cardPreview: (did: number) => get<T.CardPreview>(`/datasets/${did}/card`),
 

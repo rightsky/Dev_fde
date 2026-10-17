@@ -53,6 +53,7 @@ def assess(db: Session, p: Process, sr: SerializationRun | None) -> dict[str, An
     signals: list[dict[str, Any]] = []
     grade_s, grade_c, grade_unset, pii_ds, pii_ai, unset_terms, republish = [], [], [], [], [], [], []
     grade_s1, basis_missing, below_basis, prohibited_block, prohibited_review = [], [], [], [], []
+    org_conflict, needs_deid = [], []
     for s in targets:
         pd = by_id[s["dataset_id"]]
         canon = canonical.build(db, pd, "publish")
@@ -82,6 +83,10 @@ def assess(db: Session, p: Process, sr: SerializationRun | None) -> dict[str, An
             below_basis.append(f"{rid} ({gst['suggested_label']} 제안 → {gst['grade_label']})")
         if gst["prohibited"]["types"]:
             (prohibited_block if gst["prohibited"]["blocked"] else prohibited_review).append(f"{rid} ({', '.join(gst['prohibited']['labels'])})")
+        if gst["org_conflict"]:
+            org_conflict.append(f"{rid} (기관표 {gst['org_grade']['label']} · 스튜디오 {gst['grade_label'] or '미지정'})")
+        if gst["columns"]["needs_deid"]:
+            needs_deid.append(f"{rid} ({', '.join(gst['columns']['needs_deid'][:3])})")
         if pii:
             pii_ds.append(f"{rid}({', '.join(pii[:3])}{' 외' if len(pii) > 3 else ''})")
             if terms.get("ai_training") in ("permitted", "conditional") or terms.get("ai_redistribution") in ("permitted", "conditional"):
@@ -110,6 +115,16 @@ def assess(db: Session, p: Process, sr: SerializationRun | None) -> dict[str, An
     if prohibited_block:
         signals.append(_signal("share_prohibited", "high", "표 41 공유 불가 유형 해당 — 발행에서 제외됨",
                                "고유식별정보 · 국가보안 · 제3자 제공 금지 · 재식별 위험 잔존 데이터는 외부 카탈로그에 올리지 않습니다. 승인해도 이 데이터셋은 빠집니다", prohibited_block))
+    if org_conflict:
+        signals.append(_signal("org_grade_conflict", "high", "기관 등급표와 불일치",
+                               "기관이 정한 N²SF 등급표의 등급과 스튜디오 등급(또는 컬럼 민감 항목)이 다릅니다. 기관 보안담당과 확인하세요", org_conflict))
+    if needs_deid:
+        signals.append(_signal("column_deid_missing", "medium", "개인정보 컬럼의 비식별 처리 기록 없음",
+                               "데이터 사전에서 개인정보 · 민감정보로 표시한 컬럼에 비식별 처리 방법이 기록되지 않았습니다 (생애주기 표 처리·가공 단계)", needs_deid))
+    cg = grading.combo_grade(p)
+    if cg["below_floor"]:
+        signals.append(_signal("combo_grade_lowered", "medium", "조합 등급을 구성 데이터셋보다 낮게 설정",
+                               f"구성 최고 등급 {cg['floor_label']} → 조합 {cg['grade_label']}. 사유: {cg['reason'] or '없음'} (3.6.1 결합 후 재검토)"))
     if prohibited_review:
         signals.append(_signal("share_prohibited", "high", "표 41 공유 불가 유형 해당",
                                "원칙적으로 공유가 제한되는 유형입니다 (FDE_SHARE_PROHIBITED=review 로 발행은 허용). 제한 사유가 해소되었는지 확인하세요", prohibited_review))

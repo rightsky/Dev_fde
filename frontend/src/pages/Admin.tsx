@@ -5,6 +5,7 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api";
 import { AgentsTab } from "./AdminAgents";
+import { OrgGradesTab } from "./AdminOrgGrades";
 import { useAuth, useReference } from "../auth";
 import type { Org, Role, TaxAxis, TaxCode, User } from "../types";
 import { Badge, Banner, Button, Card, CodeBlock, ConfirmButton, Empty, Field, Modal, QueryState, SeverityBadge, Tabs, cx, fmtDateTime, fmtNum, useToast } from "../ui";
@@ -17,6 +18,7 @@ const TABS = [
   { key: "activity", label: "활동 로그" },
   { key: "shapes", label: "셰이프" },
   { key: "agents", label: "AI 에이전트(MCP)" },
+  { key: "orggrades", label: "N²SF 기관 등급표" },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 const isTab = (v: string | null): v is TabKey => TABS.some((t) => t.key === v);
@@ -80,6 +82,7 @@ export function AdminPage() {
       {tab === "activity" && <ActivityTab />}
       {tab === "shapes" && <ShapesTab />}
       {tab === "agents" && (isAdmin ? <AgentsTab /> : <Banner tone="warn">관리자 권한이 필요합니다 — AI 에이전트 키와 호출 이력은 관리자만 봅니다.</Banner>)}
+      {tab === "orggrades" && <OrgGradesTab />}
     </div>
   );
 }

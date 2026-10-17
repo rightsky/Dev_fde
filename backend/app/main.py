@@ -12,7 +12,7 @@ from . import mcp_server
 from .config import get_settings
 from .db import SessionLocal, engine
 from .migrate import upgrade as migrate_db
-from .routers import agents, catalog, core, reviews, studio
+from .routers import agents, catalog, core, reviews, studio, orggrades
 from .seed import seed
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
@@ -29,14 +29,14 @@ async def lifespan(_: FastAPI):
         yield
 
 
-app = FastAPI(title="FDE Data Studio API", version="0.13.0", lifespan=lifespan,
+app = FastAPI(title="FDE Data Studio API", version="0.14.0", lifespan=lifespan,
               docs_url="/api/docs", openapi_url="/api/openapi.json")
 
 _origins = [o.strip() for o in get_settings().cors_origins.split(",") if o.strip()]
 if _origins:
     app.add_middleware(CORSMiddleware, allow_origins=_origins, allow_methods=["*"], allow_headers=["*"])
 
-for r in (core.router, studio.router, catalog.router, agents.router, reviews.router):
+for r in (core.router, studio.router, catalog.router, agents.router, reviews.router, orggrades.router):
     app.include_router(r, prefix="/api")
 
 

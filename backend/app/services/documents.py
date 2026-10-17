@@ -65,7 +65,11 @@ MASK = "(개인정보 의심 · 표시 안 함)"
 # ------------------------------------------------------------------ 데이터 사전
 def dictionary_rows(pd: ProcessDataset) -> list[dict[str, Any]]:
     """컬럼마다 프로파일 통계와 사람이 적은 정의·단위·코드값을 한 행으로 묶는다."""
+    from . import grading
+
     dic = canonical.dictionary(pd)
+    sens = grading.column_items(pd)
+    sens_sug = grading.column_suggestions(pd)
     keys = {(k.get("table"), k.get("column")): k.get("code") for k in (pd.classification or {}).get("K", []) if k.get("column")}
     keys_any = {k.get("column"): k.get("code") for k in (pd.classification or {}).get("K", []) if k.get("column")}
     stream = pd.asset.kind == "stream"
@@ -82,6 +86,10 @@ def dictionary_rows(pd: ProcessDataset) -> list[dict[str, Any]]:
                 "samples": [] if c.get("pii") else [str(v) for v in (c.get("samples") or [])[:3]],
                 "pii": (c.get("pii") or {}).get("kind"),
                 "key": keys.get((t["name"], c["name"])) or keys_any.get(c["name"]),
+                "personal_data": sens.get((t["name"], c["name"]), {}).get("personal_data"),
+                "personal_suggested": sens_sug.get((t["name"], c["name"]), (None, None))[0] if (t["name"], c["name"]) not in sens else None,
+                "personal_suggested_why": sens_sug.get((t["name"], c["name"]), (None, None))[1] if (t["name"], c["name"]) not in sens else None,
+                "deid": sens.get((t["name"], c["name"]), {}).get("deid"),
             })
     return rows
 

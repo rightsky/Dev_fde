@@ -545,7 +545,9 @@ def test_11_diagnosis_and_attestation(client):
     assert items["C-05"]["status"] == "partial"
     assert [c["id"] for c in items["P-03"]["related"]] == ["C-04", "C-05"] and items["P-03"]["status"] == "partial"
     assert items["P-11"]["status"] == "pending", "연결 항목이 전부 확인 대기면 확인 대기"
-    assert items["P-12"]["status"] == "met" and items["P-15"]["status"] == "met"
+    # P-12 (3.6절): 등급은 있지만 S2 데이터셋에 판단 근거가 없어 부분 충족 (v0.14 부터 근거 · 표 41 · 공개 수준을 함께 본다)
+    assert items["P-12"]["status"] == "partial" and any("판단 근거 미작성" in d["detail"] for d in items["P-12"]["datasets"])
+    assert items["P-15"]["status"] == "met"
 
     assert run["max_score"] == len([i for i in run["items"] if i["status"] != "na"])
     assert sum(m["total"] for m in sm["methods"]) == 80
@@ -1272,3 +1274,93 @@ def test_19_n2sf_grading(client, monkeypatch):
     # 원복
     r = client.put(f"/api/datasets/{did}/classification", json={**body, "N2SF": base.get("N2SF", "N2SF-O")})
     assert r.status_code == 200
+
+
+# ------------------------------------------------------------------ v0.14 N²SF 2차: 컬럼 민감 항목 · 조합 등급 · 기관 등급표
+def test_20_n2sf_columns_combo_org(client):
+    from app.db import SessionLocal
+    from app.models import ProcessDataset
+    from app.services import grading
+
+    pid, did = S["pid"], S["d_acc"]  # 교통사고: 차량번호 (개인정보 의심)
+    assert client.post(f"/api/processes/{pid}/reopen").status_code in (200, 409)
+    assert client.post(f"/api/datasets/{did}/classification/unconfirm").status_code in (200, 409)
+
+    # ① 컬럼 민감 항목: 자동 후보가 보이고, 표시 + 비식별 기록을 저장하면 사전 · 정본 · 요약에 반영
+    d = client.get(f"/api/datasets/{did}/dictionary").json()
+    sug = [r for r in d["rows"] if r["personal_suggested"]]
+    assert sug and d["sensitive"]["suggested_count"] >= 1 and "personal_data" in d["options"]
+    col = sug[0]
+    r = client.put(f"/api/datasets/{did}/dictionary", json={"entries": [{"table": col["table"], "column": col["column"], "personal_data": "personal"}]})
+    assert r.status_code == 200, r.text
+    d = client.get(f"/api/datasets/{did}/dictionary").json()
+    row = next(x for x in d["rows"] if x["column"] == col["column"])
+    assert row["personal_data"] == "personal" and row["personal_suggested"] is None and row["deid"] is None
+    assert d["sensitive"]["marked"] == 1 and d["sensitive"]["needs_deid"] == [f"{col['table']}.{col['column']}"]
+    assert d["sensitive"]["dataset_personal_data"] == "personal"
+    assert client.put(f"/api/datasets/{did}/dictionary", json={"entries": [{"table": col["table"], "column": col["column"], "personal_data": "weird"}]}).status_code == 422
+    r = client.put(f"/api/datasets/{did}/dictionary", json={"entries": [{"table": col["table"], "column": col["column"], "deid": {"method": "masking", "note": "뒤 4자리 마스킹"}}]})
+    assert r.status_code == 200
+    d = client.get(f"/api/datasets/{did}/dictionary").json()
+    row = next(x for x in d["rows"] if x["column"] == col["column"])
+    assert row["personal_data"] == "personal" and row["deid"]["method"] == "masking" and row["deid"]["by"] == "관리자" and d["sensitive"]["needs_deid"] == []
+    ttl = client.get(f"/api/datasets/{did}/preview").json()["turtle"]
+    assert 'personalDataType "personal"' in ttl and 'fde:method "masking"' in ttl
+    # 컬럼에서 올라온 기본값: 등급을 O 로 두려면 사유 필요
+    base = client.get(f"/api/datasets/{did}").json()["classification"]
+    body = {k: base[k] for k in ("F1", "F2", "F3", "F4", "F5", "F6", "K") if k in base}
+    g = client.get(f"/api/datasets/{did}").json()["grading"]
+    assert g["suggested"] == "S2" and any("컬럼 민감 항목" in x for x in g["reasons"]) and g["columns"]["marked"] == 1
+    r = client.put(f"/api/datasets/{did}/classification", json={**body, "N2SF": "N2SF-O"})
+    assert r.status_code == 422 and "컬럼 민감 항목" in r.json()["detail"]["message"]
+    assert client.put(f"/api/datasets/{did}/classification", json={**body, "N2SF": "N2SF-S2"}).status_code == 200
+    # STEP 8 C-12 증빙에 비식별 기록 수가 붙는다 (즉시 진단으로 확인: 변환 전이라도 판정 가능)
+    client.post(f"/api/processes/{pid}/rerun")
+    dr = client.post(f"/api/processes/{pid}/diagnosis-runs").json()
+    items = {i["id"]: i for i in dr["run"]["items"]} if "run" in dr else {i["id"]: i for i in client.get(f"/api/datasets/{did}/diagnosis-preview").json()["items"]}
+    c12 = items["C-12"]
+    assert any("비식별 처리 기록 1개" in (dd.get("detail") or "") for dd in c12.get("datasets", [])) or "비식별 처리 기록 1개" in (c12.get("detail") or "")
+
+    # ② 조합 등급: 기본값은 구성 최고 등급, 낮추면 사유
+    det = client.get(f"/api/processes/{pid}").json()
+    cg = det["process"]["combo_grading"]
+    assert cg["floor"] == "S2" and cg["grade"] == "S2" and cg["explicit"] is False
+    r = client.put(f"/api/processes/{pid}/combo-grade", json={"grade": "O"})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "COMBO_GRADE_BELOW"
+    r = client.put(f"/api/processes/{pid}/combo-grade", json={"grade": "S1", "reason": "결합 결과는 읍면동 월별 집계만 제공하고 개별 기록은 반출하지 않음"})
+    assert r.status_code == 200 and r.json()["process"]["combo_grading"]["below_floor"] is True
+    pv = client.get(f"/api/processes/{pid}/publish-review").json()
+    if pv["assessment"]:
+        assert "combo_grade_lowered" in {s["code"] for s in pv["assessment"]["signals"]}
+    assert client.put(f"/api/processes/{pid}/combo-grade", json={"grade": None}).json()["process"]["combo_grading"]["explicit"] is False
+
+    # ③ 기관 등급표 가져오기: 열 자동 인식 · 이름 매칭 · 제안 등급 상향 · 충돌 신호
+    csv_text = "업무정보명,정보시스템,소관부서,등급,개인정보 포함,법령 근거,비고\n교통사고,사고관리시스템,안전정책과,C,포함,도로교통법,원본\n도로목록,도로대장,도로과,O,,,\n알 수 없는 표,시스템X,부서,2,,,\n이상한등급,시스템Y,부서,Z,,,\n"
+    r = client.post("/api/org-grades/import", files={"file": ("n2sf_org.csv", csv_text.encode("utf-8-sig"), "text/csv")})
+    assert r.status_code == 200, r.text
+    out = r.json()
+    assert out["imported"] == 3 and out["auto_matched"] >= 2 and len(out["skipped"]) == 1 and "grade" in out["columns"]
+    lst = client.get("/api/org-grades").json()
+    acc = next(e for e in lst["items"] if e["name"] == "교통사고")
+    assert acc["grade"] == "C" and acc["asset_id"] == S["acc"] and acc["match_score"] >= 90
+    unknown = next(e for e in lst["items"] if e["name"] == "알 수 없는 표")
+    assert unknown["asset_id"] is None and unknown["grade"] == "S2"
+    # 기관표(C) 가 스튜디오 등급(S2) 보다 높다 → 제안이 C 로 오르고 충돌 신호
+    g = client.get(f"/api/datasets/{did}").json()["grading"]
+    assert g["org_grade"]["grade"] == "C" and g["suggested"] == "C" and g["org_conflict"] is True
+    r = client.put(f"/api/datasets/{did}/classification", json={**body, "N2SF": "N2SF-S2"})
+    assert r.status_code == 422 and "기관 등급표" in r.json()["detail"]["message"]
+    pv = client.get(f"/api/processes/{pid}/publish-review").json()
+    if pv["assessment"]:
+        assert "org_grade_conflict" in {s["code"] for s in pv["assessment"]["signals"]}
+    # 매칭 수정 · 비우기
+    assert client.patch(f"/api/org-grades/{unknown['id']}", json={"asset_id": S["road"]}).json()["asset_id"] == S["road"]
+    assert client.patch(f"/api/org-grades/{acc['id']}", json={"asset_id": None}).json()["asset_id"] is None
+    assert client.get(f"/api/datasets/{did}").json()["grading"]["org_grade"] is None
+    types = [a["type"] for a in client.get("/api/activities").json()]
+    assert "org_grades_import" in types and "org_grades_match" in types
+    assert client.delete("/api/org-grades").json()["deleted"] == 3
+    # 원복
+    assert client.put(f"/api/datasets/{did}/dictionary", json={"entries": [{"table": col["table"], "column": col["column"], "personal_data": "", "clear_deid": True}]}).status_code == 200
+    with SessionLocal() as db:
+        assert grading.column_items(db.get(ProcessDataset, did)) == {}

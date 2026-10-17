@@ -113,6 +113,9 @@ class Process(Base):
     pub_mode: Mapped[bool] = mapped_column(Boolean, default=False)
     lineage_waiver_reason: Mapped[str | None] = mapped_column(Text, default=None)
     lineage_waived_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    # 조합(결합) 등급: 기본은 구성 데이터셋 최고 등급. 담당자가 낮추면 사유 필수 (가이드라인 3.6.1 결합 후 재검토)
+    combo_grade: Mapped[str | None] = mapped_column(String(10), default=None)  # O · S1 · S2 · C
+    combo_grade_reason: Mapped[str | None] = mapped_column(Text, default=None)
     created_by: Mapped[int | None] = mapped_column(ForeignKey("app_user.id"), default=None)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
@@ -492,3 +495,23 @@ class SimulationRun(Base):
     created_by: Mapped[int | None] = mapped_column(ForeignKey("app_user.id"), default=None)
     created_label: Mapped[str] = mapped_column(String(100), default="")
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class OrgGradeEntry(Base):
+    """기관이 N²SF 1단계(준비)에서 만든 업무정보 · 정보시스템 등급표의 한 행. 자산과 매칭해 데이터셋 등급 기본값과 충돌 신호에 쓴다."""
+    __tablename__ = "org_grade_entry"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[str] = mapped_column(String(20), default="info")  # info(업무정보) | system(정보시스템)
+    name: Mapped[str] = mapped_column(String(300))
+    system: Mapped[str | None] = mapped_column(String(200), default=None)  # 소관 정보시스템 (이름 또는 코드)
+    department: Mapped[str | None] = mapped_column(String(200), default=None)
+    grade: Mapped[str] = mapped_column(String(10))  # O · S1 · S2 · C
+    personal_data: Mapped[str | None] = mapped_column(String(20), default=None)  # 기관표의 개인정보 포함 표기 (있을 때)
+    legal_basis: Mapped[str | None] = mapped_column(String(500), default=None)
+    note: Mapped[str | None] = mapped_column(Text, default=None)
+    asset_id: Mapped[int | None] = mapped_column(ForeignKey("asset.id", ondelete="SET NULL"), default=None, index=True)  # 담당자가 확정한 매칭
+    match_score: Mapped[int] = mapped_column(Integer, default=0)
+    source_file: Mapped[str | None] = mapped_column(String(300), default=None)
+    source_sha256: Mapped[str | None] = mapped_column(String(64), default=None)
+    imported_by: Mapped[int | None] = mapped_column(ForeignKey("app_user.id"), default=None)
+    imported_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
