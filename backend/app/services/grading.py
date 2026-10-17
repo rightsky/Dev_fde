@@ -151,11 +151,12 @@ def state(pd: ProcessDataset) -> dict[str, Any]:
         if sug is None or rank(cg) > rank(sug):
             sug = cg
             reasons = reasons + [f"컬럼 민감 항목: {cols['dataset_personal_label']} 컬럼 있음 → {GRADE_LABEL[cg]} 이상"]
+    hints = [f"컬럼 이름 자동 탐지 {cols['suggested_count']}건 (데이터 사전에서 개인정보 여부를 확인하세요 — 등급에는 반영되지 않음)"] if cols["suggested_count"] else []
     below = sug is not None and g is not None and rank(g) < rank(sug)
     org_conflict = bool(og and ((g and rank(og["grade"]) > rank(g)) or (cols["dataset_personal_data"] and rank(PERSONAL_DATA[cols["dataset_personal_data"]][1]) > rank(og["grade"]))))
     return {
         "grade": g, "grade_label": GRADE_LABEL.get(g or "", None), "suggested": sug, "suggested_label": GRADE_LABEL.get(sug or "", None),
-        "reasons": reasons, "basis": b, "basis_complete": all(b.get(k) for k, _, _ in BASIS_FIELDS),
+        "reasons": reasons, "hints": hints, "basis": b, "basis_complete": all(b.get(k) for k, _, _ in BASIS_FIELDS),
         "below_suggested": below, "below_reason": b.get("reason") if below else None,
         "org_grade": og, "org_conflict": org_conflict, "columns": cols,
         "prohibited": prohibited(pd), "visibility": visibility(pd), "visibility_explicit": (pd.classification or {}).get(VISIBILITY_KEY) in VISIBILITIES,
@@ -222,14 +223,18 @@ def column_summary(pd: ProcessDataset) -> dict[str, Any]:
     """컬럼 민감 항목 요약과, 거기서 올라오는 데이터셋 '개인정보 유형' 기본값."""
     items = column_items(pd)
     sugs = column_suggestions(pd)
+    # 등급을 끌어올리는 것은 담당자가 데이터 사전에 '확인'한 항목뿐이다. 컬럼 이름 자동 탐지는 힌트로만 보이고
+    # (아래 suggested), 담당자가 사전에서 '비개인'으로 표시하면 힌트도 사라진다
     best = ""
-    for v in [i.get("personal_data") for i in items.values()] + [s[0] for (k, s) in sugs.items() if k not in items]:
+    for v in [i.get("personal_data") for i in items.values()]:
         if v and _COLUMN_RANK.get(v, 0) > _COLUMN_RANK.get(best, -1):
             best = v
+    pending = [(k, s) for (k, s) in sugs.items() if k not in items]
     marked = sum(1 for i in items.values() if i.get("personal_data"))
     deid = sum(1 for i in items.values() if i.get("deid"))
     needs = [k for k, i in items.items() if i.get("personal_data") in ("personal", "sensitive") and not i.get("deid")]
-    return {"marked": marked, "deid": deid, "suggested_count": len([k for k in sugs if k not in items]),
+    return {"marked": marked, "deid": deid, "suggested_count": len(pending),
+            "suggested": [{"column": f"{t}.{c}", "personal_data": s[0], "label": COLUMN_PERSONAL.get(s[0], s[0]), "reason": s[1]} for (t, c), s in pending[:20]],
             "needs_deid": [f"{t}.{c}" for t, c in needs], "dataset_personal_data": best or None,
             "dataset_personal_label": PERSONAL_DATA.get(best, ("",))[0] if best else None}
 

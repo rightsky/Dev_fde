@@ -29,7 +29,7 @@ async def lifespan(_: FastAPI):
         yield
 
 
-app = FastAPI(title="FDE Data Studio API", version="0.17.0", lifespan=lifespan,
+app = FastAPI(title="FDE Data Studio API", version="0.17.1", lifespan=lifespan,
               docs_url="/api/docs" if get_settings().expose_api_docs else None,
               openapi_url="/api/openapi.json" if get_settings().expose_api_docs else None)
 
