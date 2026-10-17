@@ -15,8 +15,8 @@ from rdflib.namespace import DCAT, DCTERMS, RDF
 from . import minting, validation
 
 MAX_BYTES = 5 * 1024 * 1024
-_PREFIX_DECL = re.compile(r"^\s*(?:@prefix|PREFIX)\s+([A-Za-z][\w-]*)?:\s*<", re.M)
-_TEMP_ID = re.compile(minting.DRAFT_PATTERN + r"|-신규\b|-초안\b|등록대기|TEMP-|TMP-", re.I)
+_PREFIX_DECL = re.compile(r"^\s*(?:@prefix|PREFIX)\s+([A-Za-z][\w-]*)?:\s*<", re.MULTILINE)
+_TEMP_ID = re.compile(minting.DRAFT_PATTERN + r"|-신규\b|-초안\b|등록대기|TEMP-|TMP-", re.IGNORECASE)
 
 
 def _format_of(filename: str) -> str | None:
@@ -62,7 +62,7 @@ def check(filename: str, data: bytes, mode: str = "draft") -> dict[str, Any]:
     # ② prefix 완결 (Turtle · TriG 만 의미 있다). 선언 안 된 접두어는 파서가 이미 실패시키므로, 여기서는 파서가 실패했을 때 어떤 접두어가 빠졌는지 짚어 준다
     if fmt in ("turtle", "trig"):
         declared = set(_PREFIX_DECL.findall(text)) | {""}
-        body = re.sub(r"^\s*(?:@prefix|PREFIX)[^\n]*$", "", text, flags=re.M)
+        body = re.sub(r"^\s*(?:@prefix|PREFIX)[^\n]*$", "", text, flags=re.MULTILINE)
         body = re.sub(r'"""[\s\S]*?"""|"[^"\n]*"|<[^>\s]*>|#[^\n]*', "", body)
         used = {m for m in re.findall(r"(?<![\w:<])([A-Za-z][\w-]*):(?=[A-Za-z_])", body)} - {"http", "https", "urn", "mailto", "file", "tel"}
         missing = sorted(used - declared)

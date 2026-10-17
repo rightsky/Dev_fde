@@ -12,7 +12,7 @@ from . import mcp_server
 from .config import get_settings
 from .db import SessionLocal, engine
 from .migrate import upgrade as migrate_db
-from .routers import agents, ard, catalog, connectors, core, reviews, studio, orggrades
+from .routers import agents, ard, catalog, connectors, core, orggrades, reviews, studio
 from .seed import seed
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")

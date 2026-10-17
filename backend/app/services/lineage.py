@@ -49,7 +49,7 @@ def join_stats(rel: Relation) -> dict[str, Any]:
     }
 
 
-def _is_pii(asset, table: str | None, column: str | None) -> bool:  # noqa: ANN001
+def _is_pii(asset, table: str | None, column: str | None) -> bool:
     for t in (asset.profile or {}).get("tables", []):
         if t.get("name") == table:
             return any(c.get("name") == column and c.get("pii") for c in t.get("columns", []))

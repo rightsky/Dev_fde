@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import CatalogEntry, Process, SerializationRun, User, ValidationRun, utcnow
-from . import grading, activity, canonical, minting
+from . import activity, canonical, grading, minting
 
 
 class PublishBlocked(Exception):

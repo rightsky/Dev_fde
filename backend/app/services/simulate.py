@@ -21,8 +21,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
-from ..models import AgentKey, Process, ProcessDataset, SimulationRun, User, utcnow
-from . import grading, activity, agent, assist, documents, serialize
+from ..models import AgentKey, Process, ProcessDataset, SimulationRun, User
+from . import activity, agent, assist, documents, grading, serialize
 
 SCENARIOS = {
     "chat": {"label": "데이터 안내 챗봇", "desc": "산출물(JSON-LD · 데이터 카드 · 데이터 사전)을 읽고 이용자 질문에 답합니다. 근거로 쓴 속성을 함께 보입니다",
@@ -175,7 +175,7 @@ def run_agent(db: Session, p: Process, question: str, with_metadata: bool, exclu
             "tools_available": [t["name"] for t in tools]}, usage
 
 
-def _excluded_entries(db: Session, exclude_assets: set[int]):  # noqa: ANN202
+def _excluded_entries(db: Session, exclude_assets: set[int]):
     from ..models import CatalogEntry
 
     if not exclude_assets:

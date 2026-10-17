@@ -187,15 +187,15 @@ def _short(name: str) -> str:
 
 # ------------------------------------------------------------------ STEP 4 분류 추천
 _F1_RULES: list[tuple[str, re.Pattern[str]]] = [
-    ("F1-02", re.compile(r"도로|링크|노선|ROAD|교차로|터널|교량", re.I)),
-    ("F1-01", re.compile(r"교통|소통|운행|차량|OBU|텔레메|eTAS|사고|버스|택시|통행|TRAFFIC", re.I)),
-    ("F1-03", re.compile(r"철도|열차|역사|지하철|RAIL", re.I)),
-    ("F1-04", re.compile(r"항공|공항|비행|AIR", re.I)),
-    ("F1-05", re.compile(r"물류|창고|화물|택배", re.I)),
-    ("F1-06", re.compile(r"도시|용도지역|지구단위|도시계획", re.I)),
-    ("F1-07", re.compile(r"주택|토지|부동산|아파트|필지|건축", re.I)),
-    ("F1-08", re.compile(r"건설|안전점검|공사|시설물", re.I)),
-    ("F1-09", re.compile(r"수자원|하천|댐|수위|강수|WATER", re.I)),
+    ("F1-02", re.compile(r"도로|링크|노선|ROAD|교차로|터널|교량", re.IGNORECASE)),
+    ("F1-01", re.compile(r"교통|소통|운행|차량|OBU|텔레메|eTAS|사고|버스|택시|통행|TRAFFIC", re.IGNORECASE)),
+    ("F1-03", re.compile(r"철도|열차|역사|지하철|RAIL", re.IGNORECASE)),
+    ("F1-04", re.compile(r"항공|공항|비행|AIR", re.IGNORECASE)),
+    ("F1-05", re.compile(r"물류|창고|화물|택배", re.IGNORECASE)),
+    ("F1-06", re.compile(r"도시|용도지역|지구단위|도시계획", re.IGNORECASE)),
+    ("F1-07", re.compile(r"주택|토지|부동산|아파트|필지|건축", re.IGNORECASE)),
+    ("F1-08", re.compile(r"건설|안전점검|공사|시설물", re.IGNORECASE)),
+    ("F1-09", re.compile(r"수자원|하천|댐|수위|강수|WATER", re.IGNORECASE)),
 ]
 
 

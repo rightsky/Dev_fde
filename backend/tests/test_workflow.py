@@ -349,7 +349,7 @@ def test_09_serialization_and_self_verify(client):
     txt = client.get(f"/api/artifacts/{arts[(S['d_acc'], 'txt')]['id']}").json()["content"]
     assert "「교통사고」는 " in txt and "「도로목록」과 K5 기준으로 결합된다 (도로링크ID = LINK_ID)" in txt and "ai-ready" in txt
     # 문서 산출물: Croissant · 데이터 카드 · 데이터 사전
-    get = lambda did, fmt: client.get(f"/api/artifacts/{arts[(did, fmt)]['id']}").json()["content"]  # noqa: E731
+    get = lambda did, fmt: client.get(f"/api/artifacts/{arts[(did, fmt)]['id']}").json()["content"]
     cr = json.loads(get(S["d_road"], "croissant"))
     assert "http://mlcommons.org/croissant/1.0" in cr["conformsTo"] and cr["distribution"][0]["sha256"]
     fields = cr["recordSet"][0]["field"]
@@ -724,7 +724,8 @@ def test_13_mcp_agent_access(client):
     # 승인 회수 → 다시 안 보인다 (상한 때문에 visible 로 확인)
     assert client.post(f"/api/agent-keys/{kb_id}/grants/{grant_id}/revoke").json()["state"] == "revoked"
     with SessionLocal() as db:
-        from app.models import AgentKey as _AK, CatalogEntry as _CE
+        from app.models import AgentKey as _AK
+        from app.models import CatalogEntry as _CE
         from app.services import agent as _agent
         assert not _agent.visible(db.query(_CE).filter_by(resource_id="DST-000002").one(), db.get(_AK, kb_id))
 
@@ -777,7 +778,7 @@ def test_14_ai_drafts(client, monkeypatch):
     monkeypatch.setattr(get_settings(), "anthropic_api_key", "sk-test")
     sent: dict[str, Any] = {}
 
-    def fake_call(system, user, tool):  # noqa: ANN001
+    def fake_call(system, user, tool):
         sent.update(system=system, user=user, tool=tool)
         names = tool["input_schema"]["required"]
         return ({n: {"text": f"[초안] {n}", "basis": "컬럼 통계"} for n in names} | {"ignored_field": {"text": "x", "basis": ""}},
@@ -811,10 +812,10 @@ def test_14_ai_drafts(client, monkeypatch):
             input_tokens, output_tokens = 1, 1
 
     class _Client:
-        def __init__(self, **kw):  # noqa: ANN003
+        def __init__(self, **kw):
             self.messages = self
 
-        def create(self, **kw):  # noqa: ANN003
+        def create(self, **kw):
             assert "tool_choice" not in kw, "Opus 5.5 는 tool_choice 강제를 지원하지 않는다"
             return _Msg()
 
@@ -837,8 +838,8 @@ def test_14_ai_drafts(client, monkeypatch):
     assert "https://www.w3.org/TR/prov-o/" in sent["system"] and '"property": "rai:dataLimitations"' in sent["user"]
     # N²SF C(비공개) 등급은 외부 모델에 보내지 않는다 (규칙 기반 칸은 된다)
     monkeypatch.setattr(assist, "_call", fake_call)
-    from app.models import ProcessDataset
     from app.db import SessionLocal
+    from app.models import ProcessDataset
 
     with SessionLocal() as db:
         p = db.get(ProcessDataset, did)
@@ -880,7 +881,7 @@ def test_15_ai_simulation(client, monkeypatch):
     # 챗봇: 구조화 응답을 가짜로. 문맥에 산출물이 들어갔는지 확인한다
     seen: list[dict] = []
 
-    def fake_call(system, user, tool):  # noqa: ANN001
+    def fake_call(system, user, tool):
         seen.append({"system": system, "user": user, "tool": tool["name"]})
         meta = 'mode="with_metadata"' in user
         return ({"answer": "갱신 주기는 매월입니다." if meta else "제공된 메타데이터에 그 정보가 없습니다", "answered": meta,
@@ -921,7 +922,7 @@ def test_15_ai_simulation(client, monkeypatch):
 
     # 에이전트: 가짜 클라이언트가 실제 도구 본체를 호출하게 한다 (search → get_usage_terms → 답)
     class _B:
-        def __init__(self, **kw):  # noqa: ANN003
+        def __init__(self, **kw):
             self.__dict__.update(kw)
 
         def model_dump(self):
@@ -931,16 +932,16 @@ def test_15_ai_simulation(client, monkeypatch):
         input_tokens, output_tokens = 50, 10
 
     class _Msg:
-        def __init__(self, content):  # noqa: ANN001
+        def __init__(self, content):
             self.content, self.usage, self.model = content, _U(), "claude-opus-5-5"
 
     calls: list[dict] = []
 
     class _Client:
-        def __init__(self, **kw):  # noqa: ANN003
+        def __init__(self, **kw):
             self.messages = self
 
-        def create(self, **kw):  # noqa: ANN003
+        def create(self, **kw):
             calls.append(kw)
             if not kw.get("tools"):
                 return _Msg([_B(type="text", text="카탈로그 도구가 없어 확인할 수 없습니다.")])

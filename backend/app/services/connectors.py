@@ -128,11 +128,11 @@ def _profile_for(table: dict[str, Any], schema: str | None, connector: DbConnect
              "nullable": col["nullable"], "pk": col["pk"]}
         if col.get("comment"):
             c["comment"] = col["comment"]
-        pii = profiling._detect_pii(col["name"], [])  # noqa: SLF001 - 이름 기준 탐지만 (값은 읽지 않는다)
+        pii = profiling._detect_pii(col["name"], [])
         if pii:
             c["pii"] = pii
         cols.append(c)
-    cands = profiling._key_candidates(table["name"], cols, {})  # noqa: SLF001
+    cands = profiling._key_candidates(table["name"], cols, {})
     for cand in cands:
         cand["distinct"], cand["sampled"] = 0, False
     warnings = ["DB 스키마에서 읽은 구조입니다. 행 데이터 · 예시값 · 결측률은 읽지 않았습니다"]

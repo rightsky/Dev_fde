@@ -24,7 +24,7 @@ def _make_engine(url: str):
     if url.startswith("sqlite"):
 
         @event.listens_for(eng, "connect")
-        def _fk_on(dbapi_conn, _):  # noqa: ANN001
+        def _fk_on(dbapi_conn, _):
             cur = dbapi_conn.cursor()
             cur.execute("PRAGMA foreign_keys=ON")
             cur.close()

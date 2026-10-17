@@ -52,7 +52,6 @@ def upgrade() -> None:
             b.add_column(sa.Column('taxonomy_set_id', sa.Integer(), nullable=True))
             b.create_foreign_key('fk_process_taxonomy_set', 'taxonomy_set', ['taxonomy_set_id'], ['id'])
     # 데이터 이관: 기본 세트 1개 + 기존 F1~F6 코드 귀속
-    now = sa.func.now()
     existing = bind.execute(sa.text("SELECT id FROM taxonomy_set WHERE slug = 'base'")).scalar()
     if existing is None:
         bind.execute(sa.text(

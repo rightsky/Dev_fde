@@ -22,7 +22,7 @@ NEW = [("N2SF-S2", "S2 — 제한 공유", "개별 기록·민감 정보 포함.
        ("N2SF-S1", "S1 — 조건부 공유", "비식별·집계 처리된 자료. 이용약정 · 목적 확인 · 비밀유지 의무를 전제로 제공", 2)]
 
 
-def _load(v):  # noqa: ANN001
+def _load(v):
     if v is None:
         return None
     return json.loads(v) if isinstance(v, str) else v

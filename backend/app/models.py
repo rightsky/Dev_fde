@@ -12,7 +12,7 @@
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, TypeDecorator, UniqueConstraint
@@ -22,7 +22,7 @@ from .db import Base
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class UTCDateTime(TypeDecorator):
@@ -31,19 +31,19 @@ class UTCDateTime(TypeDecorator):
     impl = DateTime(timezone=True)
     cache_ok = True
 
-    def process_bind_param(self, value, dialect):  # noqa: ANN001
+    def process_bind_param(self, value, dialect):
         if value is None:
             return None
         if value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc)
-        return value.astimezone(timezone.utc)  # KST 등 다른 시간대로 들어온 값도 UTC 로 맞춰 저장 (SQLite 는 오프셋을 버린다)
+            return value.replace(tzinfo=UTC)
+        return value.astimezone(UTC)  # KST 등 다른 시간대로 들어온 값도 UTC 로 맞춰 저장 (SQLite 는 오프셋을 버린다)
 
-    def process_result_value(self, value, dialect):  # noqa: ANN001
+    def process_result_value(self, value, dialect):
         if value is None:
             return None
         if value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc)
-        return value.astimezone(timezone.utc)  # PostgreSQL 은 세션 시간대로 돌려주므로 UTC 로 맞춘다
+            return value.replace(tzinfo=UTC)
+        return value.astimezone(UTC)  # PostgreSQL 은 세션 시간대로 돌려주므로 UTC 로 맞춘다
 
 
 class Organization(Base):

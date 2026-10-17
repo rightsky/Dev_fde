@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..models import Attestation, CatalogEntry, Process, ReviewRequest, SerializationRun, User, utcnow
-from . import grading, activity, canonical, catalog, diagnosis, gates, serialize, validation
+from . import activity, canonical, catalog, diagnosis, gates, grading, serialize, validation
 
 SEVERITY_ORDER = {"high": 3, "medium": 2, "low": 1}
 LEVEL_LABEL = {"high": "높음", "medium": "보통", "low": "낮음"}
