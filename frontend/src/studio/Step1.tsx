@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import { Link } from "react-router-dom";
-import { AssetProfileModal } from "../components/assets";
+import { AssetProfileModal, StreamModal, UploadZone } from "../components/assets";
 import { AssetKindBadge } from "../pages/Assets";
 import type { Asset, ComboSuggestion, Dataset, ProcessDetail } from "../types";
 import { Badge, Banner, Button, ConfirmButton, Empty, KeyPill, Meter, QueryState, cx, useToast } from "../ui";
@@ -101,6 +101,13 @@ export function Step1() {
     });
   };
 
+  const [streamOpen, setStreamOpen] = useState(false);
+  /** 여기서 올리거나 등록한 원천은 이 프로세스 후보에 바로 넣는다 */
+  const addAssets = (created: Asset[]) => {
+    if (created.length === 0) return;
+    changeSelection((cur) => [...cur, ...created.map((a) => a.id)], `이 프로세스 후보에 추가 — ${created.map((a) => a.name).join(", ")}`);
+  };
+
   const toggle = (a: Asset) => {
     const ds = byAsset.get(a.id);
     if (!ds) {
@@ -183,26 +190,29 @@ export function Step1() {
   return (
     <div className="col gap-12">
       <div>
-        <StepHeader n={1} title="데이터셋 조합 추출" sub="데이터 패브릭에 등록된 원천(파일 · DB 스키마 · 스트림) 가운데 후보를 고르면 연계키 후보를 기준으로 조합을 추천합니다." />
+        <StepHeader n={1} title="데이터셋 조합 추출" sub="파일을 올리거나 스트림을 등록하고(또는 데이터 패브릭에 이미 있는 원천에서) 후보를 고르면 연계키 후보를 기준으로 조합을 추천합니다." />
         <ReadOnlyNote />
       </div>
 
-      <Banner
-        tone="info"
-        right={
-          <Link className="btn outline sm" to="/assets" title="파일 업로드 · 스트림 등록 · 기관 DB 스키마 가져오기">
-            데이터 패브릭 관리로 →
-          </Link>
-        }
-      >
-        원천 등록은 <b>데이터 패브릭 관리</b>에서 합니다 (파일 업로드 · 스트림 등록 · 기관 DB 스키마 커넥터). 등록한 원천은 이 목록에 바로 나타납니다
-        {assetsQ.data && (
-          <span className="muted">
-            {" "}· 현재 파일 {counts.dataset} · DB 스키마 {counts.dbschema} · 스트림 {counts.stream}
-          </span>
-        )}
-        .
-      </Banner>
+      <div className="grid side">
+        <UploadZone onUploaded={addAssets} disabled={!editable} />
+        <div className="card">
+          <div className="card-title">스트림 등록 · 외부 연계</div>
+          <p className="small dim">
+            계속 흘러드는 데이터(CCTV · 센서)는 본체 대신 <b>스트림(dcat:DataService)</b>으로 선언합니다. 표본 .jsonl 을 올렸다면 등록 창에서 표본으로 고르면 컬럼이 필드로 들어갑니다.
+            기관 DB 는 데이터 패브릭의 커넥터로 가져옵니다.
+          </p>
+          <div className="row wrap gap-4 mt-12">
+            <Button variant="outline" disabled={!editable} onClick={() => setStreamOpen(true)}>
+              ＋ 스트림 등록
+            </Button>
+            <Link className="btn sm" to="/assets" title="원천 자산 대장 · 기관 DB 스키마 커넥터 · 외부 연계 현황">
+              데이터 패브릭 관리 →
+            </Link>
+          </div>
+          {assetsQ.data && <p className="tiny muted mt-8">현재 파일 {counts.dataset} · DB 스키마 {counts.dbschema} · 스트림 {counts.stream}. 여기서 올리거나 등록한 원천은 이 프로세스 후보에 바로 들어갑니다.</p>}
+        </div>
+      </div>
 
       {/* ── 후보 원천 */}
       <section>
@@ -387,6 +397,7 @@ export function Step1() {
         </div>
       </section>
 
+      {streamOpen && <StreamModal onClose={() => setStreamOpen(false)} onCreated={(a) => addAssets([a])} />}
       {profileId != null && <AssetProfileModal assetId={profileId} onClose={() => setProfileId(null)} />}
     </div>
   );

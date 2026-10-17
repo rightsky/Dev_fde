@@ -51,6 +51,10 @@ def pair_links(a: Asset, b: Asset) -> list[dict[str, Any]]:
         if st:
             rate = max(st["source_match_rate"], st["target_match_rate"])
             score = base * 0.5 + rate * 0.5 if code != "K7" else base * 0.5 + rate * 0.3
+            # 고유값이 아주 적은 축(시군구 코드 3종 같은)은 100% 겹쳐도 결합 키라기보다 분류 축이다
+            if min(st["source_distinct"], st["target_distinct"]) < 10 and code != "K7":
+                score *= 0.7
+                st = {**st, "low_cardinality": True}
         else:
             score = base * 0.6
         out.append({"code": code, "label": KEY_LABEL.get(code, code),
@@ -95,11 +99,13 @@ def combo_suggestions(assets: list[Asset]) -> list[dict[str, Any]]:
         if not edges:
             continue
         score = sum(e["score"] for _, e in edges) / len(edges)
-        shared = sorted({e["code"] for _, e in edges})
+        # 공유 키는 쌍마다 최고 후보뿐 아니라 0.35 이상인 모든 축을 보인다 (link_id 와 sgg_code 를 둘 다)
+        all_edges = [((x, y), l) for (x, y), pl in links.items() if x in ids and y in ids for l in pl if l["score"] >= 0.35]
+        shared = sorted({e["code"] for _, e in (all_edges or edges)})
         reasons = []
-        for (x, y), e in sorted(edges, key=lambda t: -t[1]["score"])[:6]:
+        for (x, y), e in sorted(all_edges or edges, key=lambda t: -t[1]["score"])[:6]:
             st = e["stats"]
-            detail = (f"값 일치 {st['matched']:,}건 ({max(st['source_match_rate'], st['target_match_rate']):.0%})"
+            detail = (f"값 일치 {st['matched']:,}건 ({max(st['source_match_rate'], st['target_match_rate']):.0%})" + (" · 고유값 적음(분류 축)" if st.get("low_cardinality") else "")
                       if st else "값 표본 없음 — 컬럼 규칙 기준")
             reasons.append(f"{by_id[x].name} ↔ {by_id[y].name}: {e['code']} {e['label']} "
                            f"({e['source']['column']} = {e['target']['column']}) · {detail}")

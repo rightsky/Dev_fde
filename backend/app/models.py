@@ -132,6 +132,7 @@ class Process(Base):
     relations: Mapped[list[Relation]] = relationship(
         back_populates="process", cascade="all, delete-orphan", order_by="Relation.priority"
     )
+    owner: Mapped[User | None] = relationship(foreign_keys=[created_by])  # 담당자 (만든 사람 또는 관리자가 배정한 사람)
 
     @property
     def combo(self) -> list[ProcessDataset]:

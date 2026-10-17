@@ -50,6 +50,7 @@ export function AssetsPage() {
   const [kind, setKind] = useState<KindFilter>("");
   const [profileId, setProfileId] = useState<number | null>(null);
   const [streamOpen, setStreamOpen] = useState(false);
+  const [streamSample, setStreamSample] = useState<Asset | null>(null); // 「스트림으로 등록」을 누른 표본 파일
   const [fresh, setFresh] = useState<number[]>([]);
   const [tab, setTab] = useState<FabricTab>(() => (location.hash === "#integrations" ? "integrations" : "assets"));
   const q = useDebounced(text.trim(), 300);
@@ -171,7 +172,7 @@ export function AssetsPage() {
             )}
           </Empty>
         ) : (
-          <AssetTable assets={list.data || []} fresh={fresh} canWrite={canWrite} onProfile={setProfileId} />
+          <AssetTable assets={list.data || []} fresh={fresh} canWrite={canWrite} onProfile={setProfileId} onStreamFrom={(a) => { setStreamSample(a); setStreamOpen(true); }} />
         )}
       </QueryState>
       {canWrite && list.data && list.data.length > 0 && (
@@ -181,12 +182,12 @@ export function AssetsPage() {
       )}
 
       {profileId != null && <AssetProfileModal assetId={profileId} onClose={() => setProfileId(null)} />}
-      {streamOpen && <StreamModal onClose={() => setStreamOpen(false)} onCreated={(a) => reveal([a])} />}
+      {streamOpen && <StreamModal sampleAsset={streamSample} onClose={() => { setStreamOpen(false); setStreamSample(null); }} onCreated={(a) => reveal([a])} />}
     </div>
   );
 }
 
-function AssetTable(props: { assets: Asset[]; fresh: number[]; canWrite: boolean; onProfile: (id: number) => void }) {
+function AssetTable(props: { assets: Asset[]; fresh: number[]; canWrite: boolean; onProfile: (id: number) => void; onStreamFrom: (a: Asset) => void }) {
   const qc = useQueryClient();
   const toast = useToast();
   const { isAdmin } = useAuth();
@@ -238,6 +239,7 @@ function AssetTable(props: { assets: Asset[]; fresh: number[]; canWrite: boolean
               onProfile={() => props.onProfile(a.id)}
               onDelete={() => remove(a)}
               onForceDelete={() => remove(a, true)}
+              onStreamFrom={() => props.onStreamFrom(a)}
             />
           ))}
         </tbody>
@@ -246,7 +248,7 @@ function AssetTable(props: { assets: Asset[]; fresh: number[]; canWrite: boolean
   );
 }
 
-function AssetRow(props: { asset: Asset; fresh: boolean; canWrite: boolean; busy: boolean; forceOffer: boolean; onProfile: () => void; onDelete: () => void; onForceDelete: () => void }) {
+function AssetRow(props: { asset: Asset; fresh: boolean; canWrite: boolean; busy: boolean; forceOffer: boolean; onProfile: () => void; onDelete: () => void; onForceDelete: () => void; onStreamFrom: () => void }) {
   const { key_labels } = useReference();
   const a = props.asset;
   const isStream = a.kind === "stream";
@@ -261,6 +263,13 @@ function AssetRow(props: { asset: Asset; fresh: boolean; canWrite: boolean; busy
           {props.fresh && <Badge tone="solid">방금 등록</Badge>}
         </div>
         {origin && <div className="tiny muted mono">{origin}</div>}
+        {isStream && a.stream.sample_filename && (
+          <div className="tiny muted">
+            표본: <span className="mono">{a.stream.sample_filename}</span>
+            {a.stream.registered_via === "schema_file" && " · 스키마 파일로 등록"}
+          </div>
+        )}
+        {isStream && !a.stream.sample_filename && a.stream.registered_via === "schema_file" && <div className="tiny muted">스키마 파일로 등록</div>}
         {a.description && <div className="small dim">{a.description}</div>}
       </td>
       <td>
@@ -317,6 +326,11 @@ function AssetRow(props: { asset: Asset; fresh: boolean; canWrite: boolean; busy
           <Button size="sm" onClick={props.onProfile}>
             프로파일
           </Button>
+          {props.canWrite && !isStream && a.source !== "dbschema" && (a.ext === "jsonl" || a.ext === "ndjson" || a.ext === "json" || a.ext === "csv") && (
+            <Button size="sm" variant="outline" onClick={props.onStreamFrom} title="이 파일을 표본으로 실시간 스트림(dcat:DataService)을 등록합니다. 컬럼이 필드로 들어갑니다">
+              스트림으로 등록
+            </Button>
+          )}
           {props.canWrite && !props.forceOffer && (
             <ConfirmButton size="sm" busy={props.busy} onConfirm={props.onDelete}>
               삭제

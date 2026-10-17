@@ -206,6 +206,7 @@ export const api = {
     endpoint_url?: string;
     timezone?: string;
     fields: { name: string; type: string }[];
+    sample_asset_id?: number | null;
   }) => post<T.Asset>("/assets/streams", body),
   updateAsset: (id: number, body: { name?: string; description?: string; org_id?: number | null }) => patch<T.Asset>(`/assets/${id}`, body),
   deleteAsset: (id: number, force = false) => del<{ ok: boolean; force: boolean; detached_processes: string[] }>(`/assets/${id}${force ? "?force=true" : ""}`),
@@ -216,7 +217,7 @@ export const api = {
   processes: (status?: "active" | "completed" | "trashed") => get<T.Process[]>("/processes", { status }),
   createProcess: (name?: string) => post<T.ProcessDetail>("/processes", { name }),
   process: (pid: number) => get<T.ProcessDetail>(`/processes/${pid}`),
-  updateProcess: (pid: number, body: { name?: string; current_step?: number; pub_mode?: boolean }) => patch<T.ProcessDetail>(`/processes/${pid}`, body),
+  updateProcess: (pid: number, body: { name?: string; current_step?: number; pub_mode?: boolean; owner_id?: number | null }) => patch<T.ProcessDetail>(`/processes/${pid}`, body),
   completeProcess: (pid: number) => post<T.ProcessDetail>(`/processes/${pid}/complete`),
   reopenProcess: (pid: number) => post<T.ProcessDetail>(`/processes/${pid}/reopen`),
   trashProcess: (pid: number) => post<T.Process>(`/processes/${pid}/trash`),

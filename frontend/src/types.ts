@@ -222,6 +222,10 @@ export interface Asset {
     endpoint_url?: string | null;
     timezone?: string | null;
     fields?: { name: string; type: string }[];
+    /** 표본 덤프 파일(업로드한 JSON Lines · CSV) 과의 연결 */
+    sample_asset_id?: number | null;
+    sample_filename?: string | null;
+    registered_via?: "form" | "schema_file";
   };
   profile_status: Profile["status"] | null;
   profile_summary: string;
@@ -244,6 +248,8 @@ export interface Process {
   name: string;
   status: "active" | "completed" | "trashed";
   current_step: number;
+  /** 담당자 (만든 사람 또는 관리자가 배정). 작업자는 자기 담당 프로세스만 본다 */
+  owner?: { id: number; name: string; org: string | null } | null;
   combo_title: string | null;
   combo_description: string | null;
   combo_source: "manual" | "suggestion" | null;
