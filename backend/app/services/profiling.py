@@ -62,7 +62,8 @@ _YM = re.compile(r"^(19|20)\d{2}(0[1-9]|1[0-2])$")
 _Y = re.compile(r"^(19|20)\d{2}$")
 
 _PII_NAME = re.compile(r"주민|성명|이름|전화|휴대|핸드폰|연락처|생년|생일|birth|이메일|email|e-mail|계좌|account|여권|passport|운전면허|차량번호|차대번호|VIN"
-                       r"|주소|addr|성별|gender|(?<![a-z])name(?![a-z])|_nm(?![a-z])|^nm$|owner|고객|환자|학생|신청인|민원인"
+                       r"|주소|addr|성별|gender|(?<![a-z_])name(?![a-z])|(?:user|person|owner|driver|cust(?:omer)?|applicant|patient|student|member|emp(?:loyee)?|contact|manager|reporter|victim|passenger|holder|guardian|parent|first|last|full|given|family|korean|kor|eng|english)_?name"
+                       r"|_nm(?![a-z])|^nm$|owner|고객|환자|학생|신청인|민원인"
                        # DB 컬럼은 영문 약어가 많다 (기관 DB 스키마 커넥터): 주민번호 · 전화 · 생년 등
                        r"|resident|rrn|jumin|(?<![a-z])ssn(?![a-z])|phone|mobile|(?<![a-z])tel(?![a-z])|cell|(?<![a-z])dob(?![a-z])|patient|customer|cust_|applicant"
                        r"|plate|vehicle_?no|차량번호판|번호판", re.I)
@@ -456,12 +457,14 @@ def _key_candidates(table: str, cols: list[dict[str, Any]], col_texts: dict[str,
                 score -= 0.15
             score = round(max(0.05, min(0.99, score)), 2)
             out.append({"code": rule["code"], "label": rule["label"], "table": table, "column": col["name"],
-                        "score": score, "reason": " · ".join(reasons)})
-    # 같은 컬럼이 여러 키에 걸리면 점수 높은 것만, K9 는 다른 키가 없을 때만
+                        "score": score, "reason": " · ".join(reasons), "_name_hit": name_hit})
+    # 같은 컬럼이 여러 키에 걸리면 점수 높은 것만. 점수가 같으면 컬럼명이 맞은 쪽 (link_id 가 값 자릿수만으로 행정구역에 잡히지 않게)
     best: dict[str, dict[str, Any]] = {}
-    for c in sorted(out, key=lambda x: -x["score"]):
+    for c in sorted(out, key=lambda x: (-x["score"], not x["_name_hit"])):
         if c["column"] not in best:
             best[c["column"]] = c
+    for c in best.values():
+        c.pop("_name_hit", None)
     return list(best.values())
 
 
