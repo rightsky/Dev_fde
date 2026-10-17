@@ -91,7 +91,7 @@ export function DatasetTable({ rows, published }: { rows: ReviewDataset[]; publi
           {rows.map((d) => (
             <tr key={d.resource_id}>
               <td className="mono nowrap">
-                {published?.includes(d.resource_id) ? <Link to={`/catalog/${encodeURIComponent(d.resource_id)}`}>{d.resource_id}</Link> : d.resource_id}
+                {published?.includes(d.resource_id) ? <Link to={`/ard/published/${encodeURIComponent(d.resource_id)}`}>{d.resource_id}</Link> : d.resource_id}
               </td>
               <td className="bold">{d.title}</td>
               <td className="nowrap">

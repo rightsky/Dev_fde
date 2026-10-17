@@ -1171,6 +1171,10 @@ def run_serialization(pid: int, body: SerializeIn, db: Session = Depends(get_db)
         raise HTTPException(422, f"지원하지 않는 포맷입니다: {bad}")
     vr = validation.latest_run(db, pid)
     sr = serialize.run(db, p, user, vr, body.formats)  # type: ignore[arg-type]
+    db.flush()
+    from ..services import ard
+
+    ard.apply_retention(db, user)  # 보존 정책: 프로세스당 최신 N회차만 (발행본이 참조하는 회차는 예외)
     db.commit()
     return {"run": serialization_out(sr), "state": gates.state(db, p)}
 
@@ -1282,6 +1286,9 @@ def rerun_pipeline(pid: int, db: Session = Depends(get_db), user: User = Depends
     prev = serialize.latest_run(db, pid)
     sr = serialize.run(db, p, user, vr, prev.formats if prev else None)
     db.flush()
+    from ..services import ard
+
+    ard.apply_retention(db, user)
     out["serialization"] = {"run_id": sr.id, "ok_count": sr.ok_count, "fail_count": sr.fail_count}
     if sr.ok_count < 1:
         out["stopped"] = "STEP 7 — 자가검증을 통과한 산출물이 없습니다"

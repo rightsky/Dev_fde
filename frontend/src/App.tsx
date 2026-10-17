@@ -1,7 +1,8 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AdminPage } from "./pages/Admin";
 import { AssetsPage } from "./pages/Assets";
-import { CatalogPage } from "./pages/Catalog";
+import { ArdPage } from "./pages/Ard";
+import { ArdPublishedPage } from "./pages/ArdPublished";
 import { HomePage } from "./pages/Home";
 import { ReviewsPage } from "./pages/Reviews";
 import { Header } from "./shell/Header";
@@ -40,8 +41,11 @@ export function App() {
       <Routes>
         <Route path="/" element={<Plane><HomePage /></Plane>} />
         <Route path="/assets" element={<Plane><AssetsPage /></Plane>} />
-        <Route path="/catalog" element={<Plane><CatalogPage /></Plane>} />
-        <Route path="/catalog/:rid" element={<Plane><CatalogPage /></Plane>} />
+        <Route path="/ard" element={<Plane><ArdPage /></Plane>} />
+        <Route path="/ard/published/:rid" element={<Plane><ArdPublishedPage /></Plane>} />
+        {/* v0.17 까지의 주소: 북마크 · 발행 ID 링크가 깨지지 않게 ARD 관리로 보낸다 */}
+        <Route path="/catalog" element={<Navigate to="/ard?tab=published" replace />} />
+        <Route path="/catalog/:rid" element={<CatalogRedirect />} />
         <Route path="/admin" element={<Plane><AdminPage /></Plane>} />
         <Route path="/reviews" element={<Plane><ReviewsPage /></Plane>} />
         <Route path="/reviews/:rid" element={<Plane><ReviewsPage /></Plane>} />
@@ -54,4 +58,9 @@ export function App() {
       </Routes>
     </div>
   );
+}
+
+function CatalogRedirect() {
+  const { rid = "" } = useParams();
+  return <Navigate to={`/ard/published/${encodeURIComponent(rid)}`} replace />;
 }

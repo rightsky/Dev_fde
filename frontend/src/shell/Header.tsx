@@ -9,7 +9,7 @@ const NAV = [
   { to: "/", label: "HOME", ico: "⌂", color: "#e8912d", end: true },
   { to: "/studio", label: "ARD 스튜디오", ico: "◈", color: "#1E5EFF" },
   { to: "/assets", label: "데이터 패브릭 관리", ico: "▦", color: "#2aa876" },
-  { to: "/catalog", label: "데이터 카탈로그", ico: "≣", color: "#7a3fa0" },
+  { to: "/ard", label: "ARD 관리", ico: "≣", color: "#7a3fa0" },
   { to: "/reviews", label: "검수 큐", ico: "✓", color: "#c2410c" },
   { to: "/admin", label: "시스템 관리", ico: "⚙", color: "#111318" },
 ];

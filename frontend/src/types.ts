@@ -822,6 +822,8 @@ export interface CatalogEntry {
     /** AI 활용 이용조건 (3.4.5 표 39): 항목 이름 → permitted | conditional | prohibited. 없는 항목은 미정 */
     ai_terms?: Record<string, string>;
     ai_conditions?: string | null;
+    /** 담당자의 외부 AI 전송 제외 표시 (MCP · 시뮬레이션에서 숨김) */
+    ai_excluded?: boolean;
     /** AI 초안을 채택해 담당자가 확정한 칸 이름들 (FDE_AI_ASSIST_NOTICE 가 켜져 있을 때만) */
     ai_assisted?: string[];
     /** AI 기본법 제34조 학습용데이터 개요 대응 작성률 "n/8" */
@@ -837,6 +839,8 @@ export interface CatalogEntry {
   };
   published_by: string;
   published_at: string;
+  /** 상세 조회에서만: 이 발행본을 만든 프로세스 데이터셋 (제출 패키지용) */
+  dataset_id?: number | null;
   turtle?: string;
   jsonld?: string;
   text_summary?: string | null;
@@ -848,7 +852,6 @@ export interface CatalogEntry {
 export interface CatalogList {
   total: number;
   items: CatalogEntry[];
-  facets: { theme: [string, number][]; data_type: [string, number][] };
 }
 
 export interface Dashboard {
@@ -1161,4 +1164,83 @@ export interface IntegrationItem {
   last_at: string | null;
   today: number | null;
   scope: string;
+}
+
+/** ARD 관리 */
+export interface Paged<T> {
+  items: T[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+}
+export interface ArdActor {
+  id: number | null;
+  name: string;
+  org: string | null;
+}
+export type ArdKind = "file" | "zip" | "validation" | "diagnosis" | "package";
+export interface ArdArtifact {
+  key: string;
+  kind: ArdKind;
+  kind_label: string;
+  id: number;
+  run_id: number;
+  mode: string | null;
+  process: { id: number; name: string; status: string };
+  dataset: { id: number; title: string } | null;
+  format: string;
+  format_label: string;
+  filename: string;
+  size: number | null;
+  sha256: string | null;
+  latest: boolean;
+  detail: string | null;
+  actor: ArdActor | null;
+  org: string | null;
+  created_at: string;
+  grade: string | null;
+  viewer_allowed: boolean;
+  can_download: boolean;
+}
+export interface ArdPublished extends CatalogEntry {
+  actor: ArdActor | null;
+  org: string | null;
+  grade: string | null;
+  visibility: MetaVisibility | null;
+  readiness: string | null;
+  s2_grants: number;
+  last_mcp_call: string | null;
+  mcp_exposed: boolean;
+}
+export interface ArdHistory {
+  id: number;
+  code: string;
+  type: string;
+  type_label: string;
+  text: string;
+  actor: ArdActor;
+  org: string | null;
+  process_id: number | null;
+  at: string;
+  payload: Record<string, unknown>;
+}
+export interface ArdSummary {
+  artifacts: number;
+  files: number;
+  published: number;
+  ai_ready: number;
+  withdrawn: number;
+  downloads_7d: number;
+  mcp_calls_30d: number;
+  stale: { process: { id: number; name: string }; step: number; reason: string }[];
+  retention: { candidates: number; size: number; keep: number };
+  page_sizes: number[];
+  generated_at: string;
+}
+export interface ArdFilters {
+  actors: { id: number; name: string; org: string | null }[];
+  orgs: string[];
+  kinds: { kind: ArdKind; label: string }[];
+  history_types: { type: string; label: string }[];
 }
