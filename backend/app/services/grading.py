@@ -117,16 +117,47 @@ def visibility(pd: ProcessDataset) -> str:
     return "internal" if normalize(grade_of(pd)) == "C" else "detail"
 
 
+def org_grade(pd: ProcessDataset) -> dict[str, Any] | None:
+    """기관 등급표에서 이 자산에 매칭된 행 가운데 가장 높은 등급."""
+    from sqlalchemy import select
+    from sqlalchemy.orm import object_session
+
+    from ..models import OrgGradeEntry
+
+    db = object_session(pd)
+    if db is None:
+        return None
+    rows = db.scalars(select(OrgGradeEntry).where(OrgGradeEntry.asset_id == pd.asset_id)).all()
+    if not rows:
+        return None
+    top = max(rows, key=lambda r: rank(r.grade))
+    return {"grade": normalize(top.grade), "label": GRADE_LABEL.get(normalize(top.grade) or "", None), "name": top.name, "system": top.system,
+            "entries": len(rows), "legal_basis": top.legal_basis, "personal_data": top.personal_data}
+
+
 def state(pd: ProcessDataset) -> dict[str, Any]:
     """화면·검수·정본이 함께 쓰는 등급 상태 요약."""
     b = basis(pd)
     sug, reasons = suggest(b)
     g = normalize(grade_of(pd))
+    og = org_grade(pd)
+    cols = column_summary(pd)
+    # 제안 등급 = 판단 근거 · 기관 등급표 · 컬럼 민감 항목 가운데 가장 높은 것
+    if og and (sug is None or rank(og["grade"]) > rank(sug)):
+        sug = og["grade"]
+        reasons = reasons + [f"기관 등급표: {og['name']} → {og['label']}"]
+    if cols["dataset_personal_data"]:
+        cg = PERSONAL_DATA[cols["dataset_personal_data"]][1]
+        if sug is None or rank(cg) > rank(sug):
+            sug = cg
+            reasons = reasons + [f"컬럼 민감 항목: {cols['dataset_personal_label']} 컬럼 있음 → {GRADE_LABEL[cg]} 이상"]
     below = sug is not None and g is not None and rank(g) < rank(sug)
+    org_conflict = bool(og and ((g and rank(og["grade"]) > rank(g)) or (cols["dataset_personal_data"] and rank(PERSONAL_DATA[cols["dataset_personal_data"]][1]) > rank(og["grade"]))))
     return {
         "grade": g, "grade_label": GRADE_LABEL.get(g or "", None), "suggested": sug, "suggested_label": GRADE_LABEL.get(sug or "", None),
         "reasons": reasons, "basis": b, "basis_complete": all(b.get(k) for k, _, _ in BASIS_FIELDS),
         "below_suggested": below, "below_reason": b.get("reason") if below else None,
+        "org_grade": og, "org_conflict": org_conflict, "columns": cols,
         "prohibited": prohibited(pd), "visibility": visibility(pd), "visibility_explicit": (pd.classification or {}).get(VISIBILITY_KEY) in VISIBILITIES,
         "options": {"personal_data": {k: v[0] for k, v in PERSONAL_DATA.items()}, "reidentification": {k: v[0] for k, v in REIDENTIFICATION.items()},
                     "legal": {k: v[0] for k, v in LEGAL.items()}, "prohibited_types": PROHIBITED_TYPES, "visibilities": VISIBILITIES,
@@ -134,11 +165,85 @@ def state(pd: ProcessDataset) -> dict[str, Any]:
     }
 
 
-def validate(grade: str | None, b: dict[str, Any]) -> str | None:
-    """저장 전 검사. 제안보다 낮은 등급에는 사유가 필요하다. 문제가 있으면 메시지."""
+def validate(grade: str | None, b: dict[str, Any], pd: ProcessDataset | None = None) -> str | None:
+    """저장 전 검사. 제안(판단 근거 · 기관 등급표 · 컬럼 민감 항목)보다 낮은 등급에는 사유가 필요하다. 문제가 있으면 메시지."""
     sug, _ = suggest(b)
+    why = "판단 근거"
+    if pd is not None:
+        og = org_grade(pd)
+        if og and (sug is None or rank(og["grade"]) > rank(sug)):
+            sug, why = og["grade"], f"기관 등급표({og['name']})"
+        cols = column_summary(pd)
+        if cols["dataset_personal_data"]:
+            cg = PERSONAL_DATA[cols["dataset_personal_data"]][1]
+            if sug is None or rank(cg) > rank(sug):
+                sug, why = cg, f"컬럼 민감 항목({cols['dataset_personal_label']})"
     if sug is None or grade is None:
         return None
     if rank(grade) < rank(sug) and len(str(b.get("reason") or "").strip()) < MIN_REASON:
-        return f"판단 근거로는 {GRADE_LABEL[sug]} 이상인데 {GRADE_LABEL[normalize(grade) or '']} 로 정했습니다 — 낮추는 사유를 {MIN_REASON}자 이상 적으세요"
+        return f"{why}로는 {GRADE_LABEL[sug]} 이상인데 {GRADE_LABEL[normalize(grade) or '']} 로 정했습니다 — 낮추는 사유를 {MIN_REASON}자 이상 적으세요"
     return None
+
+
+# ---------------------------------------------------------------- 컬럼 민감 항목 (가이드라인 생애주기 표: 항목 단위 비식별 처리·기록)
+COLUMN_PERSONAL = {"none": "비개인", "pseudonymized": "가명", "personal": "개인정보", "sensitive": "민감·고유식별"}
+_COLUMN_RANK = {"none": 0, "pseudonymized": 1, "personal": 2, "sensitive": 3}
+DEID_METHODS = {"delete": "삭제", "masking": "마스킹", "categorize": "범주화", "pseudonymize": "가명화", "aggregate": "집계", "other": "기타"}
+
+
+def column_items(pd: ProcessDataset) -> dict[tuple[str, str], dict[str, Any]]:
+    """데이터 사전에 적힌 컬럼 민감 항목: {(표, 컬럼): {personal_data, deid:{method, note, at, by}}}."""
+    out: dict[tuple[str, str], dict[str, Any]] = {}
+    for table, cols in ((pd.meta or {}).get("_dictionary") or {}).items():
+        for col, ent in (cols or {}).items():
+            item: dict[str, Any] = {}
+            if (ent or {}).get("personal_data") in COLUMN_PERSONAL:
+                item["personal_data"] = ent["personal_data"]
+            if isinstance((ent or {}).get("deid"), dict) and ent["deid"].get("method") in DEID_METHODS:
+                item["deid"] = ent["deid"]
+            if item:
+                out[(table, col)] = item
+    return out
+
+
+def column_suggestions(pd: ProcessDataset) -> dict[tuple[str, str], tuple[str, str]]:
+    """컬럼 이름 · 프로파일 PII 탐지에서 나온 개인정보 유형 후보: {(표, 컬럼): (유형, 근거)}. 값은 읽지 않는다."""
+    out: dict[tuple[str, str], tuple[str, str]] = {}
+    for t in (pd.asset.profile or {}).get("tables", []):
+        for c in t.get("columns", []):
+            if _UNIQUE_ID.search(c["name"]):
+                out[(t["name"], c["name"])] = ("sensitive", "컬럼 이름이 고유식별정보 패턴")
+            elif c.get("pii"):
+                out[(t["name"], c["name"])] = ("personal", f"개인정보 의심 ({c['pii'].get('kind', '')})")
+    return out
+
+
+def column_summary(pd: ProcessDataset) -> dict[str, Any]:
+    """컬럼 민감 항목 요약과, 거기서 올라오는 데이터셋 '개인정보 유형' 기본값."""
+    items = column_items(pd)
+    sugs = column_suggestions(pd)
+    best = ""
+    for v in [i.get("personal_data") for i in items.values()] + [s[0] for (k, s) in sugs.items() if k not in items]:
+        if v and _COLUMN_RANK.get(v, 0) > _COLUMN_RANK.get(best, -1):
+            best = v
+    marked = sum(1 for i in items.values() if i.get("personal_data"))
+    deid = sum(1 for i in items.values() if i.get("deid"))
+    needs = [k for k, i in items.items() if i.get("personal_data") in ("personal", "sensitive") and not i.get("deid")]
+    return {"marked": marked, "deid": deid, "suggested_count": len([k for k in sugs if k not in items]),
+            "needs_deid": [f"{t}.{c}" for t, c in needs], "dataset_personal_data": best or None,
+            "dataset_personal_label": PERSONAL_DATA.get(best, ("",))[0] if best else None}
+
+
+# ---------------------------------------------------------------- 조합 등급 (3.6.1 결합 후 재검토)
+def combo_grade(process: Any) -> dict[str, Any]:
+    """조합의 등급: 구성 데이터셋 최고 등급이 기본값. 담당자가 낮추면 사유가 필요하다."""
+    members = [(d, normalize(grade_of(d))) for d in process.combo]
+    graded = [g for _, g in members if g]
+    floor = GRADES[max(rank(g) for g in graded)] if graded else None
+    chosen = normalize(getattr(process, "combo_grade", None))
+    reason = getattr(process, "combo_grade_reason", None)
+    below = floor is not None and chosen is not None and rank(chosen) < rank(floor)
+    return {"floor": floor, "floor_label": GRADE_LABEL.get(floor or "", None), "grade": chosen or floor,
+            "grade_label": GRADE_LABEL.get((chosen or floor) or "", None), "explicit": chosen is not None,
+            "below_floor": below, "reason": reason, "unset": [((d.meta or {}).get("title") or d.asset.name) for d, g in members if not g],
+            "mixed": len(set(graded)) > 1}

@@ -10,7 +10,7 @@ from app.db import Base, _make_engine
 from app.migrate import BASELINE, upgrade
 
 
-LATER_TABLES = {"agent_key", "agent_call", "review_request", "simulation_run"}  # 0002 (v0.5) · 0003 (v0.7) · 0004 (v0.9)
+LATER_TABLES = {"agent_key", "agent_call", "review_request", "simulation_run", "org_grade_entry"}  # 0002 (v0.5) · 0003 (v0.7) · 0004 (v0.9)
 
 
 def _engine(tmp_path: Path, name: str):
@@ -33,6 +33,8 @@ def test_legacy_database_is_stamped_then_upgraded(tmp_path):
     Base.metadata.create_all(eng, tables=[t for t in Base.metadata.sorted_tables if t.name not in LATER_TABLES])
     with eng.begin() as c:
         c.execute(text("ALTER TABLE app_user DROP COLUMN password_changed_at"))  # 0005 (v0.12) 에서 생긴 열
+        c.execute(text("ALTER TABLE process DROP COLUMN combo_grade"))  # 0007
+        c.execute(text("ALTER TABLE process DROP COLUMN combo_grade_reason"))
         c.execute(text("INSERT INTO organization (code, label, kind, active, created_at) VALUES ('X', '기관', 'gov', 1, '2026-01-01 00:00:00')"))
     upgrade(eng)
     upgrade(eng)  # 두 번 기동해도 그대로

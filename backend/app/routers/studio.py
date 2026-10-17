@@ -103,6 +103,30 @@ def get_process(pid: int, db: Session = Depends(get_db), _: User = Depends(curre
     return _detail(db, _process(db, pid))
 
 
+class ComboGradeIn(BaseModel):
+    grade: str | None = None  # None 이면 기본값(구성 최고 등급)으로 되돌린다
+    reason: str | None = Field(default=None, max_length=1000)
+
+
+@router.put("/processes/{pid}/combo-grade")
+def set_combo_grade(pid: int, body: ComboGradeIn, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    """조합(결합) 등급. 기본값은 구성 데이터셋 최고 등급이고, 낮추려면 사유 20자 이상 (가이드라인 3.6.1 결합 후 재검토)."""
+    p = _editable(db, pid)
+    cg = grading.combo_grade(p)
+    g = grading.normalize(body.grade) if body.grade else None
+    if g is not None and g not in grading.GRADES:
+        raise HTTPException(422, f"등급 값이 올바르지 않습니다: {body.grade}")
+    reason = (body.reason or "").strip()
+    if g is not None and cg["floor"] and grading.rank(g) < grading.rank(cg["floor"]) and len(reason) < grading.MIN_REASON:
+        raise HTTPException(422, {"code": "COMBO_GRADE_BELOW", "message": f"구성 데이터셋 최고 등급이 {cg['floor_label']} 인데 {grading.GRADE_LABEL[g]} 로 정했습니다 — 낮추는 사유를 {grading.MIN_REASON}자 이상 적으세요"})
+    p.combo_grade, p.combo_grade_reason = g, (reason or None) if g else None
+    p.updated_at = utcnow()
+    activity.log(db, "combo_grade", f"조합 등급 {'설정 ' + grading.GRADE_LABEL[g] if g else '기본값으로 되돌림'} — {p.name}" + (f" ({reason})" if reason and g else ""),
+                 user=user, process_id=p.id, payload={"grade": g, "floor": cg["floor"], "reason": reason or None})
+    db.commit()
+    return _detail(db, p)
+
+
 class ProcessPatch(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     current_step: int | None = Field(default=None, ge=1, le=8)
@@ -464,12 +488,21 @@ def patch_meta(did: int, body: MetaIn, db: Session = Depends(get_db), user: User
 
 
 # ------------------------------------------------------------------ STEP 3 데이터 사전
+class DeidIn(BaseModel):
+    method: str  # delete · masking · categorize · pseudonymize · aggregate · other
+    note: str | None = Field(default=None, max_length=500)
+
+
 class DictEntry(BaseModel):
     table: str
     column: str
     description: str | None = Field(default=None, max_length=2000)
     unit: str | None = Field(default=None, max_length=200)
     codes: str | None = Field(default=None, max_length=4000)
+    # 컬럼 민감 항목 (가이드라인 생애주기 표): 개인정보 유형과 비식별 처리 기록. None 이면 그대로 두고, "" 또는 method "" 이면 지운다
+    personal_data: str | None = None
+    deid: DeidIn | None = None
+    clear_deid: bool = False
 
 
 class DictIn(BaseModel):
@@ -480,7 +513,9 @@ def _dictionary_payload(pd: ProcessDataset) -> dict[str, Any]:
     from ..services import documents
 
     rows = documents.dictionary_rows(pd)
-    return {"dataset_id": pd.id, "rows": rows, "described": sum(1 for r in rows if r["description"]), "total": len(rows)}
+    return {"dataset_id": pd.id, "rows": rows, "described": sum(1 for r in rows if r["description"]), "total": len(rows),
+            "sensitive": grading.column_summary(pd),
+            "options": {"personal_data": grading.COLUMN_PERSONAL, "deid_methods": grading.DEID_METHODS}}
 
 
 @router.get("/datasets/{did}/dictionary")
@@ -500,8 +535,24 @@ def put_dictionary(did: int, body: DictIn, db: Session = Depends(get_db), user: 
     meta = dict(pd.meta or {})
     dic = {t: dict(c) for t, c in (meta.get("_dictionary") or {}).items()}
     for e in body.entries:
+        prev = dict((dic.get(e.table) or {}).get(e.column) or {})
         ent = {k: (getattr(e, k) or "").strip() for k in ("description", "unit", "codes")}
         ent = {k: v for k, v in ent.items() if v}
+        # 민감 항목은 보낸 것만 바꾼다 (None 은 유지)
+        if e.personal_data is None:
+            if prev.get("personal_data"):
+                ent["personal_data"] = prev["personal_data"]
+        elif e.personal_data:
+            if e.personal_data not in grading.COLUMN_PERSONAL:
+                raise HTTPException(422, f"개인정보 유형 값이 올바르지 않습니다: {e.personal_data}")
+            ent["personal_data"] = e.personal_data
+        if e.deid is not None:
+            if e.deid.method not in grading.DEID_METHODS:
+                raise HTTPException(422, f"비식별 처리 방법이 올바르지 않습니다: {e.deid.method}")
+            ent["deid"] = {"method": e.deid.method, "note": (e.deid.note or "").strip() or None, "by": user.name,
+                           "at": utcnow().replace(microsecond=0).isoformat()}
+        elif prev.get("deid") and not e.clear_deid:
+            ent["deid"] = prev["deid"]
         if ent:
             dic.setdefault(e.table, {})[e.column] = ent
         else:
@@ -795,10 +846,14 @@ def put_classification(did: int, body: ClassificationIn, db: Session = Depends(g
                 b["by"], b["at"] = user.name, utcnow().replace(microsecond=0).isoformat()
             else:
                 b["by"], b["at"] = prev.get("by"), prev.get("at")
-            problem = grading.validate(out.get("N2SF"), b)
-            if problem:
-                raise HTTPException(422, {"code": "GRADE_BELOW_BASIS", "message": problem})
             out[grading.BASIS_KEY] = b
+    if out.get("N2SF"):
+        snapshot = pd.classification
+        pd.classification = out  # 검사는 저장될 값 기준 (기관 등급표 · 컬럼 민감 항목 포함)
+        problem = grading.validate(out.get("N2SF"), out.get(grading.BASIS_KEY) or {}, pd)
+        pd.classification = snapshot
+        if problem:
+            raise HTTPException(422, {"code": "GRADE_BELOW_BASIS", "message": problem})
     if body.SHARE_PROHIBITED is not None:
         bad = [t for t in body.SHARE_PROHIBITED.manual if t not in grading.PROHIBITED_TYPES]
         if bad:

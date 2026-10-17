@@ -1098,7 +1098,10 @@ function GradingPanel(props: {
   const g: GradingState | undefined = props.ds.grading;
   const { draft, locked } = props;
   if (!g) return null;
-  const sug = suggestFrom(draft.basis);
+  const local = suggestFrom(draft.basis);
+  // 서버 제안(기관 등급표 · 컬럼 민감 항목 포함)이 초안의 근거 제안보다 높으면 그쪽을 쓴다
+  const serverHigher = g.suggested && (!local.grade || GRADE_ORDER.indexOf(g.suggested) > GRADE_ORDER.indexOf(local.grade));
+  const sug = serverHigher ? { grade: g.suggested, reasons: g.reasons } : local;
   const chosen = draft.n2sf ? draft.n2sf.replace(/^N2SF-/, "") : null;
   const below = sug.grade !== null && chosen !== null && gradeRank(chosen) < gradeRank(sug.grade);
   const reasonShort = below && (draft.basis.reason ?? "").trim().length < g.options.min_reason;
@@ -1140,6 +1143,24 @@ function GradingPanel(props: {
           <input className="input" value={draft.basis.legal_refs ?? ""} disabled={locked} maxLength={500} placeholder="예: 정보공개법 제9조제1항제6호, 의료법 제19조"
             onChange={(e) => props.onBasis({ legal_refs: e.target.value })} />
         </label>
+        {(g.org_grade || g.columns.dataset_personal_data) && (
+          <div className="small mt-8 col gap-4">
+            {g.org_grade && (
+              <div className={cx(g.org_conflict && "t-warn")}>
+                기관 등급표: <b>{g.org_grade.label}</b> ({g.org_grade.name}{g.org_grade.system ? ` · ${g.org_grade.system}` : ""}){g.org_conflict && " — 스튜디오 등급 또는 컬럼 민감 항목과 어긋납니다 (검수 큐 신호)"}
+              </div>
+            )}
+            {g.columns.dataset_personal_data && (
+              <div>
+                데이터 사전 컬럼 민감 항목: 표시 {g.columns.marked}개 · 최고 <b>{g.columns.dataset_personal_label}</b>
+                {g.columns.needs_deid.length > 0 && <span className="t-warn"> · 비식별 기록 없음 {g.columns.needs_deid.length}개</span>}
+                {!draft.basis.personal_data && (
+                  <button type="button" className="link-btn small" disabled={locked} onClick={() => props.onBasis({ personal_data: g.columns.dataset_personal_data! })}>개인정보 유형에 적용</button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         <div className="row wrap mt-8" style={{ gap: 8, alignItems: "center" }}>
           {sug.grade ? (
             <>

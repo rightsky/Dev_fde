@@ -841,17 +841,14 @@
    "basis": "FAIR 원칙 12 · 3.6절",
    "method": "AUTO-GRAPH",
    "resolver": {
-    "type": "ask",
-    "query": "ASK { ?this fde:n2sfGrade ?g . ?this fde:governanceMode ?m }"
-   },
-   "partial": {
-    "query": "ASK { { ?this fde:n2sfGrade ?g } UNION { ?this fde:governanceMode ?m } }"
+    "type": "builtin",
+    "name": "security_grade"
    },
    "route": "class4",
    "focus": "N2SF",
    "difficulty": 1,
-   "criteria": "보안등급(N²SF)과 F6 거버넌스(공유 범위)가 둘 다 지정되어 있으면 충족, 하나만 있으면 부분",
-   "remedy": "STEP 4 에서 N²SF 보안등급과 F6 거버넌스를 지정한다"
+   "criteria": "N²SF 등급이 있고, S1 이상이면 등급 판단 근거(개인정보 유형 · 재식별 위험도 · 보안·법적 제한) 3항목이 작성되어 있으며, 제안보다 낮지 않고 기관 등급표와 충돌하지 않으며 F6 거버넌스가 지정되어 있으면 충족. 하나라도 빠지면 부분, 등급이 없으면 미흡. 표 41 해당 여부와 메타데이터 공개 수준은 증빙에 함께 적는다 (3.6.1 · 표 41)",
+   "remedy": "STEP 4 에서 N²SF 등급과 판단 근거 3항목을 적고, 표 41 점검과 공개 수준을 확인한 뒤 F6 거버넌스를 지정한다"
   },
   {
    "id": "P-13",
@@ -1153,8 +1150,8 @@
    },
    "allow_na": true,
    "difficulty": 2,
-   "criteria": "컬럼 이름과 값 패턴으로 개인정보 의심 컬럼을 찾는다. 찾지 못하면 해당 없음, 찾으면 담당자가 보호조치를 증빙과 함께 확인한다",
-   "remedy": "의심 컬럼에 적용한 비식별·가명처리 조치를 확인하고 증빙을 남긴다"
+   "criteria": "컬럼 이름 패턴과 데이터 사전의 개인정보 유형 표시로 개인정보 컬럼을 찾는다. 없으면 해당 없음, 있으면 비식별 처리 기록 수를 증빙으로 붙이고 담당자가 확인한다",
+   "remedy": "STEP 3 데이터 사전에서 해당 컬럼의 개인정보 유형과 비식별 처리 방법을 기록하고 증빙을 남긴다"
   },
   {
    "id": "C-13",

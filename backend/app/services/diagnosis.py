@@ -264,10 +264,49 @@ def _b_numeric_hint(ctx: _Ctx, pd: ProcessDataset):
 
 
 def _b_pii(ctx: _Ctx, pd: ProcessDataset):
+    from . import grading
+
     cols = [c for c in _columns(pd) if c.get("pii")]
-    if not cols:
+    items = grading.column_items(pd)
+    marked = {f"{t}.{c}": i for (t, c), i in items.items() if i.get("personal_data") in ("personal", "sensitive")}
+    if not cols and not marked:
         return None
-    return "attest", "개인정보 의심 컬럼: " + ", ".join(f"{c['name']}({c['pii']['kind']})" for c in cols[:6])
+    parts = []
+    if cols:
+        parts.append("개인정보 의심 컬럼: " + ", ".join(f"{c['name']}({c['pii']['kind']})" for c in cols[:6]))
+    if marked:
+        deid = sum(1 for i in marked.values() if i.get("deid"))
+        parts.append(f"데이터 사전에 개인정보·민감 표시 {len(marked)}개 컬럼, 비식별 처리 기록 {deid}개"
+                     + ("" if deid == len(marked) else f" (미기록 {len(marked) - deid}개)"))
+    return "attest", " · ".join(parts)
+
+
+def _b_security_grade(ctx: _Ctx, pd: ProcessDataset):
+    """원칙 12: 등급 · 판단 근거 · 표 41 · 공개 수준 · F6 거버넌스를 함께 본다 (3.6절)."""
+    from . import grading
+
+    st = grading.state(pd)
+    gov = bool((pd.classification or {}).get("F6"))
+    if not st["grade"]:
+        return False, "N²SF 등급 미지정" + ("" if gov else " · F6 거버넌스 미지정")
+    bits = [f"등급 {st['grade_label']}"]
+    problems = []
+    if st["grade"] != "O" and not st["basis_complete"]:
+        problems.append("판단 근거 미작성")
+    else:
+        bits.append("판단 근거 " + ("3/3" if st["basis_complete"] else f"{sum(1 for k in ('personal_data', 'reidentification', 'legal') if st['basis'].get(k))}/3"))
+    if st["below_suggested"]:
+        problems.append(f"제안 {st['suggested_label']} 보다 낮음 (사유 기록됨)")
+    if st["org_conflict"]:
+        problems.append("기관 등급표와 불일치")
+    if not gov:
+        problems.append("F6 거버넌스 미지정")
+    bits.append("표 41 " + (f"해당 {len(st['prohibited']['types'])}건" if st["prohibited"]["types"] else "해당 없음"))
+    bits.append(f"공개 수준 {st['visibility']}")
+    if st["org_grade"]:
+        bits.append(f"기관표 {st['org_grade']['label']}")
+    text = " · ".join(bits) + (" — " + ", ".join(problems) if problems else "")
+    return ("partial" if problems else True), text
 
 
 def _b_mcp_hint(ctx: _Ctx, pd: ProcessDataset):
@@ -286,7 +325,7 @@ _BUILTINS = {"minted": _b_minted, "periodicity": _b_periodicity, "related": _b_r
              "open_format": _b_open_format, "structured": _b_structured, "schema_defined": _b_schema_defined,
              "schema_hint": _b_schema_hint, "machine_readable": _b_machine_readable, "iso8601": _b_iso8601,
              "missing_markers": _b_missing_markers, "large_format": _b_large_format, "web_api": _b_web_api, "api_alt": _b_api_alt,
-             "api_hint": _b_api_hint, "numeric_hint": _b_numeric_hint, "pii": _b_pii,
+             "api_hint": _b_api_hint, "numeric_hint": _b_numeric_hint, "pii": _b_pii, "security_grade": _b_security_grade,
              "data_dictionary": _b_data_dictionary, "data_card": _b_data_card,
              "mcp_hint": _b_mcp_hint}
 # 판정기가 '해당 없음'을 돌려줄 때 화면에 적을 사유

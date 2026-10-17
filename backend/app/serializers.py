@@ -82,7 +82,8 @@ def process_out(p: Process) -> dict[str, Any]:
             "lineage_waiver_reason": p.lineage_waiver_reason, "lineage_waived_at": p.lineage_waived_at,
             "dataset_count": len(p.combo), "selected_count": sum(1 for d in p.datasets if d.selected),
             "created_at": p.created_at, "updated_at": p.updated_at, "completed_at": p.completed_at,
-            "trashed_at": p.trashed_at}
+            "trashed_at": p.trashed_at,
+            "combo_grading": grading.combo_grade(p)}
 
 
 def activity_out(a: Activity) -> dict[str, Any]:

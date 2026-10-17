@@ -1062,7 +1062,8 @@ function SaveBar(props: {
 }
 
 // ───────────── ③ 데이터 사전
-type DictDraft = Record<string, { description: string; unit: string; codes: string }>;
+type DictDraft = Record<string, { description: string; unit: string; codes: string; personal_data: string; deid_method: string; deid_note: string }>;
+const PD_TONE: Record<string, "ok" | "warn" | "err" | "muted"> = { none: "ok", pseudonymized: "warn", personal: "err", sensitive: "err" };
 const dictKey = (r: { table: string; column: string }) => `${r.table}\u0000${r.column}`;
 
 function DictTab({ pid, did, editable, onSaved, onDirty }: { pid: number; did: number; editable: boolean; onSaved: () => Promise<void>; onDirty?: (n: number) => void }) {
@@ -1071,12 +1072,15 @@ function DictTab({ pid, did, editable, onSaved, onDirty }: { pid: number; did: n
   const [draft, setDraft] = useState<DictDraft>({});
   const [busy, setBusy] = useState(false);
   const rows = q.data?.rows ?? [];
-  const value = (r: DictRow) => draft[dictKey(r)] ?? { description: r.description, unit: r.unit, codes: r.codes };
+  const value = (r: DictRow) => draft[dictKey(r)] ?? { description: r.description, unit: r.unit, codes: r.codes, personal_data: r.personal_data ?? "", deid_method: r.deid?.method ?? "", deid_note: r.deid?.note ?? "" };
   const changed = rows.filter((r) => {
     const d = draft[dictKey(r)];
-    return d && (d.description.trim() !== r.description || d.unit.trim() !== r.unit || d.codes.trim() !== r.codes);
+    return d && (d.description.trim() !== r.description || d.unit.trim() !== r.unit || d.codes.trim() !== r.codes || d.personal_data !== (r.personal_data ?? "")
+      || d.deid_method !== (r.deid?.method ?? "") || d.deid_note.trim() !== (r.deid?.note ?? ""));
   });
-  const set = (r: DictRow, k: "description" | "unit" | "codes", v: string) => setDraft((s) => ({ ...s, [dictKey(r)]: { ...value(r), [k]: v } }));
+  const set = (r: DictRow, k: "description" | "unit" | "codes" | "personal_data" | "deid_method" | "deid_note", v: string) => setDraft((s) => ({ ...s, [dictKey(r)]: { ...value(r), [k]: v } }));
+  const sens = q.data?.sensitive;
+  const opts = q.data?.options;
   useEffect(() => {
     onDirty?.(changed.length);
     return () => onDirty?.(0);
@@ -1087,7 +1091,16 @@ function DictTab({ pid, did, editable, onSaved, onDirty }: { pid: number; did: n
     try {
       await api.putDictionary(
         did,
-        changed.map((r) => ({ table: r.table, column: r.column, ...value(r) })),
+        changed.map((r) => {
+          const v = value(r);
+          const deidChanged = v.deid_method !== (r.deid?.method ?? "") || v.deid_note.trim() !== (r.deid?.note ?? "");
+          return {
+            table: r.table, column: r.column, description: v.description, unit: v.unit, codes: v.codes,
+            personal_data: v.personal_data !== (r.personal_data ?? "") ? v.personal_data : undefined,
+            deid: deidChanged && v.deid_method ? { method: v.deid_method, note: v.deid_note } : undefined,
+            clear_deid: deidChanged && !v.deid_method,
+          };
+        }),
       );
       await onSaved();
       setDraft({});
@@ -1117,6 +1130,14 @@ function DictTab({ pid, did, editable, onSaved, onDirty }: { pid: number; did: n
               컬럼 이름·자료형·결측률·예시값은 원천 프로파일에서 자동으로 채웁니다. 정의·단위·코드값 의미만 적으면 됩니다. 적은 내용은 정본 그래프의 컬럼 구조(CSVW)에 들어가고, STEP 7 에서
               데이터 사전(CSV)·데이터 카드·Croissant 로 함께 나갑니다. 모든 컬럼에 정의가 있어야 STEP 8 의 데이터 사전 항목(C-06)이 충족됩니다.
             </p>
+            {sens && (
+              <div className="row wrap gap-8 mt-8 small" title="가이드라인 생애주기 표: 개인정보·민감정보 항목은 비식별 처리와 기록을 남깁니다. 여기서 표시한 유형이 STEP 4 등급 판단의 '개인정보 유형' 기본값이 됩니다">
+                <Badge tone={sens.marked ? "info" : "muted"}>민감 항목 표시 {sens.marked}</Badge>
+                <Badge tone={sens.needs_deid.length ? "warn" : "ok"}>비식별 기록 {sens.deid}{sens.needs_deid.length ? ` · 미기록 ${sens.needs_deid.length}` : ""}</Badge>
+                {sens.suggested_count > 0 && <Badge tone="warn">자동 후보 {sens.suggested_count} (확인 필요)</Badge>}
+                {sens.dataset_personal_label && <span className="muted">→ 데이터셋 개인정보 유형 기본값: <b>{sens.dataset_personal_label}</b> (STEP 4)</span>}
+              </div>
+            )}
           </Card>
           {rows.length === 0 && <Empty>원천 프로파일에 컬럼이 없습니다.</Empty>}
           {tables.map((t) => (
@@ -1136,7 +1157,8 @@ function DictTab({ pid, did, editable, onSaved, onDirty }: { pid: number; did: n
                           <div className="row wrap gap-4 mt-4">
                             <Badge>{r.type_label}</Badge>
                             {r.key && <Badge tone="info">{r.key}</Badge>}
-                            {r.pii && <Badge tone="err">개인정보 의심</Badge>}
+                            {r.pii && !v.personal_data && <Badge tone="err">개인정보 의심</Badge>}
+                            {v.personal_data && <Badge tone={PD_TONE[v.personal_data] ?? "muted"}>{opts?.personal_data[v.personal_data] ?? v.personal_data}</Badge>}
                             {dirty && <Badge tone="warn">미저장</Badge>}
                           </div>
                           {r.null_rate != null && (
@@ -1171,6 +1193,33 @@ function DictTab({ pid, did, editable, onSaved, onDirty }: { pid: number; did: n
                             placeholder="코드값 의미 (해당 시, 예: 1=국도, 2=지방도)"
                             onChange={(e) => set(r, "codes", e.target.value)}
                           />
+                          <div className="row wrap gap-8" style={{ alignItems: "center" }}>
+                            <select className="input" style={{ width: 170 }} aria-label={`${r.column} 개인정보 유형`} value={v.personal_data} disabled={!editable || busy}
+                              onChange={(e) => set(r, "personal_data", e.target.value)}>
+                              <option value="">개인정보 유형 (미표시)</option>
+                              {Object.entries(opts?.personal_data ?? {}).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                            </select>
+                            {r.personal_suggested && !v.personal_data && (
+                              <button type="button" className="link-btn small" disabled={!editable || busy} title={r.personal_suggested_why ?? ""}
+                                onClick={() => set(r, "personal_data", r.personal_suggested!)}>
+                                자동 후보 「{opts?.personal_data[r.personal_suggested] ?? r.personal_suggested}」 적용
+                              </button>
+                            )}
+                            {(v.personal_data === "personal" || v.personal_data === "sensitive" || v.personal_data === "pseudonymized") && (
+                              <>
+                                <select className="input" style={{ width: 150 }} aria-label={`${r.column} 비식별 처리`} value={v.deid_method} disabled={!editable || busy}
+                                  onChange={(e) => set(r, "deid_method", e.target.value)}>
+                                  <option value="">비식별 처리 (미기록)</option>
+                                  {Object.entries(opts?.deid_methods ?? {}).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                                </select>
+                                {v.deid_method && (
+                                  <input className="input grow" style={{ minWidth: 160 }} aria-label={`${r.column} 비식별 처리 메모`} value={v.deid_note} disabled={!editable || busy}
+                                    placeholder="처리 내용 (예: 뒤 4자리 마스킹)" onChange={(e) => set(r, "deid_note", e.target.value)} />
+                                )}
+                                {r.deid?.by && v.deid_method === r.deid.method && <span className="tiny muted">{r.deid.by} · {fmtDateTime(r.deid.at ?? "")}</span>}
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
