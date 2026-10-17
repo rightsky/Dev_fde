@@ -185,6 +185,8 @@ def approve(db: Session, rr: ReviewRequest, user: User, note: str | None, acknow
     if self_ok and rr.risk_level == "high" and len(note) < 10:
         raise ReviewError(422, "본인이 요청한 고위험 발행을 직접 승인하려면 사유를 10자 이상 적으세요", "SELF_APPROVAL_NOTE")
     p = db.get(Process, rr.process_id)
+    if p is None or p.status == "trashed":
+        raise ReviewError(409, "휴지통에 있는 프로세스는 발행할 수 없습니다 — 복원한 뒤 다시 요청하세요")
     _reasons, vr, sr = publish_state(db, p)  # type: ignore[arg-type]
     entries = catalog.publish(db, p, user, vr, sr)  # type: ignore[arg-type]
     if not entries:

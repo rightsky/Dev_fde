@@ -81,9 +81,9 @@ def _b_periodicity(ctx: _Ctx, pd: ProcessDataset):
     v = (pd.meta or {}).get("accrual_periodicity")
     if not v:
         return False, "갱신주기 미입력"
-    if canonical.is_duration(str(v)) or v == "irregular":
-        return True, f"갱신주기 {v}"
-    return "partial", f"비표준 표기 「{v}」"
+    if v in canonical.FREQUENCY_IRI:
+        return True, f"갱신주기 {canonical.FREQUENCY_LABEL.get(v, v)} (dcterms:Frequency)"
+    return "partial", f"비표준 표기 「{v}」 — 목록의 값이 아니라 Frequency 개념으로 바꾸지 못함"
 
 
 def _relations(ctx: _Ctx, pd: ProcessDataset) -> list[Relation]:

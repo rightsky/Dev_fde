@@ -178,25 +178,28 @@ export function CodeBlock({ text, wrap, light, maxHeight }: { text: string; wrap
   );
 }
 
-export function Modal(props: { title: ReactNode; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean }) {
+export function Modal(props: { title: ReactNode; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean; dismissible?: boolean }) {
+  const dismissible = props.dismissible !== false;
   const ref = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(props.onClose);
   onCloseRef.current = props.onClose;
   // 포커스 이동과 Esc 등록은 열릴 때 한 번만 한다 (다시 그릴 때마다 포커스를 뺏으면 모달 안 입력이 끊긴다)
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onCloseRef.current();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && dismissible && onCloseRef.current();
     document.addEventListener("keydown", onKey);
     if (ref.current && !ref.current.contains(document.activeElement)) ref.current.focus();
     return () => document.removeEventListener("keydown", onKey);
   }, []);
   return (
-    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
+    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && dismissible && props.onClose()}>
       <div className={cx("modal", props.wide && "wide")} role="dialog" aria-modal="true" tabIndex={-1} ref={ref}>
         <div className="modal-head">
           <div className="modal-title">{props.title}</div>
-          <button className="link-btn" onClick={props.onClose} aria-label="닫기">
-            ✕
-          </button>
+          {dismissible && (
+            <button className="link-btn" onClick={props.onClose} aria-label="닫기">
+              ✕
+            </button>
+          )}
         </div>
         <div className="modal-body">{props.children}</div>
         {props.footer && <div className="modal-foot">{props.footer}</div>}
@@ -238,7 +241,7 @@ export function useToast() {
 }
 
 /** 한 번 더 눌러야 실행되는 위험 동작 버튼 */
-export function ConfirmButton(props: { children: ReactNode; confirmLabel?: string; onConfirm: () => void; variant?: BtnVariant; size?: "sm" | "md"; disabled?: boolean; busy?: boolean }) {
+export function ConfirmButton(props: { children: ReactNode; confirmLabel?: string; onConfirm: () => void; variant?: BtnVariant; size?: "sm" | "md"; disabled?: boolean; busy?: boolean; title?: string }) {
   const [armed, setArmed] = useState(false);
   useEffect(() => {
     if (!armed) return;
@@ -251,6 +254,7 @@ export function ConfirmButton(props: { children: ReactNode; confirmLabel?: strin
       size={props.size}
       disabled={props.disabled}
       busy={props.busy}
+      title={armed ? "다시 누르면 실행됩니다 (4초 안에)" : props.title}
       onClick={() => {
         if (armed) {
           setArmed(false);

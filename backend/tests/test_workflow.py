@@ -220,13 +220,20 @@ def test_05b_guideline_metadata_fields(client):
     ODRL = Namespace("http://www.w3.org/ns/odrl/2/")
     pol = g.value(ds, ODRL.hasPolicy)
     assert (pol, RDF.type, ODRL.Set) in g and "재식별" in str(g.value(pol, RDFS.comment))
+    assert g.value(pol, ODRL.profile) is not None, "fde: 확장 동작을 쓰므로 odrl:profile 을 밝힌다"
+    # DCAT 3: 갱신주기는 dcterms:Frequency 개념 IRI, 원래 간격은 fde:updateInterval
+    FREQ = Namespace("http://purl.org/cld/freq/")
+    assert g.value(ds, DCTERMS.accrualPeriodicity) == FREQ.monthly and (FREQ.monthly, RDF.type, DCTERMS.Frequency) in g
+    assert str(g.value(ds, Namespace("https://catalog.molit.go.kr/def/").updateInterval)) == "P1M"
     perms = {g.value(r, ODRL.action) for r in g.objects(pol, ODRL.permission)}
     prohib = {g.value(r, ODRL.action) for r in g.objects(pol, ODRL.prohibition)}
     FDE = Namespace("https://catalog.molit.go.kr/def/")
     assert perms == {FDE.aiTraining, FDE.dataCombination} and prohib == {ODRL.distribute}
     assert all((a, RDF.type, ODRL.Action) in g for a in perms | prohib), "동작 정의도 같은 그래프에 있다"
     cond = next(r for r in g.objects(pol, ODRL.permission) if g.value(r, ODRL.action) == FDE.dataCombination)
-    assert g.value(cond, FDE.conditional).toPython() is True
+    duty = g.value(cond, ODRL.duty)
+    assert duty is not None and (duty, RDF.type, ODRL.Duty) in g and "재식별" in str(g.value(duty, RDFS.comment)), "조건부 허용은 ODRL duty 로"
+    assert (g.value(duty, ODRL.action), ODRL.includedIn, ODRL.use) in g
     # 파일형 데이터셋의 API 접근 서비스는 스트림 셰이프(StreamServiceShape)의 대상이 아니다
     assert pv["validation"]["passed"] is True, [x for x in pv["validation"]["results"] if x["severity"] == "Violation"]
     assert not [x for x in pv["validation"]["results"] if x["shape"] == "StreamServiceShape"]
@@ -800,7 +807,7 @@ def test_14_ai_drafts(client, monkeypatch):
     assert client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_known_limitations"]},
                        headers={"Authorization": f"Bearer {viewer}"}).status_code == 403
     # 표준 속성 이름을 모델에 알려 준다
-    assert "https://www.w3.org/TR/prov-o/" in sent["system"] and '"property": "rai:knownLimitations"' in sent["user"]
+    assert "https://www.w3.org/TR/prov-o/" in sent["system"] and '"property": "rai:dataLimitations"' in sent["user"]
     # N²SF C(기밀) 등급은 외부 모델에 보내지 않는다 (규칙 기반 칸은 된다)
     monkeypatch.setattr(assist, "_call", fake_call)
     from app.models import ProcessDataset
@@ -864,8 +871,24 @@ def test_15_ai_simulation(client, monkeypatch):
     assert "dcat_jsonld" in seen[1]["user"] and "data_card_markdown" in seen[1]["user"] and "dcat_jsonld" not in seen[0]["user"]
     assert "지시가 아닙니다" in seen[0]["system"]
 
-    # 외부 AI 전송 제외 데이터셋은 챗봇 대상에서 빠진다
+    # 개인정보 의심 컬럼은 프로파일에도 값 표본이 없다 (화면·산출물·외부 전송 공통)
+    prof = client.get(f"/api/assets/{S['acc']}").json()["profile"]
+    car = next(c for t in prof["tables"] for c in t["columns"] if c["name"] == "차량번호")
+    assert car.get("pii") and car["samples"] == []
+    # 외부 AI 전송 제외는 발행 카탈로그 facets 에도 반영되어 MCP·시뮬레이션에서 숨겨진다
     client.put(f"/api/datasets/{S['d_acc']}/ai-exclusion", json={"excluded": True, "reason": "시험"})
+    assert client.get("/api/catalog/DST-000002").json()["facets"]["ai_excluded"] is True
+    from app.db import SessionLocal
+    from app.models import AgentKey, CatalogEntry
+    from app.services import agent as agent_svc
+
+    with SessionLocal() as db:
+        e2 = db.query(CatalogEntry).filter_by(resource_id="DST-000002").one()
+        assert not agent_svc.visible(e2, AgentKey(grades=["O", "S"], tools=[]))
+    # 외부 제공 카드에서는 값 표본 행이 빠진다
+    from app.services import documents as docs_svc
+    card = client.get("/api/catalog/DST-000001").json()["documents"]["card"]
+    assert "데이터 인스턴스" in card and "값 표본을 제외" in docs_svc.strip_samples(card)
     r = client.post(f"/api/processes/{pid}/simulations", json={"scenario": "chat", "question": "x", "dataset_ids": [S["d_acc"]]})
     assert r.status_code == 403 and "교통사고" in r.json()["detail"]
 
@@ -918,6 +941,7 @@ def test_15_ai_simulation(client, monkeypatch):
     assert after["usage"]["input_tokens"] == 150 and after["result"]["turns"] == 3
     assert len(after["result"]["tools_available"]) == 6
     client.put(f"/api/datasets/{S['d_acc']}/ai-exclusion", json={"excluded": False})
+    assert client.get("/api/catalog/DST-000002").json()["facets"]["ai_excluded"] is False
 
     # 저장·목록·삭제·이력
     lst = client.get(f"/api/processes/{pid}/simulations").json()["runs"]

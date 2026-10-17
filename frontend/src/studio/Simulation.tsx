@@ -1,6 +1,6 @@
 // STEP 7 오른쪽 패널 — AI 활용 시뮬레이션. 변환한 산출물을 실제 AI 서비스(챗봇 · 에이전트)가 쓰는 모습을 Claude 로 실행해 보인다.
 // 핵심 화면은 Before/After 비교: 같은 질문에 '메타데이터 없이' 와 '산출물 포함' 이 어떻게 다르게 답하는지 한 눈에 보인다.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import { useAuth } from "../auth";
@@ -265,6 +265,12 @@ function History({ runs, onPick }: { runs: SimulationRun[]; onPick: (g: Simulati
       groups.push(runs.filter((x) => x.group_id === r.group_id));
     } else groups.push([r]);
   }
+  const [armed, setArmed] = useState<number | null>(null);
+  useEffect(() => {
+    if (armed === null) return;
+    const t = setTimeout(() => setArmed(null), 4000);
+    return () => clearTimeout(t);
+  }, [armed]);
   const remove = async (g: SimulationRun[]) => {
     try {
       await Promise.all(g.map((r) => api.deleteSimulation(r.id)));
@@ -283,7 +289,11 @@ function History({ runs, onPick }: { runs: SimulationRun[]; onPick: (g: Simulati
             </span>
             <span className="muted">
               {fmtDateTime(g[0].created_at)} {g[0].created_by}{" "}
-              <button className="link-btn danger" onClick={(e) => { e.stopPropagation(); void remove(g); }}>삭제</button>
+              {armed === g[0].id ? (
+                <button className="link-btn danger bold" onClick={(e) => { e.stopPropagation(); setArmed(null); void remove(g); }}>정말 삭제</button>
+              ) : (
+                <button className="link-btn danger" onClick={(e) => { e.stopPropagation(); setArmed(g[0].id); }}>삭제</button>
+              )}
             </span>
           </div>
           <div className="q">{g[0].question}</div>

@@ -6,7 +6,7 @@ import { ApiError, api, downloadFile, downloads } from "../api";
 import type { ShapeRule, ValidationDataset, ValidationLatest, ValidationRun } from "../types";
 import { Badge, Banner, Button, Card, CodeBlock, Empty, Field, Modal, QueryState, SeverityBadge, cx, fmtDateTime, fmtNum, shortHash, useToast } from "../ui";
 import { useStudio } from "./context";
-import { Gate0List, ReadOnlyNote, StepHeader, ValidationRows } from "./shared";
+import { Gate0List, ReadOnlyNote, RerunButton, StepHeader, ValidationRows } from "./shared";
 
 type Mode = "draft" | "publish";
 type Busy = "run" | "mode" | "mint" | null;
@@ -115,12 +115,15 @@ export function Step6() {
               <Banner
                 tone="warn"
                 right={
-                  <Button size="sm" variant="dark" busy={busy === "run"} disabled={!editable || (busy !== null && busy !== "run")} onClick={runValidation}>
-                    재검증 실행
-                  </Button>
+                  <div className="row">
+                    <Button size="sm" busy={busy === "run"} disabled={!editable || (busy !== null && busy !== "run")} onClick={runValidation}>
+                      재검증만 실행
+                    </Button>
+                    <RerunButton variant="dark" afterGo={8} />
+                  </div>
                 }
               >
-                <b>↺ 이전 결과는 무효입니다</b> — {latest.stale}
+                <b>↺ 지난 결과입니다</b> — {latest.stale}. 열람은 되지만 발행·완료에는 쓸 수 없습니다.
               </Banner>
             )}
 

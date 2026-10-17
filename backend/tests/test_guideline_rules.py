@@ -58,5 +58,5 @@ def test_guideline_metadata_fields_have_form_inputs():
                  "dcat:landingPage", "dcterms:accrualPeriodicity", "dcat:keyword", "dcat:contactPoint", "dcterms:language",
                  "dcat:accessURL", "dcat:mediaType", "owl:versionInfo", "dcterms:issued", "dcterms:modified",
                  "adms:versionNotes", "dcterms:rights", "dcterms:temporal", "dcterms:spatial", "rai:dataBiases",
-                 "dqv:hasQualityAnnotation", "rai:knownLimitations", "rai:dataCollectionMissingData"):
+                 "dqv:hasQualityAnnotation", "rai:dataLimitations", "rai:dataCollectionMissingData"):
         assert prop in by_prop, prop

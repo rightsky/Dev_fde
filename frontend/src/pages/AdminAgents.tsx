@@ -69,7 +69,7 @@ export function AgentsTab() {
         </Modal>
       )}
       {issued && (
-        <Modal title="키가 발급되었습니다" onClose={() => setIssued(null)} wide>
+        <Modal title="키가 발급되었습니다" onClose={() => setIssued(null)} wide dismissible={false}>
           <IssuedKey k={issued} onClose={() => setIssued(null)} />
         </Modal>
       )}

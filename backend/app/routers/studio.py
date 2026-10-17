@@ -365,9 +365,12 @@ def _clean_meta(pd: ProcessDataset, db: Session, values: dict[str, Any]) -> dict
             out[k] = None
             continue
         if f["type"] == "org":
-            if db.get(Organization, int(v)) is None:
+            try:
+                v = int(v)
+            except (TypeError, ValueError):
+                raise HTTPException(422, "제공기관 값이 올바르지 않습니다") from None
+            if db.get(Organization, v) is None:
                 raise HTTPException(422, "제공기관을 찾을 수 없습니다")
-            v = int(v)
         if f["type"] == "duration" and not canonical.is_duration(str(v)):
             raise HTTPException(422, f"{f['label']}은(는) ISO 8601 duration 이어야 합니다 (예: PT5M, P1D)")
         if f["type"] == "date" and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(v)):
@@ -532,6 +535,11 @@ def set_ai_exclusion(did: int, body: ExcludeIn, db: Session = Depends(get_db), u
         meta.pop(assist.EXCLUDE_KEY, None)
         activity.log(db, "ai_exclude_clear", f"외부 AI 전송 제외 해제 — {title}", user=user, process_id=pd.process_id, dataset_id=pd.id)
     pd.meta = meta
+    # 이미 발행된 항목에도 바로 반영한다 (MCP · 시뮬레이션은 카탈로그 facets 를 본다)
+    from ..models import CatalogEntry
+
+    for e in db.scalars(select(CatalogEntry).where(CatalogEntry.asset_id == pd.asset_id)):
+        e.facets = {**(e.facets or {}), "ai_excluded": body.excluded}
     db.commit()
     return {"excluded": assist.excluded(pd), "blocked_reason": assist.blocked_reason(pd)}
 

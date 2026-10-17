@@ -181,7 +181,7 @@ export function AiExclusionBox({ did, editable }: { did: number; editable: boole
     setBusy(true);
     try {
       await api.setAiExclusion(did, excluded, reason);
-      await qc.invalidateQueries({ queryKey: ["ai-status", did] });
+      await Promise.all([qc.invalidateQueries({ queryKey: ["ai-status", did] }), qc.invalidateQueries({ queryKey: ["process"] }), qc.invalidateQueries({ queryKey: ["catalog"] })]);
       toast.ok(excluded ? "외부 AI 전송 제외로 표시했습니다 — 이 데이터셋에는 AI 초안을 쓰지 않습니다" : "외부 AI 전송 제외를 해제했습니다");
       setReason("");
     } catch (e) {

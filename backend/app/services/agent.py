@@ -62,7 +62,10 @@ def entry_grade(e: CatalogEntry) -> str:
 
 
 def visible(e: CatalogEntry, key: AgentKey) -> bool:
+    """에이전트에게 보여도 되는 발행 항목인지: 발행 중 · C 등급 아님 · 키의 등급 범위 안 · 담당자가 외부 AI 전송 제외로 표시하지 않음."""
     g = entry_grade(e)
+    if (e.facets or {}).get("ai_excluded"):
+        return False
     return e.status == "published" and g != "C" and g in (key.grades or [])
 
 

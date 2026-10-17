@@ -10,7 +10,7 @@ import { useAuth } from "../auth";
 import type { DiagItem, DiagLatest, DiagRun, DiagStatus } from "../types";
 import { Badge, Banner, Button, Card, ConfirmButton, Empty, Field, Meter, Modal, QueryState, Tabs, cx, fmtDateTime, useToast } from "../ui";
 import { useStudio } from "./context";
-import { StepHeader } from "./shared";
+import { StepHeader, RerunButton, pctLevel as sharedPctLevel } from "./shared";
 
 // ───────────── 표기 규칙 (라벨·색조만 정한다. 값은 서버 응답 그대로)
 type BadgeTone = NonNullable<Parameters<typeof Badge>[0]["tone"]>;
@@ -21,7 +21,7 @@ type RoadmapRow = Summary["roadmap"][number];
 
 const STATUS: Record<DiagStatus, { label: string; tone: BadgeTone }> = {
   met: { label: "충족", tone: "ok" },
-  partial: { label: "부분", tone: "warn" },
+  partial: { label: "부분 충족", tone: "warn" },
   unmet: { label: "미흡", tone: "err" },
   pending: { label: "확인 대기", tone: "info" },
   na: { label: "해당 없음", tone: "muted" },
@@ -35,7 +35,7 @@ const DIFFICULTY_LABEL: Record<number, string> = { 1: "낮음", 2: "중간", 3: 
 const GAUGE_COLOR: Record<Level, string> = { ok: "var(--green)", warn: "var(--orange)", err: "var(--err)" };
 const LEVEL_TEXT: Record<Level, string> = { ok: "t-ok", warn: "t-warn", err: "t-err" };
 
-const pctLevel = (pct: number): Level => (pct >= 75 ? "ok" : pct >= 40 ? "warn" : "err");
+const pctLevel = sharedPctLevel;
 const fmtScore = (n: number | null | undefined) => (n == null ? "—" : Number.isInteger(n) ? String(n) : n.toFixed(1));
 const isAttestStatus = (s: DiagStatus | undefined): s is AttestStatus => s === "met" || s === "partial" || s === "unmet" || s === "na";
 
@@ -157,8 +157,8 @@ function Diagnosis({ data }: { data: DiagLatest }) {
       <RunBar run={run} stale={stale} busy={running} blocked={blocked} onRun={runDiagnosis} />
 
       {run && stale && (
-        <Banner tone="warn" right={rerunButton}>
-          <b>⚠ 진단 결과가 최신이 아닙니다</b> — {stale}
+        <Banner tone="warn" right={<div className="row">{rerunButton}<RerunButton variant="dark" /></div>}>
+          <b>⚠ 지난 결과입니다</b> — {stale}. 열람은 되지만 발행·완료에는 쓸 수 없습니다. 상류도 바뀌었으면 오른쪽 [검증 → 변환 → 진단 다시 실행] 을 쓰세요.
         </Banner>
       )}
       {run && run.ruleset_version !== ruleset.version && (

@@ -114,7 +114,7 @@ STANDARDS = (
     "- prov: — W3C PROV-O (https://www.w3.org/TR/prov-o/). 이력은 활동(Activity)·주체(Agent)·원천 엔티티(Entity)가 드러나게 쓴다 "
     "(무엇에서, 누가, 어떤 처리로 만들었는지).\n"
     "- rai: — MLCommons Croissant 1.0 RAI 어휘 (https://mlcommons.org/working-groups/data/croissant/). "
-    "rai:dataBiases 는 확인된 편향, rai:dataLimitations·knownLimitations 는 데이터 한계, rai:dataCollectionMissingData 는 결측, "
+    "rai:dataBiases 는 확인된 편향, rai:dataLimitations 는 데이터 한계, rai:dataCollectionMissingData 는 결측, "
     "rai:dataUseCases 는 권장 용도, rai:personalSensitiveInformation 은 개인·민감정보와 보호 조치, "
     "rai:dataPreprocessingProtocol·dataAnnotationProtocol 은 전처리·어노테이션 절차, rai:dataSocialImpact 는 사회적 영향.\n"
     "- fde: — 이 스튜디오의 확장 속성 (가이드라인 부록 4 데이터 카드 칸 가운데 표준에 없는 것).\n"

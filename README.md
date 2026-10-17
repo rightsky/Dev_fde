@@ -161,9 +161,10 @@ STEP 8 의 미흡·부분·확인 대기 항목에서 [수정하러 이동] 을 
 | 데이터 사전 | CSV (`_데이터사전.csv`, 엑셀용 BOM) | 컬럼마다 자료형·정의·단위·코드값·필수 여부·결측률·고유값 수·결측 표기·예시값·연계키 |
 
 - 세 산출물 모두 정본 그래프와 원천 프로파일에서 만듭니다. 사람이 적은 컬럼 정의와 카드 항목도 정본 그래프에 들어가므로(CSVW 컬럼의 `dcterms:description` · `schema:unitText`, Croissant RAI 속성 또는 `fde:` 확장 속성), 고친 뒤에는 검증·변환이 "최신 아님"으로 바뀝니다.
-- 개인정보 의심 컬럼의 예시값은 카드와 사전에 내보내지 않습니다. 자동 탐지 기준이므로 배포 전에 확인해야 합니다.
+- 개인정보 의심 컬럼(이름 · 주소 · 전화 · 이메일 · 생년월일 · 계좌 · 차량번호 등 컬럼 이름으로 판단)은 프로파일 단계에서 예시값을 아예 저장하지 않으므로 화면 · 카드 · 사전 · 리니지 불일치 표본 어디에도 나오지 않습니다. 외부로 나가는 데이터 카드(MCP `get_data_card`, AI 시뮬레이션)는 모든 컬럼의 "데이터 인스턴스(샘플)" 행을 비웁니다. 컬럼 이름 기준 자동 탐지이므로 배포 전에 확인해야 합니다.
 - 자가검증에 ⑦ 문서 산출물 정합을 더했습니다. Croissant 필드 수·데이터 사전 행 수가 프로파일 컬럼 수와 같은지, 카드에 제목·식별자가 있는지 다시 읽어 확인합니다. Croissant 는 테스트에서 MLCommons 참조 라이브러리(mlcroissant)로도 읽어 봅니다.
-- 가이드라인 표 12 는 데이터 한계를 `rai:knownLimitations` 로 적지만 Croissant RAI 1.0 의 속성 이름은 `rai:dataLimitations` 입니다. 정본에는 둘 다 넣습니다.
+- 가이드라인 표 12 는 데이터 한계를 `rai:knownLimitations` 로 적지만 Croissant RAI 1.0 에 그런 속성은 없고 `rai:dataLimitations` 가 맞습니다. 정본은 `rai:dataLimitations` 를 쓰고, 가이드라인 문구와의 대응을 위해 `fde:knownLimitations` 도 함께 넣습니다. SHACL 과 STEP 8 O-06 도 `rai:dataLimitations` 를 봅니다.
+- 갱신 주기(`dcterms:accrualPeriodicity`)는 DCAT 3 권고대로 문자열이 아니라 `dcterms:Frequency` 개체(Dublin Core Collection Description 빈도 어휘 `http://purl.org/cld/freq/` IRI)로 넣고, 기계가 계산할 수 있도록 `fde:updateInterval` 에 ISO 8601 기간(`P1M` 등)을 함께 적습니다.
 - STEP 8 의 데이터 사전(C-06)과 데이터 카드(R-10) 항목은 이 산출물로 자동 판정합니다. 담당자 확인 항목은 16개가 됩니다.
 
 ## AI 초안 제안 (STEP 3)
@@ -217,9 +218,10 @@ STEP 8 의 미흡·부분·확인 대기 항목에서 [수정하러 이동] 을 
 
 가이드라인 3.4.5 표 39 「이용조건 명시」(AI 학습, 데이터 결합, 자동화 접근, 대량 호출, 재배포 가능 여부)를 데이터셋마다 적습니다. STEP 3 › 데이터 카드 탭 맨 아래에서 항목마다 허용 · 조건부 허용 · 불허를 고르고 조건을 문장으로 적습니다.
 
-- **정본:** ODRL 정책으로 넣습니다. 데이터셋 `odrl:hasPolicy` → `odrl:Set` → 허용은 `odrl:permission`, 불허는 `odrl:prohibition`. 재배포는 표준 동작 `odrl:distribute`, 나머지는 `fde:aiTraining` 같은 확장 동작(`odrl:includedIn odrl:use`)입니다. 조건부 허용은 허용 규칙에 `fde:conditional true` 를, 조건 문장은 정책의 `rdfs:comment` 로 적습니다.
+- **정본:** ODRL 정책으로 넣습니다. 데이터셋 `odrl:hasPolicy` → `odrl:Set` → 허용은 `odrl:permission`, 불허는 `odrl:prohibition`. 재배포는 표준 동작 `odrl:distribute`, 나머지는 `fde:aiTraining` 같은 확장 동작(`odrl:includedIn odrl:use`)입니다. 조건부 허용은 ODRL 방식대로 허용 규칙에 `odrl:duty`(동작 `fde:satisfyStatedConditions`, 조건 문장은 `rdfs:comment`)를 붙여 "조건을 지키는 것이 허용의 전제"임을 표현합니다. 정책에는 `odrl:profile <def/odrl-profile>` 을 적고, 5항목을 하나도 고르지 않은 데이터셋에는 빈 정책을 만들지 않습니다.
 - **산출물:** 데이터 카드 끝에 "부가. AI 활용 이용조건" 표가 붙습니다 (부록 4 양식 밖이라 38칸 작성률에는 넣지 않습니다). 카탈로그 상세와 MCP `get_usage_terms` · `search_datasets` 에도 보입니다.
 - **STEP 8 원칙 10:** MCP 로 제공 중인 데이터셋의 자동 증빙에 "AI 이용조건 n/5항목 명시"를 함께 적습니다.
+- **외부 AI 전송 제외:** STEP 3 에서 담당자가 "외부 AI 전송 제외"로 표시한 데이터셋은 AI 초안 제안뿐 아니라 발행 뒤 MCP 검색 · 조회와 AI 시뮬레이션에서도 빠집니다 (카탈로그 `facets.ai_excluded`). 표시를 바꾸면 이미 발행된 항목에도 즉시 반영됩니다.
 - 고른 값은 정본에 들어가므로 바꾸면 검증 · 변환이 "최신 아님"이 됩니다. 이미 발행한 데이터셋은 다시 발행해야 카탈로그와 MCP 응답에 반영됩니다.
 
 ## AI 에이전트 연계 (MCP)
