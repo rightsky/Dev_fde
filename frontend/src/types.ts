@@ -879,3 +879,27 @@ export interface PublishReview {
   direct_publish: boolean;
   direct_publish_reason: string | null;
 }
+
+// ───────────── AI 초안 제안
+export interface AiStatus {
+  enabled: boolean;
+  model: string | null;
+  fields: string[];
+  rule_fields: string[];
+  note: string;
+  /** dataset_id 를 주었을 때: 이 데이터셋에 쓸 수 없는 사유 (C 등급 · 담당자 제외) */
+  blocked_reason?: string | null;
+  grade?: string | null;
+  excluded?: { by: string; at: string; reason: string | null } | null;
+}
+export interface AiDraft {
+  text: string | string[];
+  basis: string;
+  source: "llm" | "rule";
+}
+export interface AiDraftResult {
+  drafts: Record<string, AiDraft>;
+  model: string | null;
+  usage: { input_tokens: number; output_tokens: number; model: string } | null;
+  pii_withheld?: number;
+}

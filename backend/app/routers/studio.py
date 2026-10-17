@@ -491,6 +491,72 @@ def put_dictionary(did: int, body: DictIn, db: Session = Depends(get_db), user: 
     return _dictionary_payload(pd)
 
 
+# ------------------------------------------------------------------ AI 초안 제안
+class DraftIn(BaseModel):
+    fields: list[str] = Field(default_factory=list)
+    instructions: str | None = Field(default=None, max_length=1000)
+
+
+@router.get("/ai-status")
+def ai_status(dataset_id: int | None = None, db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
+    """AI 초안 기능 상태. dataset_id 를 주면 그 데이터셋에 쓸 수 있는지(C 등급 예외)도 알려 준다."""
+    from ..services import assist
+
+    out = assist.status()
+    if dataset_id is not None:
+        pd = _dataset(db, dataset_id, editable=False)
+        out["blocked_reason"] = assist.blocked_reason(pd)
+        out["grade"] = assist.grade(pd)
+        out["excluded"] = assist.excluded(pd)
+    return out
+
+
+class ExcludeIn(BaseModel):
+    excluded: bool
+    reason: str | None = Field(default=None, max_length=500)
+
+
+@router.put("/datasets/{did}/ai-exclusion")
+def set_ai_exclusion(did: int, body: ExcludeIn, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    """담당자가 이 데이터셋을 외부 AI 전송에서 제외(또는 해제)한다. 등급과 무관하게 적용되며 활동 로그에 남는다."""
+    from ..services import assist
+
+    pd = _dataset(db, did)
+    meta = dict(pd.meta or {})
+    title = meta.get("title") or pd.asset.name
+    if body.excluded:
+        meta[assist.EXCLUDE_KEY] = {"by": user.name, "at": utcnow().isoformat(), "reason": (body.reason or "").strip() or None}
+        activity.log(db, "ai_exclude", f"외부 AI 전송 제외 — {title}" + (f" ({body.reason.strip()})" if body.reason and body.reason.strip() else ""),
+                     user=user, process_id=pd.process_id, dataset_id=pd.id)
+    else:
+        meta.pop(assist.EXCLUDE_KEY, None)
+        activity.log(db, "ai_exclude_clear", f"외부 AI 전송 제외 해제 — {title}", user=user, process_id=pd.process_id, dataset_id=pd.id)
+    pd.meta = meta
+    db.commit()
+    return {"excluded": assist.excluded(pd), "blocked_reason": assist.blocked_reason(pd)}
+
+
+@router.post("/datasets/{did}/drafts")
+def ai_drafts(did: int, body: DraftIn, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    """서술형 칸의 초안. 저장하지 않고 돌려준다 — 담당자가 검토해 채택하면 폼에 들어가고, 저장해야 정본에 반영된다."""
+    from ..services import assist
+
+    pd = _dataset(db, did)
+    rule = {k: v for k, v in assist.rule_drafts(pd).items() if not body.fields or k in body.fields}
+    llm_names = [n for n in body.fields if n in assist.LLM_FIELD_NAMES]
+    out: dict[str, Any] = {"drafts": rule, "model": None, "usage": None}
+    if llm_names:
+        try:
+            r = assist.drafts(db, pd, user, llm_names, body.instructions)
+        except assist.AssistError as exc:
+            raise HTTPException(exc.status, exc.message)
+        except Exception as exc:  # noqa: BLE001 - 외부 API 오류는 사용자에게 그대로 보이되 서버는 살아 있어야 한다
+            raise HTTPException(502, f"AI 초안 호출 실패 — {type(exc).__name__}: {str(exc)[:200]}")
+        db.commit()
+        out.update({"drafts": {**rule, **r["drafts"]}, "model": r["model"], "usage": r["usage"], "pii_withheld": r["pii_withheld"]})
+    return out
+
+
 @router.get("/datasets/{did}/card")
 def card_preview(did: int, db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
     """지금 정본으로 만든 데이터 카드 미리보기 (STEP 7 산출물과 같은 함수). 칸마다 채움 여부와 근거를 준다."""

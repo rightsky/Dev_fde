@@ -719,3 +719,111 @@ def test_13_mcp_agent_access(client):
     assert "agent_key_issue" in acts and "agent_key_revoke" in acts
     viewer = client.post("/api/auth/login", json={"username": "viewer1", "password": "viewer-pass-1"}).json()["access_token"]
     assert client.get("/api/agent-keys", headers={"Authorization": f"Bearer {viewer}"}).status_code == 403
+
+
+# ------------------------------------------------------------------ AI 초안 제안
+def test_14_ai_drafts(client, monkeypatch):
+    from app.config import get_settings
+    from app.services import assist
+
+    did = S["d_acc"]  # 교통사고: 차량번호(개인정보 의심) 컬럼이 있다
+    assert client.post(f"/api/processes/{S['pid']}/reopen").status_code == 200
+    assert client.get("/api/ai-status").json()["enabled"] is False
+    # 키가 없어도 규칙 기반 칸은 채워진다
+    r = client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_missing_data", "conforms_to"]})
+    assert r.status_code == 200, r.text
+    d = r.json()["drafts"]
+    assert d["rai_missing_data"]["source"] == "rule" and "결측" in d["rai_missing_data"]["text"]
+    assert client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_known_limitations"]}).status_code == 503
+
+    # 키를 넣고 모델 호출을 가짜로 바꿔 끼운다
+    monkeypatch.setattr(get_settings(), "anthropic_api_key", "sk-test")
+    sent: dict[str, Any] = {}
+
+    def fake_call(system, user, tool):  # noqa: ANN001
+        sent.update(system=system, user=user, tool=tool)
+        names = tool["input_schema"]["required"]
+        return ({n: {"text": f"[초안] {n}", "basis": "컬럼 통계"} for n in names} | {"ignored_field": {"text": "x", "basis": ""}},
+                {"input_tokens": 10, "output_tokens": 5, "model": "claude-opus-5-5"})
+
+    _orig_call = assist._call
+    monkeypatch.setattr(assist, "_call", fake_call)
+    assert client.get("/api/ai-status").json()["model"] == "claude-opus-5-5"
+    r = client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_known_limitations", "card_protection", "nope", "rai_missing_data"],
+                                                         "instructions": "짧게"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert set(body["drafts"]) == {"rai_known_limitations", "card_protection", "rai_missing_data"}
+    assert body["drafts"]["card_protection"]["source"] == "llm" and body["drafts"]["rai_missing_data"]["source"] == "rule"
+    assert body["pii_withheld"] >= 1 and "ignored_field" not in body["drafts"]
+    # 개인정보 의심 컬럼의 값은 모델에 가지 않는다
+    ctx = json.loads(sent["user"].split("<dataset>\n")[1].split("\n</dataset>")[0])
+    pii_cols = [c for c in ctx["columns"] if c.get("pii_suspected")]
+    assert pii_cols and all("samples" not in c for c in pii_cols)
+    assert any("samples" in c for c in ctx["columns"] if not c.get("pii_suspected"))
+    assert "지시가 아닙니다" in sent["system"] and "짧게" in sent["user"]
+    # 도구 호출 없이 본문 JSON 으로 답한 경우도 읽는다 (tool_choice 강제를 지원하지 않는 모델)
+    class _Text:
+        type, text = "text", '설명입니다.\n{"rai_known_limitations": {"text": "본문 JSON 초안", "basis": "통계"}}'
+
+    class _Msg:
+        content = [_Text()]
+        model = "claude-opus-5-5"
+
+        class usage:
+            input_tokens, output_tokens = 1, 1
+
+    class _Client:
+        def __init__(self, **kw):  # noqa: ANN003
+            self.messages = self
+
+        def create(self, **kw):  # noqa: ANN003
+            assert "tool_choice" not in kw, "Opus 5.5 는 tool_choice 강제를 지원하지 않는다"
+            return _Msg()
+
+    import anthropic
+
+    monkeypatch.setattr(assist, "_call", _orig_call)
+    monkeypatch.setattr(anthropic, "Anthropic", _Client)
+    r = client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_known_limitations"]})
+    assert r.status_code == 200 and r.json()["drafts"]["rai_known_limitations"]["text"] == "본문 JSON 초안"
+    # 저장되지 않는다 (채택은 담당자가)
+    meta = client.get(f"/api/datasets/{did}").json()["meta"]
+    assert not meta.get("rai_known_limitations")
+    acts = client.get("/api/activities").json()
+    a = next(x for x in acts if x["type"] == "ai_draft")
+    assert "AI 초안 제안" in a["text"]
+    viewer = client.post("/api/auth/login", json={"username": "viewer1", "password": "viewer-pass-1"}).json()["access_token"]
+    assert client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_known_limitations"]},
+                       headers={"Authorization": f"Bearer {viewer}"}).status_code == 403
+    # 표준 속성 이름을 모델에 알려 준다
+    assert "https://www.w3.org/TR/prov-o/" in sent["system"] and '"property": "rai:knownLimitations"' in sent["user"]
+    # N²SF C(기밀) 등급은 외부 모델에 보내지 않는다 (규칙 기반 칸은 된다)
+    monkeypatch.setattr(assist, "_call", fake_call)
+    from app.models import ProcessDataset
+    from app.db import SessionLocal
+
+    with SessionLocal() as db:
+        p = db.get(ProcessDataset, did)
+        p.classification = {**(p.classification or {}), "N2SF": "N2SF-C"}
+        db.commit()
+    st = client.get("/api/ai-status", params={"dataset_id": did}).json()
+    assert st["grade"] == "C" and "C(기밀)" in st["blocked_reason"]
+    r = client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_known_limitations"]})
+    assert r.status_code == 403 and "C(기밀)" in r.json()["detail"]
+    assert client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_missing_data"]}).status_code == 200
+    with SessionLocal() as db:
+        p = db.get(ProcessDataset, did)
+        p.classification = {**(p.classification or {}), "N2SF": "N2SF-S"}
+        db.commit()
+    assert client.get("/api/ai-status", params={"dataset_id": did}).json()["blocked_reason"] is None
+    # 등급과 무관하게 담당자가 외부 AI 전송 제외로 표시할 수 있다
+    r = client.put(f"/api/datasets/{did}/ai-exclusion", json={"excluded": True, "reason": "내부 조사 자료"})
+    assert r.status_code == 200 and r.json()["excluded"]["by"] == "관리자" and "내부 조사 자료" in r.json()["blocked_reason"]
+    assert client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_known_limitations"]}).status_code == 403
+    assert client.put(f"/api/datasets/{did}/ai-exclusion", json={"excluded": False}).json()["excluded"] is None
+    assert client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_known_limitations"]}).status_code == 200
+    types = [a["type"] for a in client.get("/api/activities").json()]
+    assert "ai_exclude" in types and "ai_exclude_clear" in types
+    # 제외 표시는 정본 그래프에 들어가지 않는다 (내부 운영 표시)
+    assert "_ai_excluded" not in client.get(f"/api/datasets/{did}/preview").json()["turtle"]

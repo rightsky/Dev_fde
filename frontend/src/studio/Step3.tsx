@@ -7,6 +7,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { api } from "../api";
 import type { CardItem, Dataset, DictRow, MetaField, Org, Preview, Reference, Severity } from "../types";
 import { Badge, Banner, Button, Card, CodeBlock, ConfirmButton, Empty, QueryState, Tabs, cx, errText, fmtDateTime, fmtNum, shortHash, useToast } from "../ui";
+import { AiDraftButton, AiExclusionBox } from "./AiDraft";
 import { useStudio } from "./context";
 import { DatasetList, Gate0List, ProfileTable, ReadOnlyNote, ReadinessBadge, StepHeader, ValidationRows } from "./shared";
 
@@ -380,6 +381,7 @@ export function Step3() {
             {!dataset.minted && <Badge title="관리자가 STEP 6 에서 ID 를 발급하면 정식 식별자로 바뀝니다">임시 ID</Badge>}
           </div>
           <Tabs tabs={TABS} value={tab} onChange={setTab} />
+          {(tab === "form" || tab === "card") && <AiExclusionBox did={dataset.id} editable={editable} />}
 
           {tab === "class" && <ClassTab key={dataset.id} pid={pid} dataset={dataset} reference={reference} editable={editable} busy={busy} onToggle={toggleClass} />}
           {tab === "form" && <FormTab key={dataset.id} m={model} fields={fields.filter((f) => !f.group)} />}
@@ -578,6 +580,7 @@ function FormTab({ m, fields }: { m: FormModel; fields: MetaField[] }) {
                 {level} 항목 <span className="muted small">{group.length}개</span>
               </>
             }
+            right={<AiDraftButton did={d.id} fields={group} editable={m.editable} valueOf={m.valueOf} onAdopt={m.setField} />}
           >
             <p className="small muted mb-8">{LEVEL_NOTE[level]}</p>
             <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
@@ -1176,6 +1179,7 @@ function CardTab({ pid, m, fields, aiFields, dirtyCount }: { pid: number; m: For
                 </Badge>
               </>
             }
+            right={<AiDraftButton did={did} fields={[...fields, ...aiFields]} editable={m.editable} valueOf={m.valueOf} onAdopt={m.setField} label="AI 초안 제안 (카드 칸)" />}
           >
             <p className="small muted">
               가이드라인 부록 4 양식 38칸을 지금 메타데이터·분류·프로파일로 채운 결과입니다. "자동"은 시스템이, "입력"은 프러퍼티 폼·데이터 사전에서 채운 칸입니다. "작성 필요" 가운데 이 탭에서만 쓰는 칸은 아래 입력란에 적습니다. 필수 칸을 90% 이상 채우고
