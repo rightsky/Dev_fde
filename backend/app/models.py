@@ -440,3 +440,33 @@ class AgentCall(Base):
     message: Mapped[str | None] = mapped_column(Text, default=None)
     duration_ms: Mapped[int] = mapped_column(Integer, default=0)
     at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, index=True)
+
+
+class ReviewRequest(Base):
+    """발행 검수 요청 (검수 큐). 담당자가 요청하고 관리자가 승인·반려한다.
+
+    가이드라인 3.4.6 표 40 의 HITL: 제한공유 데이터·개인정보 포함·데이터 결합 같은 고위험 발행은 사람이 검토·승인한다.
+    요청 시점의 변환 결과(serialization_run)와 데이터셋별 정본 체크섬을 묶어 두어, 승인하는 내용이 검토한 내용과 같음을 보장한다.
+    """
+
+    __tablename__ = "review_request"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    process_id: Mapped[int] = mapped_column(ForeignKey("process.id", ondelete="CASCADE"), index=True)
+    status: Mapped[str] = mapped_column(String(12), default="pending", index=True)  # pending | approved | rejected | withdrawn
+    message: Mapped[str | None] = mapped_column(Text, default=None)  # 요청 메모
+    serialization_run_id: Mapped[int | None] = mapped_column(ForeignKey("serialization_run.id", ondelete="SET NULL"), default=None)
+    checksums: Mapped[dict[str, str]] = mapped_column(JSON, default=dict)  # 발행 ID → 정본 체크섬 (요청 시점)
+    risk_level: Mapped[str] = mapped_column(String(8), default="low")  # high | medium | low
+    signals: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)  # [{code, severity, label, detail, datasets}]
+    datasets: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)  # 요청 시점 요약
+    diagnosis: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=None)  # {run_id, score, max_score, stale}
+    requested_by: Mapped[int | None] = mapped_column(ForeignKey("app_user.id"), default=None)
+    requested_label: Mapped[str] = mapped_column(String(100), default="")
+    requested_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    reviewer_id: Mapped[int | None] = mapped_column(ForeignKey("app_user.id"), default=None)
+    reviewer_label: Mapped[str | None] = mapped_column(String(100), default=None)
+    decided_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    decision_note: Mapped[str | None] = mapped_column(Text, default=None)
+    acknowledged: Mapped[list[str]] = mapped_column(JSON, default=list)  # 승인자가 확인한 고위험 신호 코드
+    self_approved: Mapped[bool] = mapped_column(Boolean, default=False)  # 요청자가 직접 승인
+    published: Mapped[list[str]] = mapped_column(JSON, default=list)  # 승인으로 발행된 발행 ID

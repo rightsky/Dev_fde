@@ -816,3 +816,66 @@ export interface McpInfo {
   tools: { name: string; description: string }[];
   grades: string[];
 }
+
+// ───────────── 발행 검수 큐 (표 40 HITL)
+export type RiskLevel = "high" | "medium" | "low";
+export interface ReviewSignal {
+  code: string;
+  severity: RiskLevel;
+  label: string;
+  detail: string;
+  datasets: string[];
+}
+export interface ReviewDataset {
+  dataset_id: number;
+  resource_id: string;
+  title: string | null;
+  checksum: string;
+  kind: string;
+  n2sf: string | null;
+  pii: string[];
+  ai_terms: Record<string, string>;
+  current_version: number | null;
+  change: "new" | "update" | "same";
+}
+export interface ReviewAssessment {
+  level: RiskLevel;
+  level_label: string;
+  signals: ReviewSignal[];
+  datasets: ReviewDataset[];
+  diagnosis: { run_id: number; score: number; max_score: number; ratio: number; stale: string | null } | null;
+  pii_checked: boolean;
+}
+export interface ReviewRequest {
+  id: number;
+  process_id: number;
+  process_name: string | null;
+  status: "pending" | "approved" | "rejected" | "withdrawn";
+  status_label: string;
+  message: string | null;
+  risk_level: RiskLevel;
+  risk_label: string;
+  signals: ReviewSignal[];
+  datasets: ReviewDataset[];
+  diagnosis: ReviewAssessment["diagnosis"];
+  requested_by: string;
+  requested_by_id: number | null;
+  requested_at: string;
+  reviewer: string | null;
+  decided_at: string | null;
+  decision_note: string | null;
+  acknowledged: string[];
+  self_approved: boolean;
+  published: string[];
+  serialization_run_id: number | null;
+  /** 검수 대기 중일 때만: 요청 뒤에 발행 대상이 바뀐 사유 (없으면 null) */
+  stale?: string | null;
+}
+export interface PublishReview {
+  blocked: string[];
+  assessment: ReviewAssessment | null;
+  pending: ReviewRequest | null;
+  latest: ReviewRequest | null;
+  direct_publish: boolean;
+  direct_publish_reason: string | null;
+}

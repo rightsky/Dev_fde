@@ -406,9 +406,63 @@ def test_10_publish_requires_mint(client):
     assert client.post(f"/api/processes/{pid}/publish").status_code == 409, "발행 모드 직렬화가 아직 없다"
     sr = client.post(f"/api/processes/{pid}/serialization-runs", json={}).json()["run"]
     assert sr["ok_count"] == 3
+
+    # 검수 큐 (표 40 HITL): 개인정보 의심 컬럼·결합이 있어 위험 '높음' → 관리자도 바로 발행할 수 없다
+    pr = client.get(f"/api/processes/{pid}/publish-review").json()
+    S["review_probe"] = pr
+    a = pr["assessment"]
+    codes = {x["code"]: x["severity"] for x in a["signals"]}
+    assert a["level"] == "high" and codes.get("pii") == "high" and codes.get("combination") == "high", codes
+    assert pr["direct_publish"] is False and {d["change"] for d in a["datasets"]} == {"new"}
     r = client.post(f"/api/processes/{pid}/publish")
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "REVIEW_REQUIRED"
+
+    # 담당자(작업자) 계정이 검수를 요청한다
+    assert client.post("/api/users", json={"username": "worker1", "name": "담당자", "password": "worker-pass-1",
+                                           "role": "worker"}).status_code == 200
+    wtok = client.post("/api/auth/login", json={"username": "worker1", "password": "worker-pass-1"}).json()["access_token"]
+    wh = {"Authorization": f"Bearer {wtok}"}
+    assert client.post(f"/api/processes/{pid}/publish", headers=wh).status_code == 403, "발행은 관리자만"
+    rq = client.post(f"/api/processes/{pid}/review-requests", json={"message": "도로·사고 결합 데이터 발행 요청"}, headers=wh)
+    assert rq.status_code == 200, rq.text
+    rq = rq.json()
+    assert rq["status"] == "pending" and rq["risk_level"] == "high" and len(rq["datasets"]) == 3
+    assert client.post(f"/api/processes/{pid}/review-requests", json={}, headers=wh).json()["detail"]["code"] == "REVIEW_PENDING"
+    assert client.post(f"/api/processes/{pid}/publish").json()["detail"]["code"] == "REVIEW_PENDING"
+    q = client.get("/api/review-requests", params={"status": "pending"}).json()
+    assert [x["id"] for x in q["items"]] == [rq["id"]] and q["counts"]["pending"] == 1
+    assert client.post(f"/api/review-requests/{rq['id']}/approve", json={}, headers=wh).status_code == 403, "승인은 관리자만"
+
+    # 반려 → 다시 요청 → 고위험 신호를 모두 확인해야 승인된다
+    assert client.post(f"/api/review-requests/{rq['id']}/reject", json={"note": ""}).status_code == 422
+    rj = client.post(f"/api/review-requests/{rq['id']}/reject", json={"note": "차량번호 비식별 여부를 C-12 에 적어 주세요"}).json()
+    assert rj["status"] == "rejected" and rj["reviewer"] == "관리자"
+    rq = client.post(f"/api/processes/{pid}/review-requests", json={"message": "재요청"}, headers=wh).json()
+    # 요청 뒤에 변환을 다시 돌리면 검토한 내용과 발행할 내용이 달라질 수 있으므로 승인하지 않는다
+    assert client.post(f"/api/processes/{pid}/serialization-runs", json={}).status_code == 200
+    assert client.get(f"/api/review-requests/{rq['id']}").json()["stale"]
+    high = [x["code"] for x in rq["signals"] if x["severity"] == "high"]
+    r = client.post(f"/api/review-requests/{rq['id']}/approve", json={"acknowledged": high})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "REVIEW_STALE"
+    assert client.post(f"/api/review-requests/{rq['id']}/withdraw", headers=wh).json()["status"] == "withdrawn"
+    # 관리자 본인이 요청한 고위험 발행을 직접 승인하려면 사유가 필요하다
+    mine = client.post(f"/api/processes/{pid}/review-requests", json={}).json()
+    r = client.post(f"/api/review-requests/{mine['id']}/approve", json={"acknowledged": high, "note": "확인"})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "SELF_APPROVAL_NOTE"
+    assert client.post(f"/api/review-requests/{mine['id']}/withdraw").status_code == 200
+    rq = client.post(f"/api/processes/{pid}/review-requests", json={"message": "재요청"}, headers=wh).json()
+    r = client.post(f"/api/review-requests/{rq['id']}/approve", json={"acknowledged": high[:1]})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "ACK_REQUIRED"
+    r = client.post(f"/api/review-requests/{rq['id']}/approve", json={"acknowledged": high, "note": "결합 키는 도로링크뿐, 개인 식별 불가 확인"})
     assert r.status_code == 200, r.text
-    assert sorted(e["resource_id"] for e in r.json()["published"]) == ids
+    body = r.json()
+    assert body["request"]["status"] == "approved" and body["request"]["self_approved"] is False
+    assert sorted(e["resource_id"] for e in body["published"]) == ids == sorted(body["request"]["published"])
+    assert client.post(f"/api/review-requests/{rq['id']}/approve", json={"acknowledged": high}).status_code == 409
+    acts = [a["type"] for a in client.get("/api/activities").json()]
+    assert {"review_request", "review_reject", "review_approve"} <= set(acts)
+    # 같은 내용으로는 다시 요청할 필요가 없다
+    assert client.post(f"/api/processes/{pid}/review-requests", json={}, headers=wh).status_code == 409
 
     cat = client.get("/api/catalog", params={"q": "사고"}).json()
     assert cat["total"] >= 1 and ("교통물류", 2) in [tuple(x) for x in cat["facets"]["theme"]] or cat["total"] >= 1

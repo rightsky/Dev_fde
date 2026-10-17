@@ -171,6 +171,18 @@ code,
   color: #fff;
   font-size: 11px;
 }
+.nav a .nav-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #c2410c;
+  color: #fff;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 .nav a.active {
   background: var(--dark);
   color: #fff;

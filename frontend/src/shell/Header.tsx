@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { NavLink } from "react-router-dom";
 import { api } from "../api";
 import { useAuth, useReference } from "../auth";
@@ -9,6 +10,7 @@ const NAV = [
   { to: "/studio", label: "ARD 스튜디오", ico: "◈", color: "#1E5EFF" },
   { to: "/assets", label: "데이터 패브릭 관리", ico: "▦", color: "#2aa876" },
   { to: "/catalog", label: "데이터 카탈로그", ico: "≣", color: "#7a3fa0" },
+  { to: "/reviews", label: "검수 큐", ico: "✓", color: "#c2410c" },
   { to: "/admin", label: "시스템 관리", ico: "⚙", color: "#111318" },
 ];
 
@@ -18,6 +20,9 @@ export function Header() {
   const [menu, setMenu] = useState(false);
   const [pw, setPw] = useState(false);
   const role = ref.roles.find((r) => r.value === user.role);
+  // 검수 대기 건수 (관리자에게는 처리할 일, 담당자에게는 진행 상황)
+  const pendingQ = useQuery({ queryKey: ["reviews", "pending"], queryFn: () => api.reviews("pending"), refetchInterval: 60_000 });
+  const pendingN = pendingQ.data?.counts.pending ?? 0;
   return (
     <header className="header">
       <div className="row gap-16 wrap">
@@ -35,6 +40,11 @@ export function Header() {
                 {n.ico}
               </span>
               {n.label}
+              {n.to === "/reviews" && pendingN > 0 && (
+                <span className="nav-count" aria-label={`검수 대기 ${pendingN}건`}>
+                  {pendingN}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

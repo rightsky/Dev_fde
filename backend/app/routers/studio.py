@@ -955,6 +955,15 @@ def publish(pid: int, db: Session = Depends(get_db), user: User = Depends(requir
     reasons = catalog.check(p, vr, st["validation"]["stale"], sr, st["serialization"]["stale"])
     if reasons:
         raise HTTPException(409, detail={"code": "PUBLISH_BLOCKED", "message": reasons[0], "reasons": reasons})
+    # 고위험(표 40 HITL)이거나 검수 대기 중이면 바로 발행하지 않고 검수 큐를 거친다
+    from ..services import review
+
+    if review.pending(db, pid):
+        raise HTTPException(409, detail={"code": "REVIEW_PENDING", "message": "검수 대기 중인 요청이 있습니다 — 검수 큐에서 승인하세요"})
+    risk = review.assess(db, p, sr)
+    if risk["level"] == "high":
+        raise HTTPException(409, detail={"code": "REVIEW_REQUIRED", "message": "위험 수준이 높아 검수 요청과 승인이 필요합니다",
+                                         "signals": [s for s in risk["signals"] if s["severity"] == "high"]})
     entries = catalog.publish(db, p, user, vr, sr)  # type: ignore[arg-type]
     if not entries:
         raise HTTPException(409, "발행할 수 있는 데이터셋이 없습니다 (검증 통과 + 자가검증 통과 + 민팅 필요)")
