@@ -53,6 +53,8 @@ class Settings(BaseSettings):
 
     # --- 기타 ---
     cors_origins: str = ""
+    # /api/docs · /api/openapi.json 노출 여부. 운영(docker-compose.prod.yml)에서는 false 가 기본
+    expose_api_docs: bool = True
     seed_demo_orgs: bool = True
 
     @property

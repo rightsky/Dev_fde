@@ -1,0 +1,35 @@
+# FDE Data Studio 운영 프록시. 도메인은 .env 의 FDE_DOMAIN. 인증서는 Let's Encrypt 로 자동 발급·갱신된다 (80/443 이 열려 있어야 한다).
+{
+	email {$FDE_ACME_EMAIL:admin@example.invalid}
+}
+
+{$FDE_DOMAIN} {
+	encode zstd gzip
+
+	# API 문서와 OpenAPI 는 외부에 열지 않는다 (백엔드 설정과 이중 차단)
+	@docs path /api/docs /api/docs/* /api/openapi.json /api/redoc
+	respond @docs 404
+
+	# MCP 는 긴 응답이 있을 수 있어 타임아웃을 넉넉히 둔다
+	reverse_proxy frontend:80 {
+		header_up X-Forwarded-Proto {scheme}
+		transport http {
+			read_timeout 300s
+		}
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 50MiB
+			roll_keep 10
+		}
+	}
+}

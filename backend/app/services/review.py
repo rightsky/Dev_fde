@@ -97,7 +97,7 @@ def assess(db: Session, p: Process, sr: SerializationRun | None) -> dict[str, An
             republish.append(f"{rid} v{entry.version}→v{entry.version + 1}")
 
     if grade_c:
-        signals.append(_signal("grade_c", "high", "N²SF C(기밀) 등급", "통제 등급 데이터를 카탈로그에 올립니다. 공개 범위를 다시 확인하세요", grade_c))
+        signals.append(_signal("grade_c", "high", "N²SF C(비공개) 등급", "비공개 등급 데이터를 카탈로그에 올립니다. 공개 범위를 다시 확인하세요", grade_c))
     if grade_s:
         signals.append(_signal("grade_s2", "high", "N²SF S2(제한 공유) 등급",
                                "개별 기록·민감 정보가 포함된 제한 공유 데이터입니다. 기관 간 협약 · 사전 승인 · 에이전트 노출 범위를 확인하세요 (3.6.1 · 표 40)", grade_s))

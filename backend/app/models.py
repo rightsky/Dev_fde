@@ -32,9 +32,11 @@ class UTCDateTime(TypeDecorator):
     cache_ok = True
 
     def process_bind_param(self, value, dialect):  # noqa: ANN001
-        if value is not None and value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
-        return value
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)  # KST 등 다른 시간대로 들어온 값도 UTC 로 맞춰 저장 (SQLite 는 오프셋을 버린다)
 
     def process_result_value(self, value, dialect):  # noqa: ANN001
         if value is None:

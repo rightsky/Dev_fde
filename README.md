@@ -39,6 +39,10 @@ FDE_DATABASE_URL=postgresql+psycopg://사용자@호스트/DB pytest   # PostgreS
 cd frontend && npm run build                           # 타입 검사 + 빌드
 ```
 
+### 운영 서버에 올리기 (상시 · HTTPS · 자동 백업)
+
+리눅스 서버 1대에 `deploy/install.sh` 한 줄로 Docker · HTTPS 프록시(Caddy) · 매일 백업 cron 까지 설치합니다. 절차와 운영 명령은 `docs/DEPLOY.md`, 보안 점검표는 `docs/N2SF-CONTROLS.md` 4절을 보십시오. 운영에서는 `docker-compose.prod.yml` 을 함께 써서 화면 컨테이너의 포트를 닫고 `/api/docs` 를 막습니다.
+
 ### GitHub Codespaces 로 띄우기 (설치 없이)
 
 저장소의 **Code → Codespaces → Create codespace** 를 누르면 클라우드 컴퓨터에서 전체가 뜨고 8080 포트가 브라우저로 열립니다. 자세한 절차와 AI 키 설정은 `.devcontainer/README.md` 에 있습니다.
@@ -176,7 +180,7 @@ STEP 8 의 미흡·부분·확인 대기 항목에서 [수정하러 이동] 을 
 - **구조화 출력:** tool use 로 지정한 칸만 받고 그 밖의 출력은 버립니다. 시스템 프롬프트가 데이터셋 요약 안의 문장을 지시로 따르지 말라고 못박습니다 (표 40 Prompt Injection).
 - **이력:** 호출마다 활동 로그 `ai_draft` 에 누가 · 어느 칸 · 어떤 모델 · 토큰 사용량 · 값을 뺀 개인정보 컬럼 수를 남깁니다.
 - **표준에 맞춘 초안:** 칸마다 표준 속성(dcterms:provenance, rai:dataBiases 등)을 함께 보내고, 시스템 프롬프트에 DCAT 3 · DCAT 2 · PROV-O · Croissant RAI 의 속성 뜻을 적어 두어 그 뜻에 맞게 쓰게 합니다.
-- **외부 전송 제외 (담당자 지정):** ① STEP 4 에서 담당자가 N²SF 를 **C(기밀)** 로 지정한 데이터셋은 자동으로 AI 초안이 잠깁니다 (요약·통계도 기관 밖으로 보내지 않음). ② 등급과 무관하게 STEP 3 상단의 **[외부 AI 전송 제외]** 로 담당자가 직접 제외할 수 있고, 사유와 함께 활동 로그에 남습니다. 두 경우 모두 모델 없이 되는 결측치 정보 · 준수 표준은 그대로 됩니다.
+- **외부 전송 제외 (담당자 지정):** ① STEP 4 에서 담당자가 N²SF 를 **C(비공개)** 로 지정한 데이터셋은 자동으로 AI 초안이 잠깁니다 (요약·통계도 기관 밖으로 보내지 않음). ② 등급과 무관하게 STEP 3 상단의 **[외부 AI 전송 제외]** 로 담당자가 직접 제외할 수 있고, 사유와 함께 활동 로그에 남습니다. 두 경우 모두 모델 없이 되는 결측치 정보 · 준수 표준은 그대로 됩니다.
 - **규칙 기반 칸:** 결측치 정보와 준수 표준은 모델 없이 프로파일 통계로 조립합니다 ("통계 자동" 배지). 키가 없어도 이 둘은 됩니다.
 - 기관 밖(Anthropic API)으로 데이터셋 요약이 나가므로, 가이드라인 3.4.5 의 "외부 AI 서비스 연계 허용 범위"에 따라 보안정책 검토 뒤에 켜십시오. 사용량은 Anthropic 콘솔에서 과금됩니다.
 
@@ -349,4 +353,6 @@ API 문서는 기동 후 `/api/docs` 에서 볼 수 있습니다.
 | `FDE_AI_ASSIST_NOTICE` | `true` | AI 초안을 채택한 칸을 데이터 카드·카탈로그에 "AI 보조 작성 · 담당자 확정"으로 표시할지. 정본 그래프의 이력(`fde:aiAssisted`)은 설정과 무관하게 남습니다 |
 | `FDE_REVIEW_SELF_APPROVE` | `note` | 발행 검수에서 요청자 본인의 승인. `note` 는 사유 10자 이상 + "자기 승인" 기록, `deny` 는 금지 |
 | `FDE_SHARE_PROHIBITED` | `block` | 표 41 공유 불가 유형 데이터셋 처리. `block` 은 외부 카탈로그 발행에서 제외, `review` 는 발행하되 고위험 검수 신호 |
+| `FDE_EXPOSE_API_DOCS` | `true` | `/api/docs` · `/api/openapi.json` 노출. 운영 compose 기본값은 `false` (Caddy 도 같은 경로를 404 로 막음) |
+| `FDE_DOMAIN` / `FDE_ACME_EMAIL` | (없음) | 운영 compose 의 HTTPS 도메인과 인증서 안내 메일 |
 | `FDE_TIMEZONE` | `Asia/Seoul` | 에이전트 키 일일 호출 상한과 AI 호출 일일 상한의 "하루" 기준 |

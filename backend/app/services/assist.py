@@ -192,9 +192,9 @@ def excluded(pd: ProcessDataset) -> dict[str, Any] | None:
 
 def blocked_reason(pd: ProcessDataset) -> str | None:
     """외부 모델로 보낼 수 없는 데이터셋이면 그 사유 (가이드라인 3.4.5 외부 AI 서비스 연계 범위).
-    ① STEP 4 에서 담당자가 N²SF 를 C(기밀)로 지정 → 자동 제외. ② 등급과 무관하게 담당자가 STEP 3 에서 '외부 AI 전송 제외'로 표시 → 제외."""
+    ① STEP 4 에서 담당자가 N²SF 를 C(비공개)로 지정 → 자동 제외. ② 등급과 무관하게 담당자가 STEP 3 에서 '외부 AI 전송 제외'로 표시 → 제외."""
     if grade(pd) == "C":
-        return "N²SF C(기밀) 등급 데이터셋은 외부 AI 서비스에 요약·통계를 보낼 수 없어 AI 초안을 쓰지 않습니다. 결측치 정보 · 준수 표준(통계 자동)만 됩니다"
+        return "N²SF C(비공개) 등급 데이터셋은 외부 AI 서비스에 요약·통계를 보낼 수 없어 AI 초안을 쓰지 않습니다. 결측치 정보 · 준수 표준(통계 자동)만 됩니다"
     ex = excluded(pd)
     if ex:
         return (f"담당자({ex.get('by', '')})가 외부 AI 전송 제외로 표시한 데이터셋입니다"
