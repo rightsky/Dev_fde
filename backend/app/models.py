@@ -560,3 +560,27 @@ class DbConnector(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
 
     org: Mapped[Organization | None] = relationship()
+
+
+class ShareLink(Base):
+    """공유 링크 (ARD 관리). 수요처가 로그인 없이 만료형으로 산출물을 내려받는다. O · S1 등급만 허용, 토큰은 해시만 저장."""
+    __tablename__ = "share_link"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    token_prefix: Mapped[str] = mapped_column(String(8), default="")  # 화면 표시용 앞 8자
+    kind: Mapped[str] = mapped_column(String(20))  # file | zip | validation | diagnosis | package
+    target_id: Mapped[int] = mapped_column(Integer)  # kind 별 대상 ID (artifact · run · dataset)
+    dataset_id: Mapped[int | None] = mapped_column(Integer, default=None)
+    process_id: Mapped[int | None] = mapped_column(ForeignKey("process.id", ondelete="SET NULL"), default=None)
+    filename: Mapped[str] = mapped_column(String(300))
+    grade: Mapped[str | None] = mapped_column(String(4), default=None)  # 만들 때의 등급 (O · S1)
+    recipient: Mapped[str | None] = mapped_column(String(200), default=None)  # 받는 곳 (기관 · 담당자 메모)
+    note: Mapped[str | None] = mapped_column(Text, default=None)
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    max_downloads: Mapped[int] = mapped_column(Integer, default=10)
+    downloads: Mapped[int] = mapped_column(Integer, default=0)
+    last_downloaded_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("app_user.id"), default=None)
+    created_label: Mapped[str] = mapped_column(String(100), default="")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    revoked_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)

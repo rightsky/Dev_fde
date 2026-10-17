@@ -220,9 +220,11 @@ v0.18 에서 「데이터 카탈로그」 메뉴를 「ARD 관리」로 바꿨�
 - **배포 이력** 탭: 다운로드 · 제출 패키지 · 발행 · 철회 · 복원 · 보존 정리를 작업자 · 조직 · 프로세스와 함께. CSV 내보내기. AI 기본법 제34조 문서 보관과 N²SF 이력 관리 증빙용.
 - **목록 공통**: 10 · 20 · 50 · 100개씩 페이지 이동(주소에 남아 새로고침 · 공유에 살아남음), 「구분: 작업자별 · 작업조직별」로 묶어 보기(그룹 머리글). 작업조직은 사용자 계정의 소속(시스템 관리 › 사용자)입니다.
 - **권한**: 열람 전용(viewer) 계정은 **O(공개) 등급 산출물만** 내려받습니다. 조합에 S1 이상이 있으면 ZIP · 보고서도 막힙니다. 담당자 이상은 전부. 모든 내려받기는 활동 로그 `artifact_download` · `package_download` 에 파일명 · 크기 · 체크섬 · 등급과 함께 남습니다.
+- **버전 비교** (v0.19): 산출물 보관함의 JSON-LD 행 「비교」, 발행본 상세의 「발행본 ↔ 변환 회차 비교」. 두 판의 JSON-LD 를 rdflib 로 읽어 트리플 단위로 비교하고(빈 노드는 정규화), 속성별 추가 · 삭제 · 변경을 표로 보입니다. 재발행 전 "무엇이 바뀌었나" 확인용. `GET /api/ard/datasets/{id}/versions`, `/diff?from_ref&to_ref`.
+- **공유 링크** (v0.19): 산출물 보관함의 「공유」로 수요처가 **로그인 없이** 내려받는 만료형 링크를 만듭니다 (`/share/{토큰}`). **O · S1 등급만**, 유효 기간 1~90일, 최대 1~100회, 받는 곳 · 메모. 토큰은 해시만 저장하고 원문은 만들 때 한 번만 보입니다. 만든 뒤 등급이 올라가면 자동으로 막히고, 「공유 링크」 탭에서 회수합니다(본인 또는 관리자). 내려받기마다 `share_download` 이력(파일 · 체크섬 · IP · 받는 곳). 받는 쪽 화면은 파일명 · 등급 · 만료 · 남은 횟수를 보여 줍니다.
 - **보존 정책**: 프로세스당 최신 `FDE_ARTIFACT_KEEP_RUNS`(기본 5)회차의 변환만 보관하고, 새 변환을 실행할 때 넘치는 회차를 자동 삭제합니다. 발행본이 참조하는 회차는 지우지 않습니다. 관리자는 요약의 「보존 정리」로 바로 실행할 수 있고 `retention_apply` 로그가 남습니다.
 
-API: `GET /api/ard/summary` · `/filters` · `/artifacts` · `/published` · `/history(?format=csv)` · `/retention`, `GET /api/ard/download?kind&id[&dataset_id]`, `GET /api/ard/datasets/{id}/package[/manifest]`, `POST /api/ard/retention/apply`(관리자). 발행본 상세 · 원문 · 철회 · 복원은 `/api/catalog/{발행ID}…` 그대로.
+API: `GET /api/ard/summary` · `/filters` · `/artifacts` · `/published` · `/history(?format=csv)` · `/retention` · `/share-links`, `GET /api/ard/download?kind&id[&dataset_id]`, `GET /api/ard/datasets/{id}/package[/manifest]` · `/versions` · `/diff`, `POST /api/ard/share-links` · `/share-links/{id}/revoke`, `POST /api/ard/retention/apply`(관리자). 공개: `GET /api/share/{토큰}` · `/download`. 발행본 상세 · 원문 · 철회 · 복원은 `/api/catalog/{발행ID}…` 그대로.
 
 ## 발행 검수 큐
 

@@ -6,6 +6,7 @@ import { api, downloadFile, downloads } from "../api";
 import { useAuth, useReference } from "../auth";
 import type { CatalogEntry } from "../types";
 import { Badge, Banner, Button, Card, CodeBlock, ConfirmButton, Empty, QueryState, Tabs, fmtDateTime, fmtNum, shortHash, useToast } from "../ui";
+import { CompareModal } from "./Ard";
 
 export function ArdPublishedPage() {
   const { rid = "" } = useParams();
@@ -19,6 +20,18 @@ export function ArdPublishedPage() {
       </div>
       <QueryState q={q}>{q.data && <EntryView e={q.data} />}</QueryState>
     </div>
+  );
+}
+
+function CompareButton({ datasetId, title }: { datasetId: number; title: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button size="sm" onClick={() => setOpen(true)} title="발행본과 변환 회차들의 JSON-LD 차이">
+        발행본 ↔ 변환 회차 비교
+      </Button>
+      {open && <CompareModal datasetId={datasetId} title={title} onClose={() => setOpen(false)} />}
+    </>
   );
 }
 
@@ -194,6 +207,8 @@ function EntryView({ e }: { e: CatalogEntry }) {
               {e.status === "published" && f.meta_visibility !== "internal" && !f.ai_excluded && f.n2sf !== "C" ? <Badge tone="info">노출 (키 등급 범위 안)</Badge> : <Badge tone="muted">비노출</Badge>}
               {f.ai_excluded && <div className="tiny muted">담당자가 외부 AI 전송 제외로 표시</div>}
             </dd>
+            <dt>버전 비교</dt>
+            <dd>{e.dataset_id != null ? <CompareButton datasetId={e.dataset_id} title={e.title} /> : <span className="muted">—</span>}</dd>
             <dt>제출 패키지</dt>
             <dd>
               {e.dataset_id != null ? (

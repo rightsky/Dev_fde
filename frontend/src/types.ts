@@ -1250,3 +1250,71 @@ export interface ArdFilters {
   kinds: { kind: ArdKind; label: string }[];
   history_types: { type: string; label: string }[];
 }
+
+/** ARD 관리 v0.19: 버전 비교 · 공유 링크 */
+export interface ArdVersion {
+  ref: string;
+  label: string;
+  kind: "run" | "published";
+  run_id: number | null;
+  mode: string | null;
+  at: string;
+  actor: ArdActor | null;
+  checksum: string;
+  size: number;
+  latest: boolean;
+  status?: "published" | "withdrawn";
+}
+export interface ArdDiffRow {
+  subject: string;
+  predicate: string;
+  predicate_iri: string;
+  old: string[];
+  new: string[];
+  change: "added" | "removed" | "changed";
+}
+export interface ArdDiff {
+  from: { ref: string; label: string; triples: number };
+  to: { ref: string; label: string; triples: number };
+  unchanged: number;
+  added: number;
+  removed: number;
+  rows: ArdDiffRow[];
+  truncated: boolean;
+  by_predicate: { predicate: string; added: number; removed: number; changed: number }[];
+  identical: boolean;
+}
+export interface ShareLink {
+  id: number;
+  token_prefix: string;
+  kind: ArdKind;
+  kind_label: string;
+  target_id: number;
+  dataset_id: number | null;
+  process_id: number | null;
+  filename: string;
+  grade: string | null;
+  recipient: string | null;
+  note: string | null;
+  expires_at: string;
+  max_downloads: number;
+  downloads: number;
+  last_downloaded_at: string | null;
+  created_by: string;
+  created_at: string;
+  revoked_at: string | null;
+  state: "active" | "expired" | "revoked" | "exhausted";
+}
+export interface ShareInfo {
+  filename: string;
+  kind_label: string;
+  grade: string | null;
+  expires_at: string;
+  remaining: number;
+  recipient: string | null;
+  note: string | null;
+  created_by: string;
+  ok: boolean;
+  reason: string | null;
+  notice: string;
+}

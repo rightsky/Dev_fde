@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import { AuthGate } from "./auth";
+import { SharePage } from "./pages/Share";
 import { ToastProvider } from "./ui";
 import "./styles.css";
 
@@ -16,9 +17,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ToastProvider>
-          <AuthGate>
-            <App />
-          </AuthGate>
+          {/* 공유 링크(/share/토큰)는 로그인 없이 연다 — 수요처가 받은 주소 */}
+          {window.location.pathname.startsWith("/share/") ? (
+            <SharePage />
+          ) : (
+            <AuthGate>
+              <App />
+            </AuthGate>
+          )}
         </ToastProvider>
       </BrowserRouter>
     </QueryClientProvider>

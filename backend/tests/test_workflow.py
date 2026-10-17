@@ -1766,3 +1766,69 @@ def test_28_stream_from_sample_and_schema_file(client):
     assert r.json()["created"][0]["kind"] == "dataset" and r.json()["created"][0]["row_count"] == 2
     for a in (sample, st, created[0], r.json()["created"][0]):
         client.delete(f"/api/assets/{a['id']}")
+
+
+def test_29_version_diff_and_share_links(client):
+    """v0.19: 버전 비교(회차 · 발행본 JSON-LD 트리플 차이) · 공유 링크(O · S1 만, 만료 · 횟수 · 회수 · 등급 상승 차단, 로그인 없는 내려받기, 이력)."""
+    pid = S["pid"]
+    did = next(d["id"] for d in client.get(f"/api/processes/{pid}").json()["datasets"] if d["asset"]["kind"] == "stream") if False else S["d_stream"]
+    v = client.get(f"/api/ard/datasets/{did}/versions").json()
+    assert len(v["items"]) >= 2 and any(x["kind"] == "published" for x in v["items"]) and v["items"][-1]["kind"] == "run"
+    runs = [x for x in v["items"] if x["kind"] == "run"]
+    pub = next(x for x in v["items"] if x["kind"] == "published")
+    d = client.get(f"/api/ard/datasets/{did}/diff", params={"from_ref": runs[0]["ref"], "to_ref": runs[0]["ref"]}).json()
+    assert d["identical"] is True and d["added"] == 0 and d["removed"] == 0 and d["unchanged"] > 0
+    d = client.get(f"/api/ard/datasets/{did}/diff", params={"from_ref": pub["ref"], "to_ref": runs[0]["ref"]}).json()
+    assert d["from"]["label"].startswith("발행본") and isinstance(d["rows"], list) and "by_predicate" in d
+    assert client.get(f"/api/ard/datasets/{did}/diff", params={"from_ref": "run:999999", "to_ref": runs[0]["ref"]}).status_code == 404
+
+    # 공유 링크: O 등급(스트림 cctv.vehicle.det.v1 은 O) 파일은 되고, S2(교통사고)는 403
+    files = client.get("/api/ard/artifacts", params={"kind": "file", "size": 100, "latest_only": "true"}).json()["items"]
+    o_file = next(i for i in files if i["grade"] == "O" and i["format"] == "jsonld")
+    s2_file = next(i for i in files if (i["dataset"] or {}).get("id") == S["d_acc"] and i["format"] == "jsonld")
+    assert client.post("/api/ard/share-links", json={"kind": "file", "target_id": s2_file["id"], "days": 7, "max_downloads": 2}).status_code == 403
+    r = client.post("/api/ard/share-links", json={"kind": "file", "target_id": o_file["id"], "days": 7, "max_downloads": 2, "recipient": "○○공단 데이터팀"})
+    assert r.status_code == 201, r.text
+    link = r.json()
+    token = link["token"]
+    assert link["url"].endswith(f"/share/{token}") and link["state"] == "active" and link["grade"] == "O" and "token_hash" not in link
+    lst = client.get("/api/ard/share-links").json()
+    assert any(i["id"] == link["id"] and i["token_prefix"] == token[:8] for i in lst["items"]) and lst["grades"] == ["O", "S1"]
+    assert "token" not in lst["items"][0] or lst["items"][0].get("token") is None, "목록에는 토큰 원문이 없다"
+    # 받는 쪽: 로그인 없이 정보 · 내려받기 (Authorization 헤더 없이)
+    noauth = {"Authorization": ""}
+    info = client.get(f"/api/share/{token}", headers=noauth).json()
+    assert info["ok"] is True and info["remaining"] == 2 and info["filename"] == o_file["filename"] and info["recipient"] == "○○공단 데이터팀"
+    r = client.get(f"/api/share/{token}/download", headers=noauth)
+    assert r.status_code == 200 and len(r.content) == o_file["size"]
+    assert client.get(f"/api/share/{token}", headers=noauth).json()["remaining"] == 1
+    assert client.get(f"/api/share/{token}/download", headers=noauth).status_code == 200
+    r = client.get(f"/api/share/{token}/download", headers=noauth)
+    assert r.status_code == 410 and "횟수" in r.json()["detail"]
+    assert client.get("/api/share/nope-token", headers=noauth).status_code == 404
+    hist = client.get("/api/ard/history", params={"type": "share_download"}).json()
+    assert hist["total"] >= 2 and hist["items"][0]["payload"]["share_id"] == link["id"]
+    # 회수: 작성자(worker1)는 남의 링크 403, 관리자는 OK
+    wtok = client.post("/api/auth/login", json={"username": "worker1", "password": "worker-pass-1"}).json()["access_token"]
+    r2 = client.post("/api/ard/share-links", json={"kind": "file", "target_id": o_file["id"], "days": 1, "max_downloads": 1}).json()
+    assert client.post(f"/api/ard/share-links/{r2['id']}/revoke", headers={"Authorization": f"Bearer {wtok}"}).status_code == 403
+    assert client.post(f"/api/ard/share-links/{r2['id']}/revoke").json()["state"] == "revoked"
+    assert client.get(f"/api/share/{r2['token']}", headers=noauth).json()["ok"] is False
+    assert client.get(f"/api/share/{r2['token']}/download", headers=noauth).status_code == 410
+    # 제출 패키지 링크 + 등급 상승 차단
+    r3 = client.post("/api/ard/share-links", json={"kind": "package", "target_id": did, "days": 3, "max_downloads": 5}).json()
+    assert r3["kind"] == "package" and client.get(f"/api/share/{r3['token']}/download", headers=noauth).headers["content-type"].startswith("application/zip")
+    from app.db import SessionLocal
+    from app.models import ProcessDataset
+    with SessionLocal() as db:
+        pd = db.get(ProcessDataset, did)
+        pd.classification = {**(pd.classification or {}), "N2SF": "N2SF-S2"}
+        db.commit()
+    assert client.get(f"/api/share/{r3['token']}/download", headers=noauth).status_code == 410, "만든 뒤 S2 로 올라가면 막힌다"
+    with SessionLocal() as db:
+        pd = db.get(ProcessDataset, did)
+        pd.classification = {**(pd.classification or {}), "N2SF": "N2SF-O"}
+        db.commit()
+    assert client.get(f"/api/share/{r3['token']}/download", headers=noauth).status_code == 200
+    acts = client.get("/api/activities", params={"limit": 30}).json()
+    assert {"share_create", "share_revoke", "share_download"} <= {a["type"] for a in acts}
