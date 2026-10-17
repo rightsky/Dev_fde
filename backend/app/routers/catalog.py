@@ -92,7 +92,7 @@ def restore(resource_id: str, db: Session = Depends(get_db), user: User = Depend
 def dashboard(db: Session = Depends(get_db), user: User = Depends(current_user)) -> dict[str, Any]:
     from ..services import scope
 
-    def count(model, *where) -> int:  # noqa: ANN001
+    def count(model, *where) -> int:
         return db.scalar(select(func.count()).select_from(model).where(*where)) or 0
 
     mine = [] if scope.sees_all(user) else [Process.created_by == user.id]  # 작업자는 자기 프로세스만 센다

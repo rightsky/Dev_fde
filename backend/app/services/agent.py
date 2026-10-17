@@ -11,9 +11,10 @@ from __future__ import annotations
 import hashlib
 import secrets
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime, timedelta, timezone
-from typing import Any, Iterator
+from datetime import timedelta
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -144,7 +145,7 @@ def tool_call(db: Session, headers: Any, tool: str, arguments: dict[str, Any]) -
     except AccessDenied as exc:
         status, rec.message = "denied", str(exc)
         raise
-    except Exception as exc:  # noqa: BLE001 - 이력에 남기고 그대로 올린다
+    except Exception as exc:
         status, rec.message = "error", str(exc)[:500]
         raise
     finally:

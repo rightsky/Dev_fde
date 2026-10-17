@@ -57,7 +57,7 @@ _DATE_PATTERNS: list[tuple[str, re.Pattern[str], bool]] = [
     ("YYYYMMDDHHMM", re.compile(r"^(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])([01]\d|2[0-3])[0-5]\d$"), False),
     ("YYYYMMDD", re.compile(r"^(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$"), False),
 ]
-_DATE_NAME = re.compile(r"일시|일자|날짜|시각|시간|연도|년도|년월|기준일|등록일|수정일|발생일|DATE|DT$|_DT_|_DT|TIME|TM$|YMD|YYYYMM|YEAR", re.I)
+_DATE_NAME = re.compile(r"일시|일자|날짜|시각|시간|연도|년도|년월|기준일|등록일|수정일|발생일|DATE|DT$|_DT_|_DT|TIME|TM$|YMD|YYYYMM|YEAR", re.IGNORECASE)
 _YM = re.compile(r"^(19|20)\d{2}(0[1-9]|1[0-2])$")
 _Y = re.compile(r"^(19|20)\d{2}$")
 
@@ -66,7 +66,7 @@ _PII_NAME = re.compile(r"주민|성명|이름|전화|휴대|핸드폰|연락처|
                        r"|_nm(?![a-z])|^nm$|owner|고객|환자|학생|신청인|민원인"
                        # DB 컬럼은 영문 약어가 많다 (기관 DB 스키마 커넥터): 주민번호 · 전화 · 생년 등
                        r"|resident|rrn|jumin|(?<![a-z])ssn(?![a-z])|phone|mobile|(?<![a-z])tel(?![a-z])|cell|(?<![a-z])dob(?![a-z])|patient|customer|cust_|applicant"
-                       r"|plate|vehicle_?no|차량번호판|번호판", re.I)
+                       r"|plate|vehicle_?no|차량번호판|번호판", re.IGNORECASE)
 _PII_VALUE: list[tuple[str, re.Pattern[str]]] = [
     ("주민등록번호", re.compile(r"^\d{6}-?[1-4]\d{6}$")),
     ("휴대전화", re.compile(r"^01[016789]-?\d{3,4}-?\d{4}$")),
@@ -76,21 +76,21 @@ _PII_VALUE: list[tuple[str, re.Pattern[str]]] = [
 
 # 연계키 규칙: (코드, 컬럼명 패턴, 값 검사 함수 이름, 설명)
 KEY_RULES: list[dict[str, Any]] = [
-    {"code": "K1", "name": re.compile(r"행정구역|시도|시군구|읍면동|행정동|법정동|SIDO|SGG|SIGUNGU|EMD|ADM_?CD|ADM_?DR|BJD|지역코드|관할", re.I),
+    {"code": "K1", "name": re.compile(r"행정구역|시도|시군구|읍면동|행정동|법정동|SIDO|SGG|SIGUNGU|EMD|ADM_?CD|ADM_?DR|BJD|지역코드|관할", re.IGNORECASE),
      "value": "admin_code", "label": "행정구역"},
-    {"code": "K2", "name": re.compile(r"주소|소재지|도로명|지번|ADDR|ADRES", re.I), "value": "address", "label": "주소"},
+    {"code": "K2", "name": re.compile(r"주소|소재지|도로명|지번|ADDR|ADRES", re.IGNORECASE), "value": "address", "label": "주소"},
     # LAT · LON 은 단어 경계로만 (plate · long_name 같은 오탐 방지)
-    {"code": "K3", "name": re.compile(r"위도|경도|좌표|(?<![a-z])LAT(?:ITUDE)?(?![a-z])|(?<![a-z])LON(?:G|GITUDE)?(?![a-z])|(?<![a-z])LNG(?![a-z])|X좌표|Y좌표|X_?CRD|Y_?CRD|GEOM|WKT|XCOORD|YCOORD", re.I),
+    {"code": "K3", "name": re.compile(r"위도|경도|좌표|(?<![a-z])LAT(?:ITUDE)?(?![a-z])|(?<![a-z])LON(?:G|GITUDE)?(?![a-z])|(?<![a-z])LNG(?![a-z])|X좌표|Y좌표|X_?CRD|Y_?CRD|GEOM|WKT|XCOORD|YCOORD", re.IGNORECASE),
      "value": "coordinate", "label": "좌표"},
-    {"code": "K4", "name": re.compile(r"건축물|건물(ID|번호|관리)|BLDG|BULD|PNU|필지", re.I), "value": None, "label": "건축물ID"},
-    {"code": "K5", "name": re.compile(r"링크|LINK|노드|NODE|도로(ID|번호|코드)|ROAD_?(ID|NO|CD)|노선(ID|번호|코드)", re.I),
+    {"code": "K4", "name": re.compile(r"건축물|건물(ID|번호|관리)|BLDG|BULD|PNU|필지", re.IGNORECASE), "value": None, "label": "건축물ID"},
+    {"code": "K5", "name": re.compile(r"링크|LINK|노드|NODE|도로(ID|번호|코드)|ROAD_?(ID|NO|CD)|노선(ID|번호|코드)", re.IGNORECASE),
      "value": None, "label": "도로링크"},
-    {"code": "K6", "name": re.compile(r"차량|차대|자동차등록|VHCL|VEHICLE|CAR_?(NO|ID)|VIN|운행기록장치|OBU", re.I),
+    {"code": "K6", "name": re.compile(r"차량|차대|자동차등록|VHCL|VEHICLE|CAR_?(NO|ID)|VIN|운행기록장치|OBU", re.IGNORECASE),
      "value": "vehicle", "label": "차량ID"},
     {"code": "K7", "name": _DATE_NAME, "value": "datetime", "label": "시각"},
-    {"code": "K8", "name": re.compile(r"사업(ID|번호|코드|명)|과제|공사(ID|번호|코드)|PROJECT|PRJCT|BIZ_?(ID|NO)", re.I),
+    {"code": "K8", "name": re.compile(r"사업(ID|번호|코드|명)|과제|공사(ID|번호|코드)|PROJECT|PRJCT|BIZ_?(ID|NO)", re.IGNORECASE),
      "value": None, "label": "사업ID"},
-    {"code": "K9", "name": re.compile(r"문서|DOC|관리번호|일련번호|접수번호|순번|^ID$|_ID$|^NO$|번호$", re.I),
+    {"code": "K9", "name": re.compile(r"문서|DOC|관리번호|일련번호|접수번호|순번|^ID$|_ID$|^NO$|번호$", re.IGNORECASE),
      "value": None, "label": "문서ID"},
 ]
 _ADMIN_CODE = re.compile(r"^\d{2}(\d{3})?(\d{3})?(\d{2})?$")  # 2/5/8/10자리
@@ -524,7 +524,7 @@ def profile_file(path: Path, filename: str, max_rows: int = 50_000) -> ProfileRe
         preamble = [" ".join(_to_text(v) for v in df.iloc[i].tolist() if not _is_blank(v))[:200] for i in range(hrow)]
         tables.append({
             "name": tname,
-            "rows": int(len(body)),
+            "rows": len(body),
             "truncated": truncated,
             "header_row": orig_rows[hrow] + 1,
             "preamble": [p for p in preamble if p],

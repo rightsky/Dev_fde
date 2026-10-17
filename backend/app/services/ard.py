@@ -20,8 +20,20 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
-from ..models import (Activity, AgentCall, AgentGrant, Artifact, CatalogEntry, DiagnosisRun, Process, ProcessDataset,
-                      SerializationRun, User, ValidationRun, utcnow)
+from ..models import (
+    Activity,
+    AgentCall,
+    AgentGrant,
+    Artifact,
+    CatalogEntry,
+    DiagnosisRun,
+    Process,
+    ProcessDataset,
+    SerializationRun,
+    User,
+    ValidationRun,
+    utcnow,
+)
 from . import gates, grading, serialize
 
 PAGE_SIZES = (10, 20, 50, 100)
@@ -145,7 +157,7 @@ def artifact_items(db: Session, *, process_id: int | None = None, kind: str | No
         items = [i for i in items if term in " ".join(str(x) for x in [i["process"]["name"], (i["dataset"] or {}).get("title"), i["filename"], i["format_label"],
                                                                       (i["actor"] or {}).get("name"), i["org"]] if x).lower()]
     # 정렬: 기본 최신순. 작업자 · 조직으로 묶어 볼 때는 그 키로 먼저 정렬한다
-    key_created = lambda i: i["created_at"]  # noqa: E731
+    key_created = lambda i: i["created_at"]
     if sort == "actor":
         items.sort(key=lambda i: (((i["actor"] or {}).get("name") or "힣"), -i["created_at"].timestamp()))
     elif sort == "org":
@@ -323,9 +335,8 @@ def retention_candidates(db: Session) -> list[dict[str, Any]]:
 
 
 def apply_retention(db: Session, user: User | None) -> dict[str, Any]:
-    from . import activity
-
     from ..models import ReviewRequest
+    from . import activity
 
     cands = retention_candidates(db)
     for c in cands:

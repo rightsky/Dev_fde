@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import re
+from datetime import UTC
 from typing import Any
 
 from ..config import get_settings
@@ -276,9 +277,9 @@ def apply_term_defaults(pd: ProcessDataset, grade: str | None, by: str) -> list[
             meta[name] = status
             filled.append(name)
     if filled:
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         meta[AI_TERM_DEFAULT_KEY] = {"grade": g, "fields": sorted(set(filled) | set((meta.get(AI_TERM_DEFAULT_KEY) or {}).get("fields", []))),
-                                     "by": by, "at": datetime.now(timezone.utc).replace(microsecond=0).isoformat()}
+                                     "by": by, "at": datetime.now(UTC).replace(microsecond=0).isoformat()}
         pd.meta = meta
     return filled

@@ -15,7 +15,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ..models import Process, ProcessDataset, TaxonomyAxis, TaxonomyCode, TaxonomySet, User, utcnow
+from ..models import Process, TaxonomyAxis, TaxonomyCode, TaxonomySet, User, utcnow
 
 SET_AXES = ("F1", "F2", "F3", "F4", "F5", "F6")
 _SLUG = re.compile(r"[^a-z0-9]+")

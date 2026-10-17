@@ -11,14 +11,41 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from ..db import get_db
-from ..models import (Artifact, Asset, Attestation, DiagnosisRun, Organization, Process, ProcessDataset, Relation,
-                      SerializationRun, TaxonomyAxis, TaxonomyCode, User, ValidationRun, utcnow)
+from ..models import (
+    Artifact,
+    Asset,
+    Attestation,
+    DiagnosisRun,
+    Organization,
+    Process,
+    ProcessDataset,
+    Relation,
+    SerializationRun,
+    TaxonomyAxis,
+    TaxonomyCode,
+    User,
+    ValidationRun,
+    utcnow,
+)
 from ..security import current_user, require_admin, require_writer
-from ..serializers import (activity_out, dataset_out, diagnosis_out, mint_out, process_out, serialization_out,
-                           validation_out)
-from ..services import (activity, canonical, catalog, diagnosis, gates, grading, lineage, minting, ratelimit, scope, serialize, suggest,
-                        validation)
+from ..serializers import activity_out, dataset_out, diagnosis_out, mint_out, process_out, serialization_out, validation_out
+from ..services import (
+    activity,
+    canonical,
+    catalog,
+    diagnosis,
+    gates,
+    grading,
+    lineage,
+    minting,
+    ratelimit,
+    scope,
+    serialize,
+    suggest,
+    validation,
+)
 from ..services.reference import guideline_rules, vocab
+
 
 def _scope(request: Request, db: Session = Depends(get_db), user: User = Depends(current_user)) -> None:
     scope.enforce(request, db, user)
@@ -440,7 +467,7 @@ def _clean_meta(pd: ProcessDataset, db: Session, values: dict[str, Any]) -> dict
             raise HTTPException(422, f"{f['label']}은(는) ISO 8601 duration 이어야 합니다 (예: PT5M, P1D)")
         if f["type"] == "date" and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(v)):
             raise HTTPException(422, f"{f['label']}은(는) YYYY-MM-DD 형식이어야 합니다")
-        if f["type"] == "url" and not re.match(r"^[a-z][a-z0-9+.-]*://\S+$", str(v), re.I):
+        if f["type"] == "url" and not re.match(r"^[a-z][a-z0-9+.-]*://\S+$", str(v), re.IGNORECASE):
             raise HTTPException(422, f"{f['label']}은(는) URL 형식이어야 합니다")
         if f["type"] == "ai_term" and v not in canonical.AI_TERM_STATUS:
             raise HTTPException(422, f"{f['label']}은(는) permitted · conditional · prohibited 중 하나여야 합니다")

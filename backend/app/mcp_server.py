@@ -20,9 +20,8 @@ from starlette.responses import JSONResponse
 
 from .db import SessionLocal
 from .models import AgentCall, CatalogEntry
-from .services import agent
+from .services import agent, documents
 from .services import catalog as catalog_svc
-from .services import documents
 from .services.canonical import AI_TERM_STATUS
 
 PATH = "/api/mcp"
@@ -75,7 +74,7 @@ def _ai_terms(e: CatalogEntry) -> dict[str, Any]:
             "basis": "가이드라인 3.4.5 표 39 이용조건 명시 · 정본의 ODRL 정책(odrl:hasPolicy)"}
 
 
-def _run(ctx: Context, tool: str, args: dict[str, Any], fn) -> dict[str, Any]:  # noqa: ANN001
+def _run(ctx: Context, tool: str, args: dict[str, Any], fn) -> dict[str, Any]:
     with SessionLocal() as db:
         try:
             with agent.tool_call(db, ctx.headers, tool, args) as (key, rec):
@@ -86,7 +85,7 @@ def _run(ctx: Context, tool: str, args: dict[str, Any], fn) -> dict[str, Any]:  
 
 
 # ---- 도구 본체 (MCP 와 STEP 7 AI 활용 시뮬레이션이 같이 쓴다). (db, key, rec, **인자) → 결과
-def impl_search_datasets(db, key, rec, query: str = "", limit: int = 10, exclude_assets: set[int] | None = None):  # noqa: ANN001
+def impl_search_datasets(db, key, rec, query: str = "", limit: int = 10, exclude_assets: set[int] | None = None):
     words = [w.lower() for w in query.split() if w.strip()]
     rows = db.scalars(select(CatalogEntry).where(CatalogEntry.status == "published").order_by(CatalogEntry.published_at.desc()))
     hits = [e for e in rows if agent.listable(e, key) and e.asset_id not in (exclude_assets or set())
@@ -104,7 +103,7 @@ def impl_search_datasets(db, key, rec, query: str = "", limit: int = 10, exclude
     return {"count": len(hits), "results": results}
 
 
-def impl_get_dataset(db, key, rec, resource_id: str):  # noqa: ANN001
+def impl_get_dataset(db, key, rec, resource_id: str):
     e = _entry(db, key, resource_id, rec)
     f = e.facets or {}
     docs = catalog_svc.documents_for(db, e)
@@ -115,14 +114,14 @@ def impl_get_dataset(db, key, rec, resource_id: str):  # noqa: ANN001
             + (["data_card"] if "card" in docs else [])}
 
 
-def impl_get_metadata(db, key, rec, resource_id: str, format: str = "jsonld"):  # noqa: ANN001
+def impl_get_metadata(db, key, rec, resource_id: str, format: str = "jsonld"):
     e = _entry(db, key, resource_id, rec)
     if format not in ("jsonld", "turtle"):
         raise agent.AccessDenied("format 은 jsonld 또는 turtle 입니다")
     return {"resource_id": e.resource_id, "format": format, "content": e.jsonld if format == "jsonld" else e.turtle}
 
 
-def impl_get_schema(db, key, rec, resource_id: str):  # noqa: ANN001
+def impl_get_schema(db, key, rec, resource_id: str):
     e = _entry(db, key, resource_id, rec)
     body = catalog_svc.documents_for(db, e).get("dict")
     if not body:
@@ -132,14 +131,14 @@ def impl_get_schema(db, key, rec, resource_id: str):  # noqa: ANN001
     return {"resource_id": e.resource_id, "fields": [{k: r.get(k, "") for k in keep} for r in rows]}
 
 
-def impl_get_data_card(db, key, rec, resource_id: str):  # noqa: ANN001
+def impl_get_data_card(db, key, rec, resource_id: str):
     e = _entry(db, key, resource_id, rec)
     card = catalog_svc.documents_for(db, e).get("card")
     card = documents.strip_samples(card) if card else card
     return {"resource_id": e.resource_id, "markdown": card or "", **({} if card else {"message": "이 발행본에는 데이터 카드가 없습니다"})}
 
 
-def _label(g: Graph, node) -> str | None:  # noqa: ANN001
+def _label(g: Graph, node) -> str | None:
     if node is None:
         return None
     for p in (SKOS.prefLabel, RDFS.label):
@@ -149,7 +148,7 @@ def _label(g: Graph, node) -> str | None:  # noqa: ANN001
     return str(node)
 
 
-def impl_get_usage_terms(db, key, rec, resource_id: str):  # noqa: ANN001
+def impl_get_usage_terms(db, key, rec, resource_id: str):
     e = _entry(db, key, resource_id, rec)
     g = Graph().parse(data=e.turtle, format="turtle")
     ds = URIRef(e.iri)
@@ -256,7 +255,7 @@ async def running():
 class MCPEndpoint:
     """키가 없거나 틀린 요청은 MCP 서버에 넘기기 전에 401 로 돌려보낸다."""
 
-    async def __call__(self, scope, receive, send) -> None:  # noqa: ANN001
+    async def __call__(self, scope, receive, send) -> None:
         headers = {k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope.get("headers", [])}
         raw = agent.bearer(headers)
         with SessionLocal() as db:

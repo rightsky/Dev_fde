@@ -109,7 +109,7 @@ async def sync_connector(cid: int, db: Session = Depends(get_db), user: User = D
         activity.log(db, "connector_sync", f"DB 스키마 동기화 실패: {c.name}", user=user, payload={"connector_id": c.id, "error": c.last_error})
         db.commit()
         raise HTTPException(502, c.last_error) from exc
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         c.status, c.last_error, c.last_tested_at = "error", f"{type(exc).__name__}: {exc}"[:400], utcnow()
         activity.log(db, "connector_sync", f"DB 스키마 동기화 실패: {c.name}", user=user, payload={"connector_id": c.id, "error": c.last_error})
         db.commit()

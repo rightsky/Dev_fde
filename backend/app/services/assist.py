@@ -50,7 +50,6 @@ def rule_drafts(pd: ProcessDataset) -> dict[str, dict[str, Any]]:
     cols = [(t["name"], c) for t in (pd.asset.profile or {}).get("tables", []) for c in t.get("columns", [])]
     missing = [(t, c) for t, c in cols if c.get("missing")]
     if missing:
-        total = sum(c["count"] for _t, c in cols) or 1
         parts = [f"{c['name']} {c['null_rate'] * 100:.1f}%" for _t, c in sorted(missing, key=lambda x: -x[1]["null_rate"])[:8]]
         markers = sorted({m["marker"] for _t, c in missing for m in c.get("missing_markers", [])})
         text = (f"결측 컬럼 {len(missing)}/{len(cols)}개 (컬럼별 결측률: {', '.join(parts)}" + (" 외" if len(missing) > 8 else "") + "). "
@@ -144,7 +143,7 @@ def _tool(fields: list[dict[str, Any]]) -> dict[str, Any]:
             "input_schema": {"type": "object", "properties": props, "required": [f["name"] for f in fields]}}
 
 
-def client():  # noqa: ANN201
+def client():
     """Claude API 클라이언트 (키·타임아웃은 설정에서)."""
     import anthropic
 
@@ -165,7 +164,7 @@ def _call(system: str, user: str, tool: dict[str, Any]) -> tuple[dict[str, Any],
     if block is not None:
         return dict(block.input), usage
     text = "".join(getattr(b, "text", "") for b in msg.content)
-    m = re.search(r"\{.*\}", text, re.S)
+    m = re.search(r"\{.*\}", text, re.DOTALL)
     if m:
         try:
             data = json.loads(m.group(0))

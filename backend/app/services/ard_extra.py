@@ -28,7 +28,7 @@ SHARE_MAX_DOWNLOADS = 100
 # ----------------------------------------------------------------- 버전 비교
 def versions(db: Session, pd: ProcessDataset) -> list[dict[str, Any]]:
     """이 데이터셋의 JSON-LD 가 있는 변환 회차 + 발행본."""
-    users = ard._users(db)  # noqa: SLF001
+    users = ard._users(db)
     out = []
     runs = db.scalars(select(SerializationRun).where(SerializationRun.process_id == pd.process_id).order_by(SerializationRun.id.desc())).all()
     for sr in runs:
@@ -152,7 +152,7 @@ def resolve(db: Session, token: str) -> tuple[ShareLink | None, str | None]:
     # 만든 뒤 등급이 올라갔으면 막는다 (N²SF 재분류 반영)
     pd = db.get(ProcessDataset, link.dataset_id) if link.dataset_id else None
     p = db.get(Process, link.process_id) if link.process_id else None
-    grade = ard._dataset_grade(pd) if pd else (ard._process_grade(p) if p else None)  # noqa: SLF001
+    grade = ard._dataset_grade(pd) if pd else (ard._process_grade(p) if p else None)
     if grade and grade not in SHARE_GRADES:
         return link, f"산출물 등급이 {grade} 로 바뀌어 이 링크로는 내려받을 수 없습니다"
     if p is not None and p.status == "trashed":

@@ -1,4 +1,5 @@
 """DB 스키마 이관(Alembic) 검사."""
+from datetime import UTC
 from pathlib import Path
 
 from alembic.autogenerate import compare_metadata
@@ -8,7 +9,6 @@ from sqlalchemy import inspect, text
 from app import models  # noqa: F401
 from app.db import Base, _make_engine
 from app.migrate import BASELINE, upgrade
-
 
 LATER_TABLES = {"agent_key", "agent_call", "review_request", "simulation_run", "org_grade_entry", "agent_grant", "db_connector", "share_link", "taxonomy_set"}  # 0002 (v0.5) · 0003 (v0.7) · 0004 (v0.9)
 
@@ -64,4 +64,4 @@ def test_utc_datetime_normalizes_offsets(tmp_path):
     with Session(eng) as s:
         got = s.scalar(select(Organization).where(Organization.code == "TZ")).created_at
         assert got.tzinfo is not None and got.utcoffset() == timedelta(0)
-        assert got == datetime(2026, 10, 17, 0, 0, tzinfo=timezone.utc)
+        assert got == datetime(2026, 10, 17, 0, 0, tzinfo=UTC)

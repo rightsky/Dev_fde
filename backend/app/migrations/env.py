@@ -9,7 +9,7 @@ from app.db import Base, engine
 target_metadata = Base.metadata
 
 
-def render_item(type_, obj, autogen_context):  # noqa: ANN001
+def render_item(type_, obj, autogen_context):
     """UTC 보정 타입(UTCDateTime)은 DB 에서는 timezone 붙은 DateTime 이다. 이관 파일이 앱 코드에 기대지 않게 그렇게 적는다."""
     from app.models import UTCDateTime
 
@@ -34,7 +34,7 @@ def run_migrations_online() -> None:
         _run(connectable)
 
 
-def _run(conn) -> None:  # noqa: ANN001
+def _run(conn) -> None:
     context.configure(connection=conn, target_metadata=target_metadata, compare_type=True, render_item=render_item,
                       render_as_batch=conn.dialect.name == "sqlite")
     with context.begin_transaction():

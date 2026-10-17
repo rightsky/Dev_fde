@@ -12,10 +12,21 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..db import get_db
-from ..models import (Activity, Asset, MintRecord, Organization, ProcessDataset, Process, TaxonomyAxis, TaxonomyCode, TaxonomySet,
-                      User, utcnow)
-from ..security import (create_token, current_user, hash_password, require_admin, require_writer, verify_password)
-from ..serializers import activity_out, asset_out, axis_out, mint_out, org_out, user_out
+from ..models import (
+    Activity,
+    Asset,
+    MintRecord,
+    Organization,
+    Process,
+    ProcessDataset,
+    TaxonomyAxis,
+    TaxonomyCode,
+    TaxonomySet,
+    User,
+    utcnow,
+)
+from ..security import create_token, current_user, hash_password, require_admin, require_writer, verify_password
+from ..serializers import activity_out, asset_out, mint_out, org_out, user_out
 from ..services import activity, canonical, minting, profiling, serialize, storage, validation
 from ..services.reference import vocab
 
@@ -498,7 +509,7 @@ def _create_stream(db: Session, body: StreamIn, user: User, *, via: str = "form"
         raise HTTPException(422, "시간 해상도는 ISO 8601 duration 이어야 합니다 (예: PT5M)")
     if body.org_id and db.get(Organization, body.org_id) is None:
         raise HTTPException(422, "제공기관을 찾을 수 없습니다")
-    if body.endpoint_url and not re.match(r"^[a-z][a-z0-9+.-]*://\S+$", body.endpoint_url.strip(), re.I):
+    if body.endpoint_url and not re.match(r"^[a-z][a-z0-9+.-]*://\S+$", body.endpoint_url.strip(), re.IGNORECASE):
         raise HTTPException(422, "엔드포인트는 URL 형식이어야 합니다 (예: kafka://broker:9092/topic)")
     fields = [f.model_dump() for f in body.fields if f.name.strip()]
     sample = None

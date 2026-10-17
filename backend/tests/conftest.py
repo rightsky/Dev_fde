@@ -1,4 +1,3 @@
-import io
 import os
 import tempfile
 from pathlib import Path
@@ -12,12 +11,11 @@ os.environ["FDE_ADMIN_USERNAME"] = "admin"
 os.environ["FDE_ADMIN_PASSWORD"] = "test-password-1"
 os.environ["FDE_SECRET_KEY"] = "test-secret-key-test-secret-key-0123456789"
 
-from fastapi.testclient import TestClient  # noqa: E402
+from fastapi.testclient import TestClient
+from sqlalchemy import text
 
-from sqlalchemy import text  # noqa: E402
-
-from app.db import Base, engine  # noqa: E402
-from app.main import app  # noqa: E402
+from app.db import Base, engine
+from app.main import app
 
 
 @pytest.fixture(scope="session")

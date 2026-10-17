@@ -239,7 +239,7 @@ def _b_web_api(ctx: _Ctx, pd: ProcessDataset):
     ep = _endpoint(ctx, pd)
     if not ep:
         return False, "API 엔드포인트 미선언"
-    if re.match(r"^https?://", ep, re.I):
+    if re.match(r"^https?://", ep, re.IGNORECASE):
         return True, f"API 엔드포인트 {ep}"
     return "partial", f"엔드포인트 {ep} — 웹(http) 기반 API 가 아님"
 
@@ -466,7 +466,6 @@ def preview(db: Session, process: Process, dataset_id: int | None = None) -> dic
     rules = guideline_rules()
     ctx = _Ctx(db, process)
     items = _evaluate_all(ctx, rules)
-    by_rule = {r["id"]: r for r in rules["rules"]}
     s_stale = serialize.stale_reason(db, process, ctx.sr, ctx.vr, ctx.v_stale) if ctx.sr else "변환 산출물 없음"
     provisional: set[str] = set()
     if s_stale:
@@ -523,7 +522,6 @@ def run(db: Session, process: Process, user: User) -> DiagnosisRun:
     rules = guideline_rules()
     ctx = _Ctx(db, process)
     started = utcnow()
-    scoring = rules["scoring"]
     items = _evaluate_all(ctx, rules)
     scored = [i for i in items if i["status"] != "na"]
     total = sum(i["score"] for i in scored)
