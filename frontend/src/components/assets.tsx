@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
-import { useReference } from "../auth";
+import { useAuth, useReference } from "../auth";
 import { ProfileTable } from "../studio/shared";
 import type { Asset } from "../types";
 import { Badge, Banner, Button, Empty, Field, KeyPill, Modal, QueryState, Tabs, cx, fmtDateTime, fmtNum, shortHash, useToast } from "../ui";
@@ -95,6 +95,20 @@ export function UploadZone({ onUploaded, disabled }: { onUploaded: (created: Ass
 }
 
 const FIELD_TYPES = ["string", "integer", "number", "datetime", "boolean"];
+const RESOLUTIONS = [
+  { v: "PT1S", l: "1초 (PT1S)" }, { v: "PT10S", l: "10초 (PT10S)" }, { v: "PT1M", l: "1분 (PT1M)" }, { v: "PT5M", l: "5분 (PT5M)" },
+  { v: "PT10M", l: "10분 (PT10M)" }, { v: "PT1H", l: "1시간 (PT1H)" }, { v: "P1D", l: "1일 (P1D)" }, { v: "", l: "불규칙 · 이벤트 발생 시" },
+];
+/** 흔한 공공 스트림 예시. 「예시로 채우기」로 넣고 고쳐 쓰게 한다 */
+const STREAM_EXAMPLES: { label: string; name: string; description: string; resolution: string; eventTime: string; endpoint: string; fields: { name: string; type: string }[] }[] = [
+  { label: "CCTV 차량 검지", name: "cctv.vehicle.det.v1", description: "도로 CCTV 영상에서 검지한 차량 이벤트 (영상 본체는 저장하지 않음)", resolution: "PT1S", eventTime: "event_time",
+    endpoint: "kafka://broker:9092/cctv.vehicle.det.v1",
+    fields: [{ name: "event_time", type: "datetime" }, { name: "cctv_id", type: "string" }, { name: "link_id", type: "string" }, { name: "vehicle_type", type: "string" }, { name: "speed_kmh", type: "number" }] },
+  { label: "기상 관측(AWS)", name: "weather.aws.obs.v1", description: "자동기상관측장비 1분 관측값", resolution: "PT1M", eventTime: "obs_time", endpoint: "https://api.example.go.kr/aws/stream",
+    fields: [{ name: "obs_time", type: "datetime" }, { name: "station_id", type: "string" }, { name: "temp_c", type: "number" }, { name: "rain_mm", type: "number" }, { name: "wind_ms", type: "number" }] },
+  { label: "교통량 검지기(VDS)", name: "vds.traffic.volume.v1", description: "차량검지기 5분 집계 교통량 · 속도", resolution: "PT5M", eventTime: "collected_at", endpoint: "kafka://broker:9092/vds.traffic.volume.v1",
+    fields: [{ name: "collected_at", type: "datetime" }, { name: "vds_id", type: "string" }, { name: "link_id", type: "string" }, { name: "volume", type: "integer" }, { name: "avg_speed", type: "number" }] },
+];
 
 /** 스트림 등록. 스트림은 값을 읽지 않고 메타데이터(스키마·시간 규격)만 등록한다. */
 export function StreamModal({ onClose, onCreated }: { onClose: () => void; onCreated: (a: Asset) => void }) {
@@ -119,7 +133,7 @@ export function StreamModal({ onClose, onCreated }: { onClose: () => void; onCre
         description: description.trim() || undefined,
         org_id: orgId ? Number(orgId) : null,
         temporal_resolution: resolution.trim() || undefined,
-        event_time_column: eventTime.trim() || undefined,
+        event_time_column: eventTime.trim() || fields.find((f) => f.type === "datetime" && f.name.trim())?.name.trim() || undefined,
         endpoint_url: endpoint.trim() || undefined,
         timezone: timezone.trim() || undefined,
         fields: fields.filter((f) => f.name.trim()),
@@ -150,9 +164,32 @@ export function StreamModal({ onClose, onCreated }: { onClose: () => void; onCre
         </>
       }
     >
-      <p className="small muted mb-8">실시간 스트림은 데이터 본체를 올리지 않습니다. 토픽 이름과 스키마, 시간 규격만 등록하면 필드 이름에서 연계키 후보를 계산합니다.</p>
+      <p className="small muted mb-8">
+        실시간 스트림은 데이터 본체를 올리지 않습니다. <b>이름만 있으면 등록</b>되고, 나머지는 나중에 STEP 3 에서 채워도 됩니다. 스키마 필드 이름에서 연계키 후보를 계산하니 필드는 적어 두는 게 좋습니다.
+      </p>
+      <div className="row wrap gap-4 mb-12" style={{ alignItems: "center" }}>
+        <span className="small dim">예시로 채우기:</span>
+        {STREAM_EXAMPLES.map((ex) => (
+          <button
+            key={ex.name}
+            type="button"
+            className="chip"
+            onClick={() => {
+              setName(ex.name);
+              setDescription(ex.description);
+              setResolution(ex.resolution);
+              setEventTime(ex.eventTime);
+              setEndpoint(ex.endpoint);
+              setFields(ex.fields.map((f) => ({ ...f })));
+            }}
+          >
+            {ex.label}
+          </button>
+        ))}
+        <span className="tiny muted">넣은 뒤 이름 · 필드를 기관 것으로 고치세요</span>
+      </div>
       <div className="grid c2">
-        <Field label="스트림(토픽) 이름" hint="예: cctv.vehicle.det.v1">
+        <Field label="스트림(토픽) 이름" hint="기관에서 부르는 이름 그대로. 예: cctv.vehicle.det.v1, 교통량_VDS_5분">
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
         </Field>
         <Field label="제공기관">
@@ -165,24 +202,48 @@ export function StreamModal({ onClose, onCreated }: { onClose: () => void; onCre
             ))}
           </select>
         </Field>
-        <Field label="시간 해상도 (dcat:temporalResolution)" hint="ISO 8601 duration — 예: PT1S, PT5M">
-          <input className="input mono" value={resolution} onChange={(e) => setResolution(e.target.value)} placeholder="PT5M" />
+        <Field label="데이터가 들어오는 간격 (시간 해상도)" hint="고르면 ISO 8601 duration 으로 저장됩니다 (dcat:temporalResolution)">
+          <div className="row gap-4">
+            <select className="select" value={RESOLUTIONS.some((r) => r.v === resolution) ? resolution : "__custom"} onChange={(e) => setResolution(e.target.value === "__custom" ? "PT" : e.target.value)}>
+              {RESOLUTIONS.map((r) => (
+                <option key={r.v || "none"} value={r.v}>
+                  {r.l}
+                </option>
+              ))}
+              <option value="__custom">직접 입력…</option>
+            </select>
+            {!RESOLUTIONS.some((r) => r.v === resolution) && (
+              <input className="input mono" style={{ width: 120 }} value={resolution} onChange={(e) => setResolution(e.target.value)} placeholder="PT30S" aria-label="시간 해상도 직접 입력" />
+            )}
+          </div>
         </Field>
-        <Field label="event-time 컬럼" hint="이벤트 발생 시각을 담은 필드 이름">
-          <input className="input mono" value={eventTime} onChange={(e) => setEventTime(e.target.value)} placeholder="event_time" />
+        <Field label="시각이 담긴 필드 (event-time)" hint="아래 스키마 필드 중 datetime 타입 하나. 비우면 첫 datetime 필드를 씁니다">
+          <select className="select" value={eventTime} onChange={(e) => setEventTime(e.target.value)}>
+            <option value="">— 첫 datetime 필드 —</option>
+            {fields.filter((f) => f.name.trim()).map((f) => (
+              <option key={f.name} value={f.name}>
+                {f.name} ({f.type})
+              </option>
+            ))}
+            {eventTime && !fields.some((f) => f.name === eventTime) && <option value={eventTime}>{eventTime}</option>}
+          </select>
         </Field>
-        <Field label="엔드포인트 URL (dcat:endpointURL)" hint="예: kafka://broker:9092/topic">
-          <input className="input mono" value={endpoint} onChange={(e) => setEndpoint(e.target.value)} />
+        <Field label="엔드포인트 URL (선택)" hint="브로커 · API 주소. 모르면 비워 두세요 (dcat:endpointURL)">
+          <input className="input mono" value={endpoint} onChange={(e) => setEndpoint(e.target.value)} placeholder="kafka://broker:9092/topic 또는 https://…" />
         </Field>
         <Field label="타임존">
-          <input className="input" value={timezone} onChange={(e) => setTimezone(e.target.value)} />
+          <select className="select" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
+            {["Asia/Seoul", "UTC"].map((z) => (
+              <option key={z}>{z}</option>
+            ))}
+          </select>
         </Field>
       </div>
       <Field label="설명" style={{ marginTop: 12 }}>
         <textarea className="textarea" value={description} onChange={(e) => setDescription(e.target.value)} />
       </Field>
       <div className="section-title">
-        스키마 필드 <span className="muted small">이름과 타입</span>
+        스키마 필드 <span className="muted small">이름과 타입 · 시각 필드는 datetime, ID · 코드는 string</span>
       </div>
       <div className="col">
         {fields.map((f, i) => (
@@ -211,6 +272,9 @@ export function StreamModal({ onClose, onCreated }: { onClose: () => void; onCre
 /** 원천 1건의 프로파일 상세 (표·컬럼·표본 행·연계키 후보·경고) */
 export function AssetProfileModal({ assetId, onClose }: { assetId: number; onClose: () => void }) {
   const q = useQuery({ queryKey: ["assets", assetId], queryFn: () => api.asset(assetId) });
+  const qc = useQueryClient();
+  const toast = useToast();
+  const { canWrite } = useAuth();
   const [tab, setTab] = useState(0);
   const [view, setView] = useState<"columns" | "rows">("columns");
   const a = q.data;
@@ -314,7 +378,25 @@ export function AssetProfileModal({ assetId, onClose }: { assetId: number; onClo
                   </div>
                 )}
                 {view === "columns" || a.kind === "stream" ? (
-                  <ProfileTable table={t} asset={a} />
+                  <ProfileTable
+                    table={t}
+                    asset={a}
+                    onEditSamples={
+                      canWrite
+                        ? async (column, samples) => {
+                            try {
+                              await api.updateColumn(a.id, t.name, column, { samples });
+                              await qc.invalidateQueries({ queryKey: ["assets"] });
+                              void qc.invalidateQueries({ queryKey: ["process"] });
+                              toast.ok(`예시값 저장 — ${column}`);
+                            } catch (e) {
+                              toast.error(e);
+                              throw e;
+                            }
+                          }
+                        : undefined
+                    }
+                  />
                 ) : (
                   <div className="table-wrap" style={{ maxHeight: 360, overflow: "auto" }}>
                     <table className="table">

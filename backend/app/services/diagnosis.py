@@ -499,7 +499,9 @@ def preview(db: Session, process: Process, dataset_id: int | None = None) -> dic
                     "provisional": it["id"] in provisional, "route": it["route"],
                     "detail": row["detail"] if row else (it["evidence"][0] if it["evidence"] else None),
                     "focus": (row or {}).get("focus") or (it["route"] or {}).get("focus"),
-                    "dataset_status": row["status"] if row else None})
+                    "dataset_status": row["status"] if row else None,
+                    # 전체 화면(STEP 8)이 데이터셋 행마다 "지금 판정"을 겹쳐 보이도록 데이터셋별 판정도 준다
+                    "datasets": [{"id": d["id"], "status": d["status"], "detail": d.get("detail")} for d in it["datasets"]] if dataset_id is None else []})
     counts = {k: 0 for k in ("met", "partial", "unmet", "pending", "na")}
     for o in out:
         counts[o["status"]] += 1

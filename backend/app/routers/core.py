@@ -387,19 +387,74 @@ def update_asset(asset_id: int, body: AssetPatch, db: Session = Depends(get_db),
     return asset_out(a, detail=True)
 
 
-@router.delete("/assets/{asset_id}")
-def delete_asset(asset_id: int, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+class ColumnPatch(BaseModel):
+    """프로파일 컬럼의 예시값 · 설명을 담당자가 직접 고친다 (값을 읽지 못한 DB 스키마 · 스트림, 또는 잘못 뽑힌 예시값)."""
+    samples: list[str] | None = Field(default=None, max_length=10)
+    comment: str | None = Field(default=None, max_length=500)
+
+
+@router.patch("/assets/{asset_id}/columns")
+def update_column(asset_id: int, table: str, column: str, body: ColumnPatch, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
     a = _asset_or_404(db, asset_id)
-    if minting.minted_record(db, a.id):
-        raise HTTPException(409, "발행 ID 가 발급된 원천은 삭제할 수 없습니다 (카탈로그 추적성 유지)")
+    prof = dict(a.profile or {})
+    tables = [dict(t) for t in prof.get("tables", [])]
+    hit = None
+    for t in tables:
+        if t.get("name") != table:
+            continue
+        cols = [dict(c) for c in t.get("columns", [])]
+        for c in cols:
+            if c.get("name") == column:
+                hit = c
+                if body.samples is not None:
+                    c["samples"] = [str(x).strip()[:200] for x in body.samples if str(x).strip()][:10]
+                    c["samples_edited"] = True  # 사람이 적은 예시값 — 프로파일 통계가 아님
+                    c["max_len"] = max([c.get("max_len", 0)] + [len(x) for x in c["samples"]])
+                if body.comment is not None:
+                    c["comment"] = body.comment.strip() or None
+        t["columns"] = cols
+    if hit is None:
+        raise HTTPException(404, "컬럼을 찾을 수 없습니다")
+    prof["tables"] = tables
+    a.profile = prof
+    activity.log(db, "asset_column_edit", f"원천 컬럼 예시값 수정 — {a.name} · {table}.{column}", user=user,
+                 payload={"asset_id": a.id, "table": table, "column": column, "samples": body.samples, "comment": body.comment})
+    db.commit()
+    return asset_out(a, detail=True)
+
+
+@router.delete("/assets/{asset_id}")
+def delete_asset(asset_id: int, force: bool = False, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    """원천 삭제. 기본은 발행 ID 발급 · 조합 포함 원천을 보호한다. force 는 관리자만: 보호를 무시하고 모든 프로세스의 선택 ·
+    조합 · 관계에서 떼어낸 뒤 지운다 (발행본 · 민팅 대장 · 활동 로그는 추적성을 위해 남긴다). 업로드 원본 파일도 지운다."""
+    a = _asset_or_404(db, asset_id)
+    if force and user.role != "admin":
+        raise HTTPException(403, "강제 삭제는 관리자만 할 수 있습니다")
     used = db.execute(select(Process.name).join(ProcessDataset, ProcessDataset.process_id == Process.id)
                       .where(ProcessDataset.asset_id == a.id, ProcessDataset.in_combo.is_(True),
                              Process.status != "trashed")).scalars().all()
-    if used:
-        raise HTTPException(409, "조합에 포함된 원천입니다 — 먼저 조합에서 제외하세요: " + ", ".join(sorted(set(used))[:5]))
-    for pd in db.scalars(select(ProcessDataset).where(ProcessDataset.asset_id == a.id)).all():
+    if not force:
+        if minting.minted_record(db, a.id):
+            raise HTTPException(409, "발행 ID 가 발급된 원천은 삭제할 수 없습니다 (카탈로그 추적성 유지). 관리자는 「강제 삭제」로 지울 수 있습니다")
+        if used:
+            raise HTTPException(409, "조합에 포함된 원천입니다 — 먼저 조합에서 제외하세요: " + ", ".join(sorted(set(used))[:5]))
+    from ..models import Relation
+    pds = db.scalars(select(ProcessDataset).where(ProcessDataset.asset_id == a.id)).all()
+    pd_ids = [pd.id for pd in pds]
+    if pd_ids:
+        for rel in db.scalars(select(Relation).where((Relation.source_id.in_(pd_ids)) | (Relation.target_id.in_(pd_ids)))).all():
+            db.delete(rel)
+    for pd in pds:
         db.delete(pd)
+    removed_file = False
+    if a.storage_key and not db.scalar(select(func.count()).select_from(Asset).where(Asset.storage_key == a.storage_key, Asset.id != a.id, Asset.deleted_at.is_(None))):
+        try:
+            storage.path_of(a.storage_key).unlink(missing_ok=True)
+            removed_file = True
+        except (ValueError, OSError):
+            pass
     a.deleted_at = utcnow()
-    activity.log(db, "asset_delete", f"원천 삭제 — {a.name}", user=user, payload={"asset_id": a.id})
+    activity.log(db, "asset_delete", ("원천 강제 삭제 — " if force else "원천 삭제 — ") + a.name, user=user,
+                 payload={"asset_id": a.id, "force": force, "detached_processes": sorted(set(used)), "file_removed": removed_file})
     db.commit()
-    return {"ok": True}
+    return {"ok": True, "force": force, "detached_processes": sorted(set(used))}

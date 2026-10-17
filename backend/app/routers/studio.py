@@ -1293,6 +1293,13 @@ def rerun_pipeline(pid: int, db: Session = Depends(get_db), user: User = Depends
     return {**out, "state": gates.state(db, p)}
 
 
+@router.get("/processes/{pid}/diagnosis-preview")
+def process_diagnosis_preview(pid: int, db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
+    """즉시 진단(프로세스 전체) — 저장된 진단이 최신이 아닐 때 STEP 8 이 항목 · 데이터셋마다 '지금 판정'을 겹쳐 보인다. 기록은 남기지 않는다."""
+    p = _process(db, pid)
+    return diagnosis.preview(db, p, None)
+
+
 @router.get("/processes/{pid}/diagnosis-runs/latest")
 def latest_diagnosis(pid: int, db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
     p = _process(db, pid)

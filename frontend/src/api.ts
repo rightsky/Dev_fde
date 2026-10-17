@@ -208,7 +208,9 @@ export const api = {
     fields: { name: string; type: string }[];
   }) => post<T.Asset>("/assets/streams", body),
   updateAsset: (id: number, body: { name?: string; description?: string; org_id?: number | null }) => patch<T.Asset>(`/assets/${id}`, body),
-  deleteAsset: (id: number) => del<{ ok: boolean }>(`/assets/${id}`),
+  deleteAsset: (id: number, force = false) => del<{ ok: boolean; force: boolean; detached_processes: string[] }>(`/assets/${id}${force ? "?force=true" : ""}`),
+  updateColumn: (id: number, table: string, column: string, body: { samples?: string[]; comment?: string }) =>
+    patch<T.Asset>(`/assets/${id}/columns?table=${encodeURIComponent(table)}&column=${encodeURIComponent(column)}`, body),
 
   // 프로세스
   processes: (status?: "active" | "completed" | "trashed") => get<T.Process[]>("/processes", { status }),
@@ -307,6 +309,7 @@ export const api = {
   // STEP 8
   runDiagnosis: (pid: number) => post<{ run: T.DiagRun; state: T.ProcessState }>(`/processes/${pid}/diagnosis-runs`),
   diagnosisPreview: (did: number) => get<T.DiagPreview>(`/datasets/${did}/diagnosis-preview`),
+  processDiagnosisPreview: (pid: number) => get<T.DiagPreview>(`/processes/${pid}/diagnosis-preview`),
   rerun: (pid: number) => post<T.RerunResult>(`/processes/${pid}/rerun`),
   latestDiagnosis: (pid: number) => get<T.DiagLatest>(`/processes/${pid}/diagnosis-runs/latest`),
   attest: (pid: number, itemId: string, body: { status: "met" | "partial" | "unmet" | "na"; note?: string; evidence?: string }) =>

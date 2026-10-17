@@ -189,16 +189,21 @@ export function AssetsPage() {
 function AssetTable(props: { assets: Asset[]; fresh: number[]; canWrite: boolean; onProfile: (id: number) => void }) {
   const qc = useQueryClient();
   const toast = useToast();
+  const { isAdmin } = useAuth();
   const [busyId, setBusyId] = useState<number | null>(null);
+  // 보호 조건(발행 ID · 조합 포함)에 걸린 원천: 관리자에게만 「강제 삭제」를 열어 준다
+  const [forceOffer, setForceOffer] = useState<number | null>(null);
 
-  const remove = async (a: Asset) => {
+  const remove = async (a: Asset, force = false) => {
     setBusyId(a.id);
     try {
-      await api.deleteAsset(a.id);
+      const r = await api.deleteAsset(a.id, force);
       await refreshAssets(qc);
-      toast.ok(`원천 삭제 — ${a.name}`);
+      setForceOffer(null);
+      toast.ok(force ? `원천 강제 삭제 — ${a.name}${r.detached_processes.length ? ` (조합에서 떼어냄: ${r.detached_processes.join(", ")})` : ""}` : `원천 삭제 — ${a.name}`);
     } catch (e) {
       toast.error(e); // 발행 ID 발급·조합 포함 등 삭제할 수 없는 사유는 서버 문구 그대로 보여 준다
+      if (!force && isAdmin && (e as { status?: number })?.status === 409) setForceOffer(a.id);
     } finally {
       setBusyId(null);
     }
@@ -229,8 +234,10 @@ function AssetTable(props: { assets: Asset[]; fresh: number[]; canWrite: boolean
               fresh={props.fresh.includes(a.id)}
               canWrite={props.canWrite}
               busy={busyId === a.id}
+              forceOffer={forceOffer === a.id}
               onProfile={() => props.onProfile(a.id)}
               onDelete={() => remove(a)}
+              onForceDelete={() => remove(a, true)}
             />
           ))}
         </tbody>
@@ -239,7 +246,7 @@ function AssetTable(props: { assets: Asset[]; fresh: number[]; canWrite: boolean
   );
 }
 
-function AssetRow(props: { asset: Asset; fresh: boolean; canWrite: boolean; busy: boolean; onProfile: () => void; onDelete: () => void }) {
+function AssetRow(props: { asset: Asset; fresh: boolean; canWrite: boolean; busy: boolean; forceOffer: boolean; onProfile: () => void; onDelete: () => void; onForceDelete: () => void }) {
   const { key_labels } = useReference();
   const a = props.asset;
   const isStream = a.kind === "stream";
@@ -310,9 +317,15 @@ function AssetRow(props: { asset: Asset; fresh: boolean; canWrite: boolean; busy
           <Button size="sm" onClick={props.onProfile}>
             프로파일
           </Button>
-          {props.canWrite && (
+          {props.canWrite && !props.forceOffer && (
             <ConfirmButton size="sm" busy={props.busy} onConfirm={props.onDelete}>
               삭제
+            </ConfirmButton>
+          )}
+          {props.forceOffer && (
+            <ConfirmButton size="sm" variant="danger" busy={props.busy} onConfirm={props.onForceDelete} confirmLabel="정말 강제 삭제"
+              title="발행 ID · 조합 포함 보호를 무시하고 지웁니다. 모든 프로세스의 선택 · 조합 · 관계에서 떼어내며, 발행본 · 민팅 대장 · 활동 로그는 남습니다">
+              강제 삭제
             </ConfirmButton>
           )}
         </div>
