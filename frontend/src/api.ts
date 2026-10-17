@@ -327,6 +327,13 @@ export const api = {
   ardHistory: (params: Record<string, string | number | boolean | undefined>) => get<T.Paged<T.ArdHistory>>("/ard/history", params),
   ardRetention: () => get<{ candidates: { run_id: number; process: { id: number; name: string }; started_at: string; files: number; size: number }[]; keep: number; size: number }>("/ard/retention"),
   ardRetentionApply: () => post<{ deleted: number; runs: number[]; keep: number }>("/ard/retention/apply", {}),
+  ardVersions: (did: number) => get<{ dataset: { id: number; title: string }; items: T.ArdVersion[] }>(`/ard/datasets/${did}/versions`),
+  ardDiff: (did: number, fromRef: string, toRef: string) => get<T.ArdDiff>(`/ard/datasets/${did}/diff`, { from_ref: fromRef, to_ref: toRef }),
+  shareLinks: (state?: string) => get<{ items: T.ShareLink[]; max_days: number; max_downloads: number; grades: string[] }>("/ard/share-links", { state }),
+  createShareLink: (body: { kind: string; target_id: number; dataset_id?: number | null; days: number; max_downloads: number; recipient?: string | null; note?: string | null }) =>
+    post<T.ShareLink & { url: string; token: string }>("/ard/share-links", body),
+  revokeShareLink: (id: number) => post<T.ShareLink>(`/ard/share-links/${id}/revoke`, {}),
+  shareInfo: (token: string) => get<T.ShareInfo>(`/share/${encodeURIComponent(token)}`),
   catalogEntry: (rid: string) => get<T.CatalogEntry>(`/catalog/${encodeURIComponent(rid)}`),
   withdraw: (rid: string) => post<T.CatalogEntry>(`/catalog/${encodeURIComponent(rid)}/withdraw`),
   republish: (rid: string) => post<T.CatalogEntry>(`/catalog/${encodeURIComponent(rid)}/restore`),
@@ -336,6 +343,7 @@ export const api = {
 export const downloads = {
   ard: (kind: string, id: number, datasetId?: number | null) => `/ard/download?kind=${kind}&id=${id}${datasetId != null ? `&dataset_id=${datasetId}` : ""}`,
   ardPackage: (did: number) => `/ard/datasets/${did}/package`,
+  shareDownload: (token: string) => `/share/${encodeURIComponent(token)}/download`,
   ardHistoryCsv: (params: string) => `/ard/history?format=csv${params ? "&" + params : ""}`,
   artifact: (aid: number) => `/artifacts/${aid}?download=true`,
   runZip: (runId: number) => `/serialization-runs/${runId}/download`,

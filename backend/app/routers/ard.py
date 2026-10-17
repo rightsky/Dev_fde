@@ -5,13 +5,14 @@ import re
 from typing import Any
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Process, ProcessDataset, User
-from ..security import current_user, require_admin
-from ..services import activity, ard, scope
+from ..models import Process, ProcessDataset, ShareLink, User
+from ..security import current_user, require_admin, require_writer
+from ..services import activity, ard, ard_extra, scope
 
 router = APIRouter()
 
@@ -125,3 +126,124 @@ def retention_apply(db: Session = Depends(get_db), user: User = Depends(require_
     r = ard.apply_retention(db, user)
     db.commit()
     return r
+
+
+# ----------------------------------------------------------------- 버전 비교 (v0.19)
+@router.get("/ard/datasets/{did}/versions")
+def dataset_versions(did: int, db: Session = Depends(get_db), user: User = Depends(current_user)) -> dict[str, Any]:
+    pd = db.get(ProcessDataset, did)
+    if pd is None or not scope.visible(user, pd.process):
+        raise HTTPException(404, "데이터셋을 찾을 수 없습니다")
+    return {"dataset": {"id": pd.id, "title": (pd.meta or {}).get("title") or pd.asset.name}, "items": ard_extra.versions(db, pd)}
+
+
+@router.get("/ard/datasets/{did}/diff")
+def dataset_diff(did: int, from_ref: str, to_ref: str, db: Session = Depends(get_db), user: User = Depends(current_user)) -> dict[str, Any]:
+    pd = db.get(ProcessDataset, did)
+    if pd is None or not scope.visible(user, pd.process):
+        raise HTTPException(404, "데이터셋을 찾을 수 없습니다")
+    try:
+        return ard_extra.diff(db, pd, from_ref, to_ref)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+# ----------------------------------------------------------------- 공유 링크 (v0.19)
+class ShareIn(BaseModel):
+    kind: str
+    target_id: int
+    dataset_id: int | None = None
+    days: int = Field(default=7, ge=1, le=ard_extra.SHARE_MAX_DAYS)
+    max_downloads: int = Field(default=10, ge=1, le=ard_extra.SHARE_MAX_DOWNLOADS)
+    recipient: str | None = Field(default=None, max_length=200)
+    note: str | None = Field(default=None, max_length=1000)
+
+
+@router.get("/ard/share-links")
+def share_links(state: str | None = None, db: Session = Depends(get_db), user: User = Depends(current_user)) -> dict[str, Any]:
+    from sqlalchemy import select
+
+    rows = db.scalars(select(ShareLink).order_by(ShareLink.id.desc())).all()
+    allowed = scope.visible_process_ids(db, user)
+    if allowed is not None:
+        rows = [r for r in rows if r.process_id in allowed or r.created_by == user.id]
+    items = [ard_extra.out(r) for r in rows]
+    if state in ("active", "expired", "revoked", "exhausted"):
+        items = [i for i in items if i["state"] == state]
+    return {"items": items, "max_days": ard_extra.SHARE_MAX_DAYS, "max_downloads": ard_extra.SHARE_MAX_DOWNLOADS, "grades": list(ard_extra.SHARE_GRADES)}
+
+
+@router.post("/ard/share-links", status_code=201)
+def share_create(body: ShareIn, request: Request, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    if body.kind not in ard.KINDS:
+        raise HTTPException(422, "알 수 없는 산출물 종류입니다")
+    # 작업자는 자기 프로세스 산출물만
+    if body.kind == "package":
+        pd = db.get(ProcessDataset, body.target_id)
+        if pd is None or not scope.visible(user, pd.process):
+            raise HTTPException(404, "데이터셋을 찾을 수 없습니다")
+    else:
+        got = ard.fetch_file(db, body.kind, body.target_id, body.dataset_id)
+        if got is None or not scope.visible(user, db.get(Process, got[3]["process_id"]) if got[3].get("process_id") else None):
+            raise HTTPException(404, "산출물을 찾을 수 없습니다")
+    try:
+        link, token = ard_extra.create(db, user, kind=body.kind, target_id=body.target_id, dataset_id=body.dataset_id, days=body.days, max_downloads=body.max_downloads,
+                                       recipient=body.recipient, note=body.note)
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    activity.log(db, "share_create", f"공유 링크 생성 — {link.filename} ({link.grade} · {body.days}일 · {body.max_downloads}회" + (f" · {link.recipient}" if link.recipient else "") + ")",
+                 user=user, process_id=link.process_id, dataset_id=link.dataset_id,
+                 payload={"share_id": link.id, "kind": link.kind, "target_id": link.target_id, "filename": link.filename, "grade": link.grade, "expires_at": link.expires_at.isoformat(),
+                          "max_downloads": link.max_downloads, "recipient": link.recipient, "token_prefix": link.token_prefix})
+    db.commit()
+    base = str(request.base_url).rstrip("/")
+    # 토큰 원문은 이 응답에서 한 번만 준다. 화면 주소(/share/…)는 SPA 가 받아 /api/share/… 로 내려받는다
+    return {**ard_extra.out(link), "url": f"{base}/share/{token}", "token": token}
+
+
+@router.post("/ard/share-links/{sid}/revoke")
+def share_revoke(sid: int, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
+    link = db.get(ShareLink, sid)
+    if link is None:
+        raise HTTPException(404, "공유 링크를 찾을 수 없습니다")
+    if user.role != "admin" and link.created_by != user.id:
+        raise HTTPException(403, "본인이 만든 링크만 회수할 수 있습니다")
+    if link.revoked_at is None:
+        link.revoked_at = ard.utcnow()
+        activity.log(db, "share_revoke", f"공유 링크 회수 — {link.filename} ({link.token_prefix}…)", user=user, process_id=link.process_id, dataset_id=link.dataset_id,
+                     payload={"share_id": link.id, "downloads": link.downloads})
+        db.commit()
+    return ard_extra.out(link)
+
+
+# 공개 (로그인 없음): 링크 정보 · 내려받기. 토큰은 경로로만 받고 로그에는 앞 8자만 남긴다
+@router.get("/share/{token}")
+def share_info(token: str, db: Session = Depends(get_db)) -> dict[str, Any]:
+    link, why = ard_extra.resolve(db, token)
+    if link is None:
+        raise HTTPException(404, why)
+    o = ard_extra.out(link)
+    return {"filename": o["filename"], "kind_label": o["kind_label"], "grade": o["grade"], "expires_at": o["expires_at"], "remaining": max(0, link.max_downloads - link.downloads),
+            "recipient": o["recipient"], "note": o["note"], "created_by": o["created_by"], "ok": why is None, "reason": why,
+            "notice": "이 산출물은 FDE Data Studio 에서 발행한 메타데이터 산출물입니다. 내려받기는 기록됩니다."}
+
+
+@router.get("/share/{token}/download")
+def share_download(token: str, request: Request, db: Session = Depends(get_db)) -> Response:
+    link, why = ard_extra.resolve(db, token)
+    if link is None or why:
+        raise HTTPException(410 if link else 404, why)
+    got = ard_extra.fetch(db, link)
+    if got is None:
+        raise HTTPException(404, "산출물이 더 이상 없습니다 (보존 정리로 삭제되었을 수 있습니다)")
+    content, filename, media_type = got
+    link.downloads += 1
+    link.last_downloaded_at = ard.utcnow()
+    ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "") or "").split(",")[0].strip()
+    activity.log(db, "share_download", f"공유 링크 다운로드 — {filename} ({link.token_prefix}… · {link.downloads}/{link.max_downloads})", user=None,
+                 process_id=link.process_id, dataset_id=link.dataset_id,
+                 payload={"share_id": link.id, "filename": filename, "size": len(content), "sha256": ard.sha256(content), "ip": ip, "recipient": link.recipient}, software=True)
+    db.commit()
+    return _download(content, filename, media_type)

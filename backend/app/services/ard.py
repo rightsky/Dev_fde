@@ -28,7 +28,7 @@ PAGE_SIZES = (10, 20, 50, 100)
 KINDS = {"file": "산출물 파일", "zip": "산출물 묶음(ZIP)", "validation": "검증 보고서", "diagnosis": "진단 보고서", "package": "제출 패키지"}
 FORMAT_LABEL = {f["key"]: f["tag"] for f in serialize.FORMATS}
 HISTORY_TYPES = {"artifact_download": "다운로드", "package_download": "제출 패키지", "publish": "발행", "withdraw": "철회", "republish": "복원",
-                 "retention_apply": "보존 정리"}
+                 "retention_apply": "보존 정리", "share_create": "공유 링크 생성", "share_download": "공유 링크 다운로드", "share_revoke": "공유 링크 회수"}
 
 
 def page_args(page: int | None, size: int | None) -> tuple[int, int]:

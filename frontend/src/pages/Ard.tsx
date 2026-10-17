@@ -5,16 +5,17 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import { Link, useSearchParams } from "react-router-dom";
 import { api, downloadFile, downloads } from "../api";
 import { useAuth } from "../auth";
-import type { ArdArtifact, ArdFilters, ArdHistory, ArdKind, ArdPublished, ArdSummary } from "../types";
-import { Badge, Banner, Button, ConfirmButton, Empty, Pager, QueryState, Tabs, cx, fmtBytes, fmtDateTime, fmtNum, shortHash, useToast } from "../ui";
+import type { ArdArtifact, ArdDiff, ArdFilters, ArdHistory, ArdKind, ArdPublished, ArdSummary, ArdVersion, ShareLink } from "../types";
+import { Badge, Banner, Button, ConfirmButton, Empty, Field, Modal, Pager, QueryState, Tabs, cx, fmtBytes, fmtDateTime, fmtNum, shortHash, useToast } from "../ui";
 
-type Tab = "artifacts" | "published" | "history";
+type Tab = "artifacts" | "published" | "history" | "shares";
 type GroupBy = "" | "actor" | "org";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "artifacts", label: "산출물 보관함" },
   { key: "published", label: "발행본" },
   { key: "history", label: "배포 이력" },
+  { key: "shares", label: "공유 링크" },
 ];
 const GROUPS: { key: GroupBy; label: string }[] = [
   { key: "", label: "구분 없음" },
@@ -69,6 +70,7 @@ export function ArdPage() {
           {tab === "artifacts" && <ArtifactsTab filters={filters.data} sizes={summary.data?.page_sizes} />}
           {tab === "published" && <PublishedTab filters={filters.data} sizes={summary.data?.page_sizes} />}
           {tab === "history" && <HistoryTab filters={filters.data} sizes={summary.data?.page_sizes} />}
+          {tab === "shares" && <SharesTab />}
         </>
       )}
     </div>
@@ -241,6 +243,9 @@ function ArtifactsTab({ filters, sizes }: { filters: ArdFilters; sizes?: number[
   const q = useQuery({ queryKey: ["ard", "artifacts", params], queryFn: () => api.ardArtifacts(params), placeholderData: keepPreviousData });
   const [busy, setBusy] = useState<string | null>(null);
   const [checked, setChecked] = useState<Set<string>>(() => new Set());
+  const [share, setShare] = useState<ArdArtifact | null>(null);
+  const [sharePkg, setSharePkg] = useState(false);
+  const [compare, setCompare] = useState<{ id: number; title: string; runId: number } | null>(null);
   const dl = async (a: ArdArtifact) => {
     setBusy(a.key);
     try {
@@ -368,8 +373,18 @@ function ArtifactsTab({ filters, sizes }: { filters: ArdFilters; sizes?: number[
                           ⤓ 내려받기
                         </Button>
                         {a.kind === "file" && a.format === "jsonld" && a.dataset && (
-                          <Button size="sm" variant="outline" busy={busy === `pkg-${a.key}`} disabled={!a.can_download} title="JSON-LD · Croissant · 데이터 카드 · 데이터 사전 + manifest.json 을 한 ZIP 으로" onClick={() => dlPackage(a)}>
-                            제출 패키지
+                          <>
+                            <Button size="sm" variant="outline" busy={busy === `pkg-${a.key}`} disabled={!a.can_download} title="JSON-LD · Croissant · 데이터 카드 · 데이터 사전 + manifest.json 을 한 ZIP 으로" onClick={() => dlPackage(a)}>
+                              제출 패키지
+                            </Button>
+                            <Button size="sm" onClick={() => setCompare({ id: a.dataset!.id, title: a.dataset!.title, runId: a.run_id })} title="이 데이터셋의 다른 회차 · 발행본과 JSON-LD 차이를 봅니다">
+                              비교
+                            </Button>
+                          </>
+                        )}
+                        {a.can_download && (a.grade === "O" || a.grade === "S1") && (
+                          <Button size="sm" onClick={() => { setShare(a); setSharePkg(false); }} title="수요처가 로그인 없이 내려받는 만료형 링크 (O · S1 만)">
+                            공유
                           </Button>
                         )}
                       </div>
@@ -382,6 +397,8 @@ function ArtifactsTab({ filters, sizes }: { filters: ArdFilters; sizes?: number[
         )}
         {q.data && <Pager page={q.data.page} pages={q.data.pages} size={q.data.size} total={q.data.total} sizes={sizes} onPage={(p) => set({ page: p })} onSize={(s) => set({ size: s, page: 1 })} />}
       </QueryState>
+      {share && <ShareModal artifact={share} asPackage={sharePkg} onClose={() => setShare(null)} />}
+      {compare && <CompareModal datasetId={compare.id} title={compare.title} initialRunId={compare.runId} onClose={() => setCompare(null)} />}
       <p className="tiny muted mt-8">
         「제출 패키지」는 데이터셋 하나의 JSON-LD(정본) · Croissant · 데이터 카드 · 데이터 사전과 체크섬 · 발행 ID · 등급을 적은 manifest.json 을 한 ZIP 으로 묶습니다. 포털 · 수요처에 보낼 때 이 파일 하나면 됩니다. 모든 내려받기는 배포 이력에 남습니다.
       </p>
@@ -593,4 +610,302 @@ function PayloadLine({ p }: { p: Record<string, unknown> }) {
     return out;
   }, [p]);
   return <>{parts.join(" · ") || "—"}</>;
+}
+
+
+// ───────────── 버전 비교 (v0.19)
+export function CompareModal({ datasetId, title, initialRunId, onClose }: { datasetId: number; title: string; initialRunId?: number | null; onClose: () => void }) {
+  const vq = useQuery({ queryKey: ["ard", "versions", datasetId], queryFn: () => api.ardVersions(datasetId) });
+  const items = vq.data?.items || [];
+  const [from, setFrom] = useState<string>("");
+  const [to, setTo] = useState<string>("");
+  const [onlyChanged, setOnlyChanged] = useState(true);
+  useEffect(() => {
+    if (!items.length || from || to) return;
+    // 기본: 선택한 회차 ↔ 그 직전 회차 (없으면 발행본 ↔ 최신)
+    const runs = items.filter((v) => v.kind === "run");
+    const idx = runs.findIndex((v) => v.run_id === initialRunId);
+    const cur = idx >= 0 ? runs[idx] : runs[0];
+    const prev = idx >= 0 && runs[idx + 1] ? runs[idx + 1] : items.find((v) => v.kind === "published") || runs[1];
+    if (cur) setTo(cur.ref);
+    if (prev) setFrom(prev.ref);
+  }, [items, from, to, initialRunId]);
+  const dq = useQuery({ queryKey: ["ard", "diff", datasetId, from, to], queryFn: () => api.ardDiff(datasetId, from, to), enabled: !!from && !!to && from !== to });
+  const d: ArdDiff | undefined = dq.data;
+  const rows = d ? d.rows : [];
+  const label = (v: ArdVersion) => `${v.label} · ${fmtDateTime(v.at)}${v.latest ? " · 최신" : ""}${v.status === "withdrawn" ? " · 철회" : ""}`;
+  return (
+    <Modal title={`버전 비교 — ${title}`} onClose={onClose} wide>
+      <QueryState q={vq}>
+        {items.length < 2 ? (
+          <Empty>비교할 회차가 2개 이상 있어야 합니다 (변환을 한 번 더 실행하거나 발행본이 있어야 함)</Empty>
+        ) : (
+          <>
+            <div className="grid c2">
+              <Field label="기준 (이전)">
+                <select className="select" value={from} onChange={(e) => setFrom(e.target.value)}>
+                  {items.map((v) => (
+                    <option key={v.ref} value={v.ref}>
+                      {label(v)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="비교 대상 (이후)">
+                <select className="select" value={to} onChange={(e) => setTo(e.target.value)}>
+                  {items.map((v) => (
+                    <option key={v.ref} value={v.ref}>
+                      {label(v)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            {from === to && <Banner tone="warn">같은 회차를 골랐습니다</Banner>}
+            <QueryState q={dq}>
+              {d && (
+                <div className="col gap-8 mt-8">
+                  {d.identical ? (
+                    <Banner tone="ok">
+                      <b>차이 없음</b> — 두 판의 정본 그래프가 같습니다 (트리플 {fmtNum(d.unchanged)}개).
+                    </Banner>
+                  ) : (
+                    <Banner tone="info">
+                      <b>{d.from.label}</b> → <b>{d.to.label}</b>: 추가 <span className="t-ok bold">{fmtNum(d.added)}</span> · 삭제 <span className="t-err bold">{fmtNum(d.removed)}</span> · 그대로 {fmtNum(d.unchanged)} 트리플
+                      {d.truncated && " · 500행까지만 표시"}
+                    </Banner>
+                  )}
+                  {d.by_predicate.length > 0 && (
+                    <div className="row wrap gap-4">
+                      {d.by_predicate.slice(0, 12).map((p) => (
+                        <span key={p.predicate} className="badge" title={`변경 ${p.changed} · 추가 ${p.added} · 삭제 ${p.removed}`}>
+                          <span className="mono">{p.predicate}</span> {p.changed + p.added + p.removed}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {rows.length > 0 && (
+                    <>
+                      <label className="check small">
+                        <input type="checkbox" checked={onlyChanged} onChange={(e) => setOnlyChanged(e.target.checked)} /> 값이 바뀐 것만 (추가 · 삭제만 된 행 숨김)
+                      </label>
+                      <div className="table-wrap" style={{ maxHeight: 420, overflow: "auto" }}>
+                        <table className="table">
+                          <thead>
+                            <tr>
+                              <th>속성</th>
+                              <th>주어</th>
+                              <th>이전</th>
+                              <th>이후</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rows.filter((r) => !onlyChanged || r.change === "changed").map((r, i) => (
+                              <tr key={i}>
+                                <td className="mono small nowrap" title={r.predicate_iri}>
+                                  {r.predicate} {r.change === "added" ? <Badge tone="ok">추가</Badge> : r.change === "removed" ? <Badge tone="err">삭제</Badge> : <Badge tone="warn">변경</Badge>}
+                                </td>
+                                <td className="mono tiny muted" style={{ maxWidth: 200 }}>{r.subject}</td>
+                                <td className="small" style={{ maxWidth: 320 }}>{r.old.length ? r.old.map((x, j) => <div key={j} className="t-err" style={{ wordBreak: "break-all" }}>{x}</div>) : <span className="muted">—</span>}</td>
+                                <td className="small" style={{ maxWidth: 320 }}>{r.new.length ? r.new.map((x, j) => <div key={j} className="t-ok" style={{ wordBreak: "break-all" }}>{x}</div>) : <span className="muted">—</span>}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </QueryState>
+          </>
+        )}
+      </QueryState>
+    </Modal>
+  );
+}
+
+// ───────────── 공유 링크 (v0.19)
+function ShareModal({ artifact, asPackage, onClose }: { artifact: ArdArtifact; asPackage: boolean; onClose: () => void }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [days, setDays] = useState(7);
+  const [max, setMax] = useState(10);
+  const [recipient, setRecipient] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ url: string; expires_at: string } | null>(null);
+  const kind = asPackage ? "package" : artifact.kind;
+  const targetId = asPackage ? artifact.dataset!.id : artifact.id;
+  const create = async () => {
+    setBusy(true);
+    try {
+      const r = await api.createShareLink({ kind, target_id: targetId, dataset_id: artifact.dataset?.id ?? null, days, max_downloads: max, recipient: recipient || null, note: note || null });
+      // 주소는 화면이 열린 도메인 기준으로 만든다 (역방향 프록시 뒤에서 백엔드가 보는 Host · 스킴과 다를 수 있다)
+      setResult({ url: `${window.location.origin}/share/${r.token}`, expires_at: r.expires_at });
+      void qc.invalidateQueries({ queryKey: ["ard"] });
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const copy = async () => {
+    if (!result) return;
+    try {
+      await navigator.clipboard.writeText(result.url);
+      toast.ok("주소를 복사했습니다");
+    } catch {
+      toast.error(new Error("복사하지 못했습니다 — 주소를 직접 선택해 복사하세요"));
+    }
+  };
+  return (
+    <Modal title="공유 링크 만들기" onClose={onClose} footer={result ? <Button variant="primary" onClick={onClose}>닫기</Button> : <><Button onClick={onClose}>취소</Button><Button variant="primary" busy={busy} onClick={create}>링크 만들기</Button></>}>
+      <div className="col gap-8">
+        <div>
+          <div className="bold">{artifact.filename}</div>
+          <div className="small muted">
+            {artifact.process.name}
+            {artifact.dataset && ` · ${artifact.dataset.title}`} · 등급 {artifact.grade}
+          </div>
+        </div>
+        {result ? (
+          <>
+            <Banner tone="ok">
+              <b>링크를 만들었습니다.</b> 이 주소는 지금 한 번만 보입니다 — 복사해서 받는 쪽에 전달하세요. 만료 {fmtDateTime(result.expires_at)} · 최대 {max}회.
+            </Banner>
+            <div className="row gap-4">
+              <input className="input mono" readOnly value={result.url} onFocus={(e) => e.currentTarget.select()} />
+              <Button variant="primary" onClick={copy}>
+                복사
+              </Button>
+            </div>
+            <p className="tiny muted">받는 쪽은 로그인 없이 열리는 안내 화면에서 내려받습니다. 내려받을 때마다 배포 이력에 남고, 「공유 링크」 탭에서 언제든 회수할 수 있습니다.</p>
+          </>
+        ) : (
+          <>
+            <Banner tone="info">O · S1 등급 산출물만 공유 링크를 만들 수 있습니다. 만든 뒤 등급이 올라가면 링크는 자동으로 막힙니다.</Banner>
+            <div className="grid c2">
+              <Field label="유효 기간">
+                <select className="select" value={days} onChange={(e) => setDays(Number(e.target.value))}>
+                  {[1, 3, 7, 14, 30, 90].map((d) => (
+                    <option key={d} value={d}>
+                      {d}일
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="최대 내려받기 횟수">
+                <select className="select" value={max} onChange={(e) => setMax(Number(e.target.value))}>
+                  {[1, 3, 5, 10, 30, 100].map((d) => (
+                    <option key={d} value={d}>
+                      {d}회
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="받는 곳 (선택)" hint="기관 · 담당자. 이력과 안내 화면에 표시">
+                <input className="input" value={recipient} onChange={(e) => setRecipient(e.target.value)} maxLength={200} placeholder="예: ○○공단 데이터팀 김○○" />
+              </Field>
+              <Field label="메모 (선택)" hint="협약 번호 · 목적 등">
+                <input className="input" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} />
+              </Field>
+            </div>
+          </>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function SharesTab() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [state, setState] = useState<string>("active");
+  const q = useQuery({ queryKey: ["ard", "shares", state], queryFn: () => api.shareLinks(state === "all" ? undefined : state) });
+  const [busy, setBusy] = useState<number | null>(null);
+  const revoke = async (l: ShareLink) => {
+    setBusy(l.id);
+    try {
+      await api.revokeShareLink(l.id);
+      await qc.invalidateQueries({ queryKey: ["ard"] });
+      toast.ok(`회수 — ${l.filename}`);
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      setBusy(null);
+    }
+  };
+  const tone: Record<ShareLink["state"], "ok" | "muted" | "err" | "warn"> = { active: "ok", expired: "muted", revoked: "err", exhausted: "warn" };
+  const label: Record<ShareLink["state"], string> = { active: "유효", expired: "만료", revoked: "회수", exhausted: "횟수 소진" };
+  return (
+    <div>
+      <div className="row between wrap mb-8" style={{ alignItems: "center" }}>
+        <div className="row gap-4">
+          {["active", "expired", "exhausted", "revoked", "all"].map((k) => (
+            <button key={k} type="button" className={cx("chip", state === k && "on")} aria-pressed={state === k} onClick={() => setState(k)}>
+              {k === "all" ? "전체" : label[k as ShareLink["state"]]}
+            </button>
+          ))}
+        </div>
+        <span className="small muted">수요처가 로그인 없이 내려받는 만료형 링크. O · S1 등급만, 최대 {q.data?.max_days ?? 90}일 · {q.data?.max_downloads ?? 100}회. 산출물 보관함의 「공유」 버튼으로 만듭니다.</span>
+      </div>
+      <QueryState q={q}>
+        {q.data && q.data.items.length === 0 ? (
+          <Empty>공유 링크가 없습니다</Empty>
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>파일</th>
+                  <th>상태</th>
+                  <th>등급</th>
+                  <th>받는 곳</th>
+                  <th className="num">내려받기</th>
+                  <th>만료</th>
+                  <th>만든 사람</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {(q.data?.items || []).map((l) => (
+                  <tr key={l.id}>
+                    <td style={{ minWidth: 220 }}>
+                      <div className="bold">{l.filename}</div>
+                      <div className="tiny muted mono">
+                        {l.kind_label} · 토큰 {l.token_prefix}…{l.process_id != null && <> · <Link to={`/studio/${l.process_id}`}>#{l.process_id}</Link></>}
+                      </div>
+                      {l.note && <div className="tiny muted">{l.note}</div>}
+                    </td>
+                    <td>
+                      <Badge tone={tone[l.state]}>{label[l.state]}</Badge>
+                    </td>
+                    <td>{l.grade ? <Badge tone={GRADE_TONE[l.grade] || "muted"}>{l.grade}</Badge> : "—"}</td>
+                    <td>{l.recipient || <span className="muted">—</span>}</td>
+                    <td className="num">
+                      {l.downloads} / {l.max_downloads}
+                      {l.last_downloaded_at && <div className="tiny muted">{fmtDateTime(l.last_downloaded_at)}</div>}
+                    </td>
+                    <td className="nowrap">{fmtDateTime(l.expires_at)}</td>
+                    <td className="nowrap">
+                      {l.created_by}
+                      <div className="tiny muted">{fmtDateTime(l.created_at)}</div>
+                    </td>
+                    <td className="nowrap right">
+                      {l.state === "active" && (
+                        <ConfirmButton size="sm" variant="danger" busy={busy === l.id} onConfirm={() => revoke(l)} confirmLabel="회수">
+                          회수
+                        </ConfirmButton>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </QueryState>
+    </div>
+  );
 }
