@@ -199,8 +199,7 @@ export function Step1() {
         <div className="card">
           <div className="card-title">스트림 등록 · 외부 연계</div>
           <p className="small dim">
-            계속 흘러드는 데이터(CCTV · 센서)는 본체 대신 <b>스트림(dcat:DataService)</b>으로 선언합니다. 표본 .jsonl 을 올렸다면 등록 창에서 표본으로 고르면 컬럼이 필드로 들어갑니다.
-            기관 DB 는 데이터 패브릭의 커넥터로 가져옵니다.
+            순서: <b>① 파일 선택</b>(표 또는 스트림 표본 .jsonl) → <b>② 후보 목록에서 확인</b> → <b>③ 스트림이면 등록</b>. 계속 흘러드는 데이터(CCTV · 센서)는 본체 대신 <b>스트림(dcat:DataService)</b>으로 선언하고, 등록 창에서 올린 .jsonl 을 표본으로 고르면 컬럼이 필드로 들어갑니다. 기관 DB 는 데이터 패브릭의 커넥터로 가져옵니다.
           </p>
           <div className="row wrap gap-4 mt-12">
             <Button variant="outline" disabled={!editable} onClick={() => setStreamOpen(true)}>
