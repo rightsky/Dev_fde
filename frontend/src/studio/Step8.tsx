@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, downloadFile, downloads } from "../api";
 import { useAuth } from "../auth";
-import type { DiagItem, DiagLatest, DiagRun, DiagStatus } from "../types";
+import type { DiagItem, DiagLatest, DiagPreview, DiagRun, DiagStatus } from "../types";
 import { Badge, Banner, Button, Card, ConfirmButton, Empty, Field, Meter, Modal, QueryState, Tabs, cx, fmtDateTime, useToast } from "../ui";
 import { useStudio } from "./context";
 import { StepHeader, RerunButton, pctLevel as sharedPctLevel } from "./shared";
@@ -57,6 +57,43 @@ function StatusBadge({ status }: { status: DiagStatus }) {
   return <Badge tone={s.tone}>{s.label}</Badge>;
 }
 
+/** 저장된 판정 옆에 "지금 판정"을 겹쳐 보인다. 같으면 저장된 판정만, 다르면 "저장 → 지금" */
+function LiveStatus({ saved, live }: { saved: DiagStatus; live: DiagStatus | undefined }) {
+  if (!live || live === saved) return <StatusBadge status={saved} />;
+  return (
+    <span className="row gap-4 nowrap" title="저장된 진단 결과 → 지금 저장된 내용으로 즉시 판정한 결과. 점수에 반영하려면 재진단을 실행하세요" style={{ alignItems: "center" }}>
+      <span style={{ opacity: 0.55 }}>
+        <StatusBadge status={saved} />
+      </span>
+      <span className="muted" aria-hidden="true">→</span>
+      <StatusBadge status={live} />
+      <span className="tiny muted">지금</span>
+    </span>
+  );
+}
+
+/** 즉시 진단 결과를 항목 · 데이터셋별로 찾기 쉽게 펼친 것 */
+interface LiveMap {
+  item: Record<string, DiagStatus>;
+  dataset: Record<string, DiagStatus>; // `${itemId}:${datasetId}`
+  datasetDetail: Record<string, string | null>;
+  improved: number;
+  regressed: number;
+  score: number;
+  max_score: number;
+}
+function toLiveMap(p: DiagPreview): LiveMap {
+  const m: LiveMap = { item: {}, dataset: {}, datasetDetail: {}, improved: p.improved.length, regressed: p.regressed.length, score: p.score, max_score: p.max_score };
+  for (const it of p.items) {
+    m.item[it.id] = it.status;
+    for (const d of it.datasets || []) {
+      m.dataset[`${it.id}:${d.id}`] = d.status;
+      m.datasetDetail[`${it.id}:${d.id}`] = d.detail;
+    }
+  }
+  return m;
+}
+
 /** 이번 화면에서 기록했지만 아직 재진단에 반영되지 않은 담당자 확인 (진단 실행 단위로 묶는다) */
 interface LocalAttest {
   status: AttestStatus;
@@ -91,6 +128,10 @@ function Diagnosis({ data }: { data: DiagLatest }) {
   const toast = useToast();
   const { run, stale, ruleset } = data;
   const [running, setRunning] = useState(false);
+  // 저장된 진단이 최신이 아니면 즉시 진단을 돌려 항목마다 "지금 판정"을 겹쳐 보인다 (기록은 남기지 않는다).
+  // 다른 단계에서 고치고 돌아오면 refresh() 가 ["process", pid] 를 무효화하므로 자동으로 다시 계산된다
+  const previewQ = useQuery({ queryKey: ["process", pid, "diagnosis-preview"], queryFn: () => api.processDiagnosisPreview(pid), enabled: !!run && !!stale });
+  const live = useMemo(() => (run && stale && previewQ.data ? toLiveMap(previewQ.data) : null), [run, stale, previewQ.data]);
   const [recorded, setRecorded] = useState<Recorded>({ runId: null, items: {} });
   const [focus, setFocus] = useState<{ id: string; seq: number } | null>(params.focus ? { id: params.focus, seq: 0 } : null);
 
@@ -159,6 +200,14 @@ function Diagnosis({ data }: { data: DiagLatest }) {
       {run && stale && (
         <Banner tone="warn" right={<div className="row">{rerunButton}<RerunButton variant="dark" /></div>}>
           <b>⚠ 최신 결과가 아닙니다</b> — {stale}. 열람은 되지만 발행·완료에는 쓸 수 없습니다. 상류도 바뀌었으면 오른쪽 [검증 → 변환 → 진단 다시 실행] 을 쓰세요.
+          {live && (
+            <div className="small mt-4">
+              지금 저장된 내용으로 즉시 판정하면 <b>{fmtScore(live.score)} / {fmtScore(live.max_score)}점</b>
+              {live.improved > 0 && <span className="t-ok"> · 개선 {live.improved}건</span>}
+              {live.regressed > 0 && <span className="t-err"> · 악화 {live.regressed}건</span>}
+              {live.improved === 0 && live.regressed === 0 && " · 항목 판정 변화 없음"}. 아래 목록의 「→ 지금」 표시가 그 결과이며, 점수와 기록에 반영하려면 재진단을 실행하세요.
+            </div>
+          )}
         </Banner>
       )}
       {run && run.ruleset_version !== ruleset.version && (
@@ -188,7 +237,7 @@ function Diagnosis({ data }: { data: DiagLatest }) {
           </div>
           <MethodsCard summary={run.summary} />
           <RoadmapCard roadmap={run.summary.roadmap} onShowItem={(id) => setFocus((f) => ({ id, seq: (f?.seq ?? 0) + 1 }))} />
-          <ItemsCard run={run} focus={focus} localAttests={localAttests} onAttested={onAttested} />
+          <ItemsCard run={run} focus={focus} localAttests={localAttests} onAttested={onAttested} live={live} />
         </>
       )}
 
@@ -488,8 +537,9 @@ function ItemsCard(props: {
   focus: { id: string; seq: number } | null;
   localAttests: Record<string, LocalAttest>;
   onAttested: (itemId: string, a: LocalAttest) => void;
+  live: LiveMap | null;
 }) {
-  const { run, focus, localAttests } = props;
+  const { run, focus, localAttests, live } = props;
   const { detail } = useStudio();
   const { canWrite } = useAuth();
   const [status, setStatus] = useState<StatusFilter>("all");
@@ -580,6 +630,9 @@ function ItemsCard(props: {
               open={open.has(item.id)}
               flash={flash === item.id}
               local={localAttests[item.id]}
+              liveStatus={live?.item[item.id]}
+              liveDatasets={live ? (id: number) => live.dataset[`${item.id}:${id}`] : undefined}
+              liveDetail={live ? (id: number) => live.datasetDetail[`${item.id}:${id}`] : undefined}
               attestBlocked={attestBlocked}
               onToggle={() => toggle(item.id)}
               onAttest={() => setAttesting(item)}
@@ -612,6 +665,9 @@ function ItemRow(props: {
   open: boolean;
   flash: boolean;
   local: LocalAttest | undefined;
+  liveStatus?: DiagStatus;
+  liveDatasets?: (datasetId: number) => DiagStatus | undefined;
+  liveDetail?: (datasetId: number) => string | null | undefined;
   attestBlocked: string | null;
   onToggle: () => void;
   onAttest: () => void;
@@ -669,7 +725,7 @@ function ItemRow(props: {
         </span>
         {local && <Badge tone="info">확인 기록됨 · 재진단 전</Badge>}
         <Badge tone={METHOD_TONE[item.method] || "muted"}>{item.method}</Badge>
-        <StatusBadge status={item.status} />
+        <LiveStatus saved={item.status} live={props.liveStatus} />
         <span className="muted" aria-hidden="true" style={{ width: 12, flex: "none" }}>
           {open ? "▾" : "▸"}
         </span>
@@ -723,16 +779,18 @@ function ItemRow(props: {
                     </tr>
                   </thead>
                   <tbody>
-                    {item.datasets.map((d) => (
+                    {item.datasets.map((d) => {
+                      const now = props.liveDatasets?.(d.id);
+                      return (
                       <tr key={d.id}>
                         <td className="bold">{d.name}</td>
                         <td>
-                          <StatusBadge status={d.status} />
+                          <LiveStatus saved={d.status} live={now} />
                         </td>
-                        <td>{d.detail}</td>
+                        <td>{now && now !== d.status ? (props.liveDetail?.(d.id) ?? d.detail) : d.detail}</td>
                         {route && (
                           <td className="nowrap right">
-                            {d.status !== "met" && (
+                            {(now ?? d.status) !== "met" && (
                               <button className="link-btn small" onClick={() => go(route.step, { dataset: d.id, focus: d.focus ?? route.focus, fix: item.id })}>
                                 STEP {route.step} 에서 수정
                               </button>
@@ -740,7 +798,8 @@ function ItemRow(props: {
                           </td>
                         )}
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

@@ -180,6 +180,8 @@ export interface ColumnProfile {
   nullable?: boolean;
   pk?: boolean;
   comment?: string;
+  /** 담당자가 직접 적은 예시값 (프로파일 통계가 아님) */
+  samples_edited?: boolean;
 }
 
 export interface TableProfile {
@@ -1075,6 +1077,8 @@ export interface DiagPreviewItem {
   detail: string | null;
   focus: string | null;
   dataset_status: DiagStatus | null;
+  /** 프로세스 전체 즉시 진단에서만: 데이터셋별 지금 판정 */
+  datasets?: { id: number; status: DiagStatus; detail: string | null }[];
 }
 export interface DiagPreview {
   items: DiagPreviewItem[];

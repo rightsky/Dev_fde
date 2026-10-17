@@ -1024,6 +1024,12 @@ def test_17_diagnosis_preview(client):
     assert m07["dataset_status"] == "unmet" and m07["changed"] and any(r["id"] == "M-07" for r in pv["regressed"])
     assert pv["provisional_note"] and next(i for i in pv["items"] if i["id"] == "R-10")["provisional"]
     assert next(i for i in pv["items"] if i["id"] == "P-04")["provisional"], "산출물 항목을 종합하는 원칙도 잠정"
+    # 프로세스 전체 즉시 진단: STEP 8 이 저장된 결과 위에 "지금 판정"을 겹쳐 보일 때 쓴다. 데이터셋별 판정이 함께 온다
+    allpv = client.get(f"/api/processes/{pid}/diagnosis-preview").json()
+    m07a = next(i for i in allpv["items"] if i["id"] == "M-07")
+    assert m07a["dataset_id"] is None if "dataset_id" in m07a else allpv["dataset_id"] is None
+    assert any(d["id"] == did and d["status"] == "unmet" for d in m07a["datasets"]) and m07a["previous"] in ("met", "partial")
+    assert client.get(f"/api/processes/{pid}/diagnosis-runs/latest").json()["stale"], "저장된 진단은 최신 아님"
     assert client.get(f"/api/processes/{pid}/diagnosis-runs/latest").json()["run"]["id"] == pv["last_run"]["id"], "기록은 남기지 않는다"
     # 되돌리면 개선으로 잡힌다
     client.patch(f"/api/datasets/{did}/meta", json={"values": {"accrual_periodicity": "P1M"}})
@@ -1533,3 +1539,37 @@ def test_23_db_connectors_and_integrations(client):
 
     assert client.delete(f"/api/connectors/{cid}").status_code == 200
     assert client.get(f"/api/connectors/{cid}/test").status_code in (404, 405)
+
+
+def test_24_column_samples_and_force_delete(client):
+    """프로파일 예시값 직접 입력(작성자) · 강제 삭제(관리자만, 보호 무시 · 조합에서 떼어냄 · 민팅 대장은 유지)."""
+    # 예시값 입력: 스키마만 있는 원천(스트림)에 담당자가 예시를 적는다
+    r = client.post("/api/assets/streams", json={"name": "edit.samples.v1", "fields": [{"name": "event_time", "type": "datetime"}, {"name": "phone", "type": "string"}]})
+    assert r.status_code in (200, 201), r.text
+    aid = r.json()["id"]
+    assert client.patch(f"/api/assets/{aid}/columns", params={"table": "stream", "column": "nope"}, json={"samples": ["x"]}).status_code == 404
+    r = client.patch(f"/api/assets/{aid}/columns", params={"table": "stream", "column": "event_time"}, json={"samples": [" 2026-01-01T00:00:00+09:00 ", "", "2026-01-01T00:00:01+09:00"]})
+    assert r.status_code == 200, r.text
+    col = next(c for c in r.json()["profile"]["tables"][0]["columns"] if c["name"] == "event_time")
+    assert col["samples"] == ["2026-01-01T00:00:00+09:00", "2026-01-01T00:00:01+09:00"] and col["samples_edited"] is True
+    wtok = client.post("/api/auth/login", json={"username": "worker1", "password": "worker-pass-1"}).json()["access_token"]
+    wh = {"Authorization": f"Bearer {wtok}"}
+    assert client.patch(f"/api/assets/{aid}/columns", params={"table": "stream", "column": "phone"}, json={"samples": ["010-****-1234"]}, headers=wh).status_code == 200
+    acts = client.get("/api/activities", params={"limit": 5}).json()
+    assert any(a["type"] == "asset_column_edit" for a in acts)
+    assert client.delete(f"/api/assets/{aid}").status_code == 200
+
+    # 강제 삭제: 민팅된 원천은 일반 삭제 409, 작성자의 force 는 403, 관리자의 force 는 200 이고 프로세스에서 떨어진다
+    road = S["road"]
+    assert client.delete(f"/api/assets/{road}").status_code == 409
+    assert client.delete(f"/api/assets/{road}", params={"force": "true"}, headers=wh).status_code == 403
+    before = client.get(f"/api/processes/{S['pid']}").json()
+    assert any(d["asset"]["id"] == road for d in before["datasets"])
+    r = client.delete(f"/api/assets/{road}", params={"force": "true"})
+    assert r.status_code == 200 and r.json()["force"] is True, r.text
+    assert client.get(f"/api/assets/{road}").status_code == 404
+    after = client.get(f"/api/processes/{S['pid']}").json()
+    assert not any(d["asset"]["id"] == road for d in after["datasets"]), "모든 프로세스에서 떼어낸다"
+    assert any(m["asset_id"] == road for m in client.get("/api/mint-registry").json()["records"]), "민팅 대장은 남는다"
+    acts = client.get("/api/activities", params={"limit": 5}).json()
+    assert any(a["type"] == "asset_delete" and "강제" in a["text"] for a in acts)

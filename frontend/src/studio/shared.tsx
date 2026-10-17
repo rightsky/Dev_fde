@@ -63,10 +63,70 @@ export function ReadinessBadge({ d }: { d: Dataset }) {
 }
 
 /** 프로파일된 표 1개의 컬럼 요약 */
-export function ProfileTable({ table, asset, compact }: { table: TableProfile; asset?: Asset; compact?: boolean }) {
+export function ProfileTable({ table, asset, compact, onEditSamples }: { table: TableProfile; asset?: Asset; compact?: boolean; onEditSamples?: (column: string, samples: string[]) => Promise<void> }) {
   const keyOf = (col: string) => asset?.key_candidates.find((k) => k.table === table.name && k.column === col);
   // DB 스키마에서 온 표는 값 통계가 없다: 결측률 · 고유값 · 예시값 대신 원본 자료형 · 널 허용 · 기본키 · 주석을 보인다
   const schemaOnly = asset?.source === "dbschema" || table.columns.some((c) => c.raw_type != null);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const startEdit = (name: string, samples: string[]) => {
+    setEditing(name);
+    setDraft(samples.join(", "));
+  };
+  const commit = async () => {
+    if (!editing || !onEditSamples) return;
+    setSaving(true);
+    try {
+      await onEditSamples(editing, draft.split(",").map((x) => x.trim()).filter(Boolean));
+      setEditing(null);
+    } finally {
+      setSaving(false);
+    }
+  };
+  const SampleCell = ({ c }: { c: TableProfile["columns"][number] }) =>
+    editing === c.name ? (
+      <td style={{ minWidth: 260 }}>
+        <div className="row gap-4" style={{ alignItems: "center" }}>
+          <input
+            className="input"
+            autoFocus
+            value={draft}
+            placeholder="쉼표로 구분 · 최대 10개"
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void commit();
+              if (e.key === "Escape") setEditing(null);
+            }}
+            aria-label={`${c.name} 예시값`}
+          />
+          <Button size="sm" variant="primary" busy={saving} onClick={() => void commit()}>
+            저장
+          </Button>
+          <Button size="sm" onClick={() => setEditing(null)}>
+            취소
+          </Button>
+        </div>
+        {c.pii && <div className="tiny t-warn mt-4">개인정보 의심 컬럼입니다. 실제 값 대신 마스킹한 예시(예: 010-****-1234)를 적으세요</div>}
+      </td>
+    ) : (
+      <td className="muted" style={{ maxWidth: 260 }}>
+        <span className="ellipsis" style={{ display: "inline-block", maxWidth: 200, verticalAlign: "bottom" }} title={c.samples.join(", ")}>
+          {c.samples.slice(0, 3).join(", ")}
+        </span>
+        {c.samples_edited && (
+          <span className="tiny muted" title="담당자가 직접 적은 예시값 (프로파일 통계가 아님)">
+            {" "}
+            · 직접 입력
+          </span>
+        )}
+        {onEditSamples && (
+          <button type="button" className="link-btn small" style={{ marginLeft: 6 }} onClick={() => startEdit(c.name, c.samples)} title="예시값을 직접 적거나 고칩니다">
+            {c.samples.length ? "수정" : "입력"}
+          </button>
+        )}
+      </td>
+    );
   return (
     <div className="table-wrap">
       <table className="table">
@@ -78,7 +138,7 @@ export function ProfileTable({ table, asset, compact }: { table: TableProfile; a
               <>
                 <th>원본 자료형</th>
                 <th>제약</th>
-                {!compact && <th>주석</th>}
+                {!compact && <th>예시 값 (직접 입력)</th>}
               </>
             ) : (
               <>
@@ -103,11 +163,7 @@ export function ProfileTable({ table, asset, compact }: { table: TableProfile; a
                     <td className="tiny">
                       {c.pk && <Badge tone="dark">PK</Badge>} {c.nullable === false && !c.pk && <span className="muted">NOT NULL</span>}
                     </td>
-                    {!compact && (
-                      <td className="muted ellipsis" style={{ maxWidth: 260 }} title={c.comment || undefined}>
-                        {c.comment || ""}
-                      </td>
-                    )}
+                    {!compact && <SampleCell c={c} />}
                   </>
                 ) : (
                   <>
@@ -116,11 +172,7 @@ export function ProfileTable({ table, asset, compact }: { table: TableProfile; a
                       {fmtNum(c.distinct)}
                       {c.unique ? " · 유일" : ""}
                     </td>
-                    {!compact && (
-                      <td className="muted ellipsis" style={{ maxWidth: 260 }} title={c.samples.join(", ")}>
-                        {c.samples.slice(0, 3).join(", ")}
-                      </td>
-                    )}
+                    {!compact && <SampleCell c={c} />}
                   </>
                 )}
                 <td>
