@@ -5,16 +5,27 @@ import type { QueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import { useAuth, useReference } from "../auth";
 import { AssetProfileModal, StreamModal, UploadZone } from "../components/assets";
+import { ConnectorsPanel, IntegrationsBoard } from "../components/fabric";
 import type { Asset } from "../types";
-import { Badge, Banner, Button, ConfirmButton, Empty, KeyPill, QueryState, cx, fmtDateTime, fmtNum, useToast } from "../ui";
+import { Badge, Banner, Button, ConfirmButton, Empty, KeyPill, QueryState, Tabs, cx, fmtDateTime, fmtNum, useToast } from "../ui";
 
-type KindFilter = "" | "dataset" | "stream";
+type KindFilter = "" | "dataset" | "stream" | "dbschema";
+type FabricTab = "assets" | "integrations";
 
 const KINDS: { key: KindFilter; label: string }[] = [
   { key: "", label: "전체" },
   { key: "dataset", label: "파일" },
+  { key: "dbschema", label: "DB 스키마" },
   { key: "stream", label: "스트림" },
 ];
+const isKind = (a: Asset, k: KindFilter) => (k === "" ? true : k === "dbschema" ? a.source === "dbschema" : k === "dataset" ? a.kind === "dataset" && a.source !== "dbschema" : a.kind === k);
+
+/** 유형 배지: 파일 · DB 스키마 · 스트림 */
+export function AssetKindBadge({ asset }: { asset: Asset }) {
+  if (asset.kind === "stream") return <Badge tone="purple">실시간 스트림</Badge>;
+  if (asset.source === "dbschema") return <Badge tone="dark" title={asset.connector ? `${asset.connector.name}${asset.connector.deleted ? " (커넥터 삭제됨)" : ""}` : undefined}>DB 스키마</Badge>;
+  return <Badge tone="info">{asset.data_form || "파일"}</Badge>;
+}
 
 /** 입력이 멈춘 뒤 ms 가 지나야 값이 바뀐다 (검색어 → 서버 조회 간격 조절) */
 function useDebounced<V>(value: V, ms: number): V {
@@ -40,16 +51,18 @@ export function AssetsPage() {
   const [profileId, setProfileId] = useState<number | null>(null);
   const [streamOpen, setStreamOpen] = useState(false);
   const [fresh, setFresh] = useState<number[]>([]);
+  const [tab, setTab] = useState<FabricTab>(() => (location.hash === "#integrations" ? "integrations" : "assets"));
   const q = useDebounced(text.trim(), 300);
 
-  const list = useQuery({ queryKey: ["assets", { kind, q }], queryFn: () => api.assets({ kind, q }), placeholderData: keepPreviousData });
-  // 유형별 건수는 유형 필터와 무관하게 센다. 유형이 "전체"이면 위 조회와 같은 키라 요청은 한 번만 나간다.
+  // 출처(DB 스키마)는 서버 필터가 아니라 화면에서 가른다. 전체 목록 한 번만 받는다.
   const pool = useQuery({ queryKey: ["assets", { kind: "", q }], queryFn: () => api.assets({ q }), placeholderData: keepPreviousData });
+  const list = { ...pool, data: pool.data?.filter((a) => isKind(a, kind)) };
 
   const counts: Record<KindFilter, number | undefined> = {
     "": pool.data?.length,
-    dataset: pool.data?.filter((a) => a.kind === "dataset").length,
-    stream: pool.data?.filter((a) => a.kind === "stream").length,
+    dataset: pool.data?.filter((a) => isKind(a, "dataset")).length,
+    dbschema: pool.data?.filter((a) => isKind(a, "dbschema")).length,
+    stream: pool.data?.filter((a) => isKind(a, "stream")).length,
   };
   const filtered = q !== "" || kind !== "";
 
@@ -57,7 +70,8 @@ export function AssetsPage() {
   const reveal = (created: Asset[]) => {
     setFresh(created.map((a) => a.id));
     setText("");
-    if (kind && created.some((a) => a.kind !== kind)) setKind("");
+    if (kind && created.some((a) => !isKind(a, kind))) setKind("");
+    setTab("assets");
   };
 
   return (
@@ -65,13 +79,43 @@ export function AssetsPage() {
       <div className="row between top wrap">
         <div>
           <h1 className="page-title">데이터 패브릭 관리</h1>
-          <p className="page-sub">업로드한 파일과 등록한 스트림입니다. 스튜디오의 모든 프로세스가 이 원천을 후보로 씁니다.</p>
+          <p className="page-sub">원천 자산 · 외부 연계. 파일 업로드 · 스트림 등록 · 기관 DB 스키마 가져오기가 모두 여기서 이루어지고, 스튜디오의 모든 프로세스가 이 원천을 후보로 씁니다.</p>
         </div>
-        <Button variant="outline" disabled={!canWrite} onClick={() => setStreamOpen(true)} title={canWrite ? "실시간 스트림의 스키마와 시간 규격을 등록합니다" : "열람 전용 계정은 등록할 수 없습니다"}>
-          ＋ 스트림 등록
-        </Button>
+        {tab === "assets" && (
+          <Button variant="outline" disabled={!canWrite} onClick={() => setStreamOpen(true)} title={canWrite ? "실시간 스트림의 스키마와 시간 규격을 등록합니다" : "열람 전용 계정은 등록할 수 없습니다"}>
+            ＋ 스트림 등록
+          </Button>
+        )}
       </div>
 
+      <div className="mb-12">
+        <Tabs<FabricTab>
+          tabs={[
+            { key: "assets", label: <>원천 자산 {counts[""] != null && <span className="score">{fmtNum(counts[""])}</span>}</> },
+            { key: "integrations", label: "외부 연계" },
+          ]}
+          value={tab}
+          onChange={(k) => {
+            setTab(k);
+            history.replaceState(null, "", k === "integrations" ? "#integrations" : location.pathname);
+          }}
+        />
+      </div>
+
+      {tab === "integrations" && (
+        <div className="col gap-16">
+          <section>
+            <div className="section-title">외부 연계 현황</div>
+            <IntegrationsBoard />
+          </section>
+          <section>
+            <ConnectorsPanel onSynced={() => setKind("dbschema")} />
+          </section>
+        </div>
+      )}
+
+      {tab === "assets" && (
+      <>
       {!canWrite && (
         <div className="mb-8">
           <Banner tone="info">열람 전용 계정입니다 — 업로드 · 스트림 등록 · 삭제는 담당자 이상 권한에서 할 수 있습니다.</Banner>
@@ -101,7 +145,7 @@ export function AssetsPage() {
         {pool.data && (
           <div className="small dim">
             {q ? `「${q}」 검색 결과 ` : "원천 "}
-            <b>{fmtNum(counts[""])}건</b> — 파일 {fmtNum(counts.dataset)}건 · 스트림 {fmtNum(counts.stream)}건
+            <b>{fmtNum(counts[""])}건</b> — 파일 {fmtNum(counts.dataset)}건 · DB 스키마 {fmtNum(counts.dbschema)}건 · 스트림 {fmtNum(counts.stream)}건
           </div>
         )}
       </div>
@@ -123,7 +167,7 @@ export function AssetsPage() {
                 </button>
               </>
             ) : (
-              "등록된 원천이 없습니다 — 위에서 파일을 올리거나 스트림을 등록하세요"
+              "등록된 원천이 없습니다 — 위에서 파일을 올리거나 스트림을 등록하세요. 기관 DB 는 「외부 연계」 탭에서 커넥터로 가져옵니다"
             )}
           </Empty>
         ) : (
@@ -132,6 +176,8 @@ export function AssetsPage() {
       </QueryState>
       {canWrite && list.data && list.data.length > 0 && (
         <p className="tiny muted mt-8">발행 ID 가 발급되었거나 조합에 포함된 원천은 삭제할 수 없습니다. 삭제하면 아직 조합에 넣지 않은 프로세스의 선택 목록에서도 빠집니다.</p>
+      )}
+      </>
       )}
 
       {profileId != null && <AssetProfileModal assetId={profileId} onClose={() => setProfileId(null)} />}
@@ -197,7 +243,7 @@ function AssetRow(props: { asset: Asset; fresh: boolean; canWrite: boolean; busy
   const { key_labels } = useReference();
   const a = props.asset;
   const isStream = a.kind === "stream";
-  const origin = isStream ? a.stream.endpoint_url : a.filename;
+  const origin = isStream ? a.stream.endpoint_url : a.source === "dbschema" ? `${a.connector?.name || "커넥터"} › ${a.filename}` : a.filename;
   return (
     <tr>
       <td style={{ minWidth: 180 }}>
@@ -211,7 +257,7 @@ function AssetRow(props: { asset: Asset; fresh: boolean; canWrite: boolean; busy
         {a.description && <div className="small dim">{a.description}</div>}
       </td>
       <td>
-        <Badge tone={isStream ? "purple" : "info"}>{isStream ? "실시간 스트림" : a.data_form || "파일"}</Badge>
+        <AssetKindBadge asset={a} />
       </td>
       <td>
         {a.ext ? (

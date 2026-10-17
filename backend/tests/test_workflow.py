@@ -1422,3 +1422,110 @@ def test_22_api_docs_toggle(client, monkeypatch):
     monkeypatch.setattr(get_settings(), "expose_api_docs", False)
     closed = FastAPI(docs_url="/api/docs" if get_settings().expose_api_docs else None, openapi_url="/api/openapi.json" if get_settings().expose_api_docs else None)
     assert closed.docs_url is None and closed.openapi_url is None
+
+
+def _connector_target():
+    """커넥터 시험용 PostgreSQL. CI 는 FDE_DATABASE_URL 의 PostgreSQL, 로컬은 55432 개발 DB. 둘 다 없으면 접속 부분만 건너뛴다."""
+    import os
+    from urllib.parse import urlparse
+
+    url = os.environ.get("FDE_CONNECTOR_TEST_URL") or os.environ.get("FDE_DATABASE_URL", "")
+    if not url.startswith("postgresql"):
+        url = "postgresql+psycopg://postgres@127.0.0.1:55432/fde_test"
+    u = urlparse(url)
+    try:
+        import psycopg
+        psycopg.connect(host=u.hostname, port=u.port or 5432, dbname=u.path.lstrip("/"), user=u.username, password=u.password or "", connect_timeout=2).close()
+    except Exception:  # noqa: BLE001
+        return None
+    return {"host": u.hostname, "port": u.port or 5432, "database": u.path.lstrip("/"), "username": u.username, "password": u.password or ""}
+
+
+def test_23_db_connectors_and_integrations(client):
+    """데이터 패브릭 외부 연계: 비밀번호 암호화 저장 · 응답 비노출, 읽기 전용 스키마 반영 → dbschema 자산, 연계 현황판."""
+    from app.services import connectors
+
+    # 암호화 왕복
+    tok = connectors.encrypt("p@ss:word/한글")
+    assert tok != "p@ss:word/한글" and connectors.decrypt(tok) == "p@ss:word/한글"
+
+    board = client.get("/api/integrations").json()
+    assert [i["key"] for i in board["items"]] == ["anthropic", "mcp", "connectors"]
+    assert board["items"][2]["status"] == "off"
+
+    # 작성자는 등록 못 함, 관리자만
+    wtok = client.post("/api/auth/login", json={"username": "worker1", "password": "worker-pass-1"}).json()["access_token"]
+    wh = {"Authorization": f"Bearer {wtok}"}
+    body = {"name": "시험 DB", "kind": "postgresql", "host": "127.0.0.1", "port": 1, "database": "x", "username": "u", "password": "secret-pw"}
+    assert client.post("/api/connectors", json=body, headers=wh).status_code == 403
+    assert client.post("/api/connectors", json={**body, "kind": "oracle"}).status_code == 422
+    r = client.post("/api/connectors", json=body)
+    assert r.status_code == 201, r.text
+    cid = r.json()["id"]
+    text_all = client.get("/api/connectors").text + r.text
+    assert "secret-pw" not in text_all and "secret_enc" not in text_all, "비밀번호는 어떤 응답에도 없어야 한다"
+    lst = client.get("/api/connectors").json()
+    assert lst["items"][0]["status"] == "never" and lst["items"][0]["schema"] == "public" and lst["kinds"][0]["kind"] == "postgresql"
+
+    # 접속 실패는 상태 error 로 기록되고 활동 로그에 남는다
+    r = client.post(f"/api/connectors/{cid}/test", headers=wh)
+    assert r.status_code == 200 and r.json()["ok"] is False and r.json()["connector"]["status"] == "error"
+    assert client.post(f"/api/connectors/{cid}/sync", headers=wh).status_code == 502
+    acts = client.get("/api/activities", params={"limit": 20}).json()
+    types = [a["type"] for a in (acts["items"] if isinstance(acts, dict) else acts)]
+    assert "connector_create" in types and "connector_test" in types and "connector_sync" in types
+
+    target = _connector_target()
+    if target is not None:
+        # 실제 PostgreSQL 에 표를 만들고 스키마만 읽어 온다
+        import psycopg
+        with psycopg.connect(host=target["host"], port=target["port"], dbname=target["database"], user=target["username"], password=target["password"], autocommit=True) as cx:
+            cx.execute("DROP SCHEMA IF EXISTS fde_conn_test CASCADE")
+            cx.execute("CREATE SCHEMA fde_conn_test")
+            cx.execute("CREATE TABLE fde_conn_test.citizen (resident_no varchar(14) primary key, name text, birth date, income numeric(12,2), active boolean)")
+            cx.execute("COMMENT ON TABLE fde_conn_test.citizen IS '주민 기본'")
+            cx.execute("INSERT INTO fde_conn_test.citizen VALUES ('900101-1234567', '홍길동', '1990-01-01', 100.5, true)")
+            cx.execute("CREATE TABLE fde_conn_test.road_link (link_id bigint primary key, road_name text, length_m double precision)")
+        r = client.post("/api/connectors", json={"name": "기관 DB", "kind": "postgresql", "schema": "fde_conn_test", **target})
+        assert r.status_code == 201, r.text
+        live = r.json()["id"]
+        r = client.post(f"/api/connectors/{live}/test", headers=wh)
+        assert r.status_code == 200 and r.json()["ok"] is True and r.json()["tables"] == 2 and r.json()["columns"] == 8, r.text
+        r = client.post(f"/api/connectors/{live}/sync", headers=wh)
+        assert r.status_code == 200, r.text
+        assert sorted(r.json()["created"]) == ["citizen", "road_link"] and r.json()["connector"]["status"] == "ok" and r.json()["connector"]["table_count"] == 2
+        assets = [a for a in client.get("/api/assets").json() if a["source"] == "dbschema"]
+        assert len(assets) == 2
+        cz = next(a for a in assets if a["name"] == "citizen")
+        assert cz["connector"]["name"] == "기관 DB" and cz["profile_status"] == "dbschema" and cz["column_count"] == 5 and cz["row_count"] == 0
+        assert cz["description"] == "주민 기본" and "DB 스키마" in cz["profile_summary"]
+        detail = client.get(f"/api/assets/{cz['id']}").json()
+        cols = {c["name"]: c for c in detail["profile"]["tables"][0]["columns"]}
+        assert cols["resident_no"]["pk"] is True and cols["resident_no"].get("pii"), "주민번호 컬럼은 이름으로 개인정보 의심"
+        assert cols["income"]["type"] == "number" and cols["birth"]["type"] == "datetime" and cols["active"]["type"] == "boolean" and cols["link_id"]["type"] == "integer" if "link_id" in cols else True
+        assert all(c["samples"] == [] for c in cols.values()), "값은 읽지 않는다"
+        assert "홍길동" not in client.get(f"/api/assets/{cz['id']}").text
+        # 두 번째 동기화: 변화 없음 → unchanged, 표 하나 지우면 missing 표시
+        r = client.post(f"/api/connectors/{live}/sync", headers=wh).json()
+        assert r["created"] == [] and r["unchanged"] == 2
+        with psycopg.connect(host=target["host"], port=target["port"], dbname=target["database"], user=target["username"], password=target["password"], autocommit=True) as cx:
+            cx.execute("ALTER TABLE fde_conn_test.road_link ADD COLUMN lanes smallint")
+            cx.execute("DROP TABLE fde_conn_test.citizen")
+        r = client.post(f"/api/connectors/{live}/sync", headers=wh).json()
+        assert r["updated"] == ["road_link"] and r["missing"] == ["fde_conn_test.citizen"]
+        assets = [a for a in client.get("/api/assets").json() if a["source"] == "dbschema"]
+        assert len(assets) == 2, "사라진 표의 자산은 지우지 않는다"
+        assert any("원천 DB 에 이 테이블이 없었습니다" in w for w in next(a for a in assets if a["name"] == "citizen")["warnings"])
+        board = client.get("/api/integrations").json()
+        assert board["items"][2]["enabled"] is True and board["items"][2]["last_at"] is not None
+        with psycopg.connect(host=target["host"], port=target["port"], dbname=target["database"], user=target["username"], password=target["password"], autocommit=True) as cx:
+            cx.execute("DROP SCHEMA fde_conn_test CASCADE")
+        # 삭제: 비밀번호 즉시 폐기, 자산은 남고 "연결 끊김" 표시
+        assert client.delete(f"/api/connectors/{live}", headers=wh).status_code == 403
+        assert client.delete(f"/api/connectors/{live}").status_code == 200
+        assert all(c["id"] != live for c in client.get("/api/connectors").json()["items"])
+        assets = [a for a in client.get("/api/assets").json() if a["source"] == "dbschema"]
+        assert len(assets) == 2 and all(a["connector"]["deleted"] for a in assets)
+
+    assert client.delete(f"/api/connectors/{cid}").status_code == 200
+    assert client.get(f"/api/connectors/{cid}/test").status_code in (404, 405)

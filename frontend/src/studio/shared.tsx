@@ -65,6 +65,8 @@ export function ReadinessBadge({ d }: { d: Dataset }) {
 /** 프로파일된 표 1개의 컬럼 요약 */
 export function ProfileTable({ table, asset, compact }: { table: TableProfile; asset?: Asset; compact?: boolean }) {
   const keyOf = (col: string) => asset?.key_candidates.find((k) => k.table === table.name && k.column === col);
+  // DB 스키마에서 온 표는 값 통계가 없다: 결측률 · 고유값 · 예시값 대신 원본 자료형 · 널 허용 · 기본키 · 주석을 보인다
+  const schemaOnly = asset?.source === "dbschema" || table.columns.some((c) => c.raw_type != null);
   return (
     <div className="table-wrap">
       <table className="table">
@@ -72,9 +74,19 @@ export function ProfileTable({ table, asset, compact }: { table: TableProfile; a
           <tr>
             <th>컬럼</th>
             <th>타입</th>
-            <th className="num">결측률</th>
-            <th className="num">고유값</th>
-            {!compact && <th>예시 값</th>}
+            {schemaOnly ? (
+              <>
+                <th>원본 자료형</th>
+                <th>제약</th>
+                {!compact && <th>주석</th>}
+              </>
+            ) : (
+              <>
+                <th className="num">결측률</th>
+                <th className="num">고유값</th>
+                {!compact && <th>예시 값</th>}
+              </>
+            )}
             <th>감지</th>
           </tr>
         </thead>
@@ -85,15 +97,31 @@ export function ProfileTable({ table, asset, compact }: { table: TableProfile; a
               <tr key={c.name}>
                 <td className="bold">{c.name}</td>
                 <td className="mono">{c.type}</td>
-                <td className={cx("num", c.null_rate > 0.05 && "t-warn")}>{fmtPct(c.null_rate, 1)}</td>
-                <td className="num">
-                  {fmtNum(c.distinct)}
-                  {c.unique ? " · 유일" : ""}
-                </td>
-                {!compact && (
-                  <td className="muted ellipsis" style={{ maxWidth: 260 }} title={c.samples.join(", ")}>
-                    {c.samples.slice(0, 3).join(", ")}
-                  </td>
+                {schemaOnly ? (
+                  <>
+                    <td className="mono tiny">{c.raw_type || "—"}</td>
+                    <td className="tiny">
+                      {c.pk && <Badge tone="dark">PK</Badge>} {c.nullable === false && !c.pk && <span className="muted">NOT NULL</span>}
+                    </td>
+                    {!compact && (
+                      <td className="muted ellipsis" style={{ maxWidth: 260 }} title={c.comment || undefined}>
+                        {c.comment || ""}
+                      </td>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <td className={cx("num", c.null_rate > 0.05 && "t-warn")}>{fmtPct(c.null_rate, 1)}</td>
+                    <td className="num">
+                      {fmtNum(c.distinct)}
+                      {c.unique ? " · 유일" : ""}
+                    </td>
+                    {!compact && (
+                      <td className="muted ellipsis" style={{ maxWidth: 260 }} title={c.samples.join(", ")}>
+                        {c.samples.slice(0, 3).join(", ")}
+                      </td>
+                    )}
+                  </>
                 )}
                 <td>
                   <div className="row wrap gap-4">

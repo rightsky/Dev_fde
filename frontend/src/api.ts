@@ -176,6 +176,14 @@ export const api = {
   createGrant: (keyId: number, body: { resource_id: string; note: string; expires_days: number | null }) => post<T.AgentGrant>(`/agent-keys/${keyId}/grants`, body),
   revokeGrant: (keyId: number, gid: number) => post<T.AgentGrant>(`/agent-keys/${keyId}/grants/${gid}/revoke`),
   setComboGrade: (pid: number, body: { grade: string | null; reason?: string }) => put<T.ProcessDetail>(`/processes/${pid}/combo-grade`, body),
+  // 데이터 패브릭 외부 연계
+  connectors: () => get<{ items: T.DbConnector[]; kinds: T.ConnectorKind[] }>("/connectors"),
+  createConnector: (body: { name: string; kind: string; host: string; port: number | null; database: string; schema: string | null; username: string; password: string; org_id: number | null; note: string | null }) =>
+    post<T.DbConnector>("/connectors", body),
+  testConnector: (id: number) => post<{ ok: boolean; error?: string; tables?: number; columns?: number; sample?: string[]; connector: T.DbConnector }>(`/connectors/${id}/test`, {}),
+  syncConnector: (id: number) => post<T.ConnectorSyncResult>(`/connectors/${id}/sync`, {}),
+  deleteConnector: (id: number) => del<{ ok: boolean }>(`/connectors/${id}`),
+  integrations: () => get<{ items: T.IntegrationItem[]; api_docs_exposed: boolean; generated_at: string }>("/integrations"),
   orgGrades: () => get<{ items: T.OrgGradeEntry[]; total: number; matched: number; unmatched: number }>("/org-grades"),
   importOrgGrades: (file: File) => {
     const fd = new FormData();

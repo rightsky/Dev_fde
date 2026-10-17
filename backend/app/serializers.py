@@ -34,9 +34,11 @@ def asset_out(a: Asset, detail: bool = False) -> dict[str, Any]:
     tables = prof.get("tables", [])
     out: dict[str, Any] = {
         "id": a.id, "name": a.name, "kind": a.kind, "source": a.source, "filename": a.filename, "ext": a.ext,
-        "size": a.size, "size_label": human_size(a.size) if a.kind == "dataset" else None, "sha256": a.sha256,
+        "size": a.size, "size_label": human_size(a.size) if a.kind == "dataset" and a.size is not None else None, "sha256": a.sha256,
         "media_type": a.media_type, "data_form": a.data_form, "description": a.description,
         "org": org_out(a.org) if a.org else None, "stream": a.stream or {},
+        "connector": ({"id": a.connector.id, "name": a.connector.name, "kind": a.connector.kind, "deleted": a.connector.deleted_at is not None}
+                      if getattr(a, "connector", None) else None),
         "profile_status": prof.get("status"), "profile_summary": profile_summary(prof),
         "table_count": len(tables), "column_count": sum(len(t["columns"]) for t in tables),
         "row_count": sum(t.get("rows", 0) for t in tables),
