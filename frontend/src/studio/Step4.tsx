@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
-import type { Classification, ClassSuggestion, Dataset, TaxAxis, TaxCode } from "../types";
+import type { Classification, ClassSuggestion, Dataset, GradeBasis, GradingState, MetaVisibility, TaxAxis, TaxCode } from "../types";
 import { Badge, Banner, Button, Empty, KeyPill, QueryState, cx, errText, fmtDateTime, useToast } from "../ui";
 import { useStudio } from "./context";
 import { InstantDiag } from "./InstantDiag";
@@ -34,6 +34,9 @@ interface Draft {
   codes: Record<FAxis, string[]>;
   keys: KeyDraft[];
   n2sf: string | null;
+  basis: GradeBasis;
+  prohibited: { manual: string[]; overrides: Record<string, string> };
+  visibility: MetaVisibility | null;
 }
 
 interface Thresholds {
@@ -87,6 +90,10 @@ function fromServer(cls: Classification | null | undefined): Draft {
     codes: { F1: [...(c.F1 ?? [])], F2: [...(c.F2 ?? [])], F3: [...(c.F3 ?? [])], F4: [...(c.F4 ?? [])], F5: [...(c.F5 ?? [])], F6: [...(c.F6 ?? [])] },
     keys: (c.K ?? []).map((k) => ({ code: k.code, table: k.table ?? null, column: k.column ?? null })),
     n2sf: c.N2SF ?? null,
+    basis: { personal_data: c.N2SF_BASIS?.personal_data, reidentification: c.N2SF_BASIS?.reidentification, legal: c.N2SF_BASIS?.legal,
+             legal_refs: c.N2SF_BASIS?.legal_refs, reason: c.N2SF_BASIS?.reason },
+    prohibited: { manual: [...(c.SHARE_PROHIBITED?.manual ?? [])], overrides: { ...(c.SHARE_PROHIBITED?.overrides ?? {}) } },
+    visibility: c.META_VISIBILITY ?? null,
   };
 }
 
@@ -95,7 +102,7 @@ function dropInactive(d: Draft, tax: Taxonomy): Draft {
   const inAxis = (axis: string, code: string) => tax.axes.get(axis)?.codes.some((c) => c.code === code) ?? false;
   const codes = { ...d.codes };
   for (const a of F_AXES) codes[a] = d.codes[a].filter((c) => inAxis(a, c));
-  return { codes, keys: d.keys.filter((k) => inAxis("K", k.code)), n2sf: d.n2sf && inAxis("N2SF", d.n2sf) ? d.n2sf : null };
+  return { ...d, codes, keys: d.keys.filter((k) => inAxis("K", k.code)), n2sf: d.n2sf && inAxis("N2SF", d.n2sf) ? d.n2sf : null };
 }
 
 const countCodes = (d: Draft) => F_AXES.reduce((n, a) => n + d.codes[a].length, 0) + d.keys.length + (d.n2sf ? 1 : 0);
@@ -106,6 +113,10 @@ function draftKey(d: Draft): string {
     F_AXES.map((a) => [...d.codes[a]].sort()),
     d.keys.map((k) => (k.column ? `${k.code}|${k.table ?? ""}|${k.column}` : k.code)).sort(),
     d.n2sf ?? "",
+    [d.basis.personal_data ?? "", d.basis.reidentification ?? "", d.basis.legal ?? "", (d.basis.legal_refs ?? "").trim(), (d.basis.reason ?? "").trim()],
+    [...d.prohibited.manual].sort(),
+    Object.entries(d.prohibited.overrides).filter(([, v]) => v.trim()).sort(),
+    d.visibility ?? "",
   ]);
 }
 
@@ -120,6 +131,14 @@ function toBody(d: Draft): Classification {
     K: d.keys.map((k) => (k.column ? { code: k.code, table: k.table, column: k.column } : { code: k.code })),
   };
   if (d.n2sf) body.N2SF = d.n2sf;
+  const b = d.basis;
+  if (b.personal_data || b.reidentification || b.legal || b.legal_refs?.trim() || b.reason?.trim()) {
+    body.N2SF_BASIS = { personal_data: b.personal_data, reidentification: b.reidentification, legal: b.legal,
+                        legal_refs: b.legal_refs?.trim() || undefined, reason: b.reason?.trim() || undefined };
+  }
+  const ov = Object.fromEntries(Object.entries(d.prohibited.overrides).filter(([, v]) => v.trim()));
+  if (d.prohibited.manual.length || Object.keys(ov).length) body.SHARE_PROHIBITED = { manual: d.prohibited.manual, overrides: ov };
+  if (d.visibility) body.META_VISIBILITY = d.visibility;
   return body;
 }
 
@@ -207,7 +226,7 @@ function applyStrong(d: Draft, sugs: Map<string, AxisSuggestions>, tax: Taxonomy
     n2sf = grade.code;
     added += 1;
   }
-  return { next: { codes, keys, n2sf }, added };
+  return { next: { ...d, codes, keys, n2sf }, added };
 }
 
 function tier(score: number, th: Thresholds): { label: string; tone: "ok" | "info" | "muted" } {
@@ -469,6 +488,11 @@ function Workbench(props: {
     );
   const patchKey = (code: string, patch: Partial<KeyDraft>) => onChange((d) => ({ ...d, keys: d.keys.map((k) => (k.code === code ? { ...k, ...patch } : k)) }));
   const setGrade = (code: string) => onChange((d) => ({ ...d, n2sf: d.n2sf === code ? null : code }));
+  const patchBasis = (patch: Partial<GradeBasis>) => onChange((d) => ({ ...d, basis: { ...d.basis, ...patch } }));
+  const toggleProhibited = (t: string) =>
+    onChange((d) => ({ ...d, prohibited: { ...d.prohibited, manual: d.prohibited.manual.includes(t) ? d.prohibited.manual.filter((x) => x !== t) : [...d.prohibited.manual, t] } }));
+  const setOverride = (t: string, reason: string) => onChange((d) => ({ ...d, prohibited: { ...d.prohibited, overrides: { ...d.prohibited.overrides, [t]: reason } } }));
+  const setVisibility = (v: MetaVisibility | null) => onChange((d) => ({ ...d, visibility: v }));
 
   const save = async () => {
     setBusy("save");
@@ -587,7 +611,11 @@ function Workbench(props: {
               ) : axis.code === "K" ? (
                 <KeyAxis axis={axis} keys={current.keys} sv={sv} tables={tables} profileQ={dsQ} locked={locked} onToggle={toggleKey} onPatch={patchKey} />
               ) : axis.code === "N2SF" ? (
-                <GradeAxis axis={axis} value={current.n2sf} sv={sv} locked={locked} onPick={setGrade} />
+                <>
+                  <GradeAxis axis={axis} value={current.n2sf} sv={sv} locked={locked} onPick={setGrade} />
+                  <GradingPanel ds={dsQ.data ?? ds} draft={current} locked={locked} onBasis={patchBasis} onPick={(code) => onChange((d) => ({ ...d, n2sf: code }))}
+                    onToggleProhibited={toggleProhibited} onOverride={setOverride} onVisibility={setVisibility} />
+                </>
               ) : isFAxis(axis.code) ? (
                 <ChipAxis axis={axis} selected={current.codes[axis.code]} sv={sv} locked={locked} onToggle={(code) => toggleCode(axis.code as FAxis, code, axis.multi)} />
               ) : null}
@@ -1022,6 +1050,175 @@ function SummaryCard({ ds, tax, current, onJump }: { ds: Dataset; tax: Taxonomy;
       ) : (
         <div className="tiny muted mt-4">조합의 모든 데이터셋을 확정하면 STEP 5 관계로 넘어가는 버튼이 나타납니다.</div>
       )}
+    </div>
+  );
+}
+
+
+// ───────────── N²SF 등급 판단 근거 · 표 41 · 메타데이터 공개 수준 (가이드라인 3.6.1 · 표 41)
+
+const GRADE_ORDER = ["O", "S1", "S2", "C"];
+const gradeRank = (code: string | null | undefined) => {
+  const g = (code ?? "").replace(/^N2SF-/, "");
+  return GRADE_ORDER.indexOf(g === "S" ? "S2" : g);
+};
+const BASIS_MIN_GRADE: Record<string, Record<string, string>> = {
+  personal_data: { none: "O", anonymized: "O", pseudonymized: "S1", personal: "S2", sensitive: "C" },
+  reidentification: { low: "O", medium: "S1", high: "S2" },
+  legal: { none: "O", "trade-secret": "S1", statutory: "C", "national-security": "C" },
+};
+const GRADE_SHORT: Record<string, string> = { O: "O · 공개", S1: "S1 · 조건부 공유", S2: "S2 · 제한 공유", C: "C · 비공개" };
+
+/** 초안(저장 전)의 판단 근거에서 제안 등급을 계산한다 (서버 grading.suggest 와 같은 표). */
+function suggestFrom(b: GradeBasis): { grade: string | null; reasons: string[] } {
+  let best = -1;
+  const reasons: string[] = [];
+  const labels: Record<string, string> = { personal_data: "개인정보 유형", reidentification: "재식별 위험도", legal: "보안·법적 제한" };
+  for (const key of ["personal_data", "reidentification", "legal"] as const) {
+    const v = b[key];
+    const g = v ? BASIS_MIN_GRADE[key][v] : undefined;
+    if (g) {
+      best = Math.max(best, GRADE_ORDER.indexOf(g));
+      reasons.push(`${labels[key]} → ${GRADE_SHORT[g]} 이상`);
+    }
+  }
+  return { grade: best >= 0 ? GRADE_ORDER[best] : null, reasons };
+}
+
+function GradingPanel(props: {
+  ds: Dataset;
+  draft: Draft;
+  locked: boolean;
+  onBasis: (patch: Partial<GradeBasis>) => void;
+  onPick: (code: string) => void;
+  onToggleProhibited: (t: string) => void;
+  onOverride: (t: string, reason: string) => void;
+  onVisibility: (v: MetaVisibility | null) => void;
+}) {
+  const g: GradingState | undefined = props.ds.grading;
+  const { draft, locked } = props;
+  if (!g) return null;
+  const sug = suggestFrom(draft.basis);
+  const chosen = draft.n2sf ? draft.n2sf.replace(/^N2SF-/, "") : null;
+  const below = sug.grade !== null && chosen !== null && gradeRank(chosen) < gradeRank(sug.grade);
+  const reasonShort = below && (draft.basis.reason ?? "").trim().length < g.options.min_reason;
+  const autoTypes = Object.entries(g.prohibited.auto);
+  const manualTypes = Object.keys(g.options.prohibited_types).filter((t) => !["unique-identifier", "national-security", "reidentification-risk"].includes(t));
+  const activeTypes = [
+    ...autoTypes.filter(([t]) => !(draft.prohibited.overrides[t] ?? "").trim()).map(([t]) => t),
+    ...draft.prohibited.manual,
+  ];
+  const defaultVis: MetaVisibility = chosen === "C" ? "internal" : "detail";
+  const sel = (key: "personal_data" | "reidentification" | "legal", label: string, hint: string) => (
+    <label className="field">
+      <span className="field-label">{label}</span>
+      <select className="input" value={draft.basis[key] ?? ""} disabled={locked} onChange={(e) => props.onBasis({ [key]: e.target.value || undefined })}>
+        <option value="">선택 안 함</option>
+        {Object.entries(g.options[key]).map(([k, v]) => (
+          <option key={k} value={k}>
+            {v} → {GRADE_SHORT[BASIS_MIN_GRADE[key][k]]} 이상
+          </option>
+        ))}
+      </select>
+      <span className="small muted">{hint}</span>
+    </label>
+  );
+  return (
+    <div className="col gap-12 mt-12" data-focus="N2SF_BASIS">
+      <div className="card tight flat">
+        <div className="row between wrap">
+          <b>등급 판단 근거</b>
+          <span className="small muted">가이드라인 3.6.1 판단 항목 · 세 항목에서 제안 등급이 나오고, 낮게 정하면 사유가 필요합니다</span>
+        </div>
+        <div className="grid mt-8" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 10 }}>
+          {sel("personal_data", "개인정보 유형", "비개인 · 익명 · 가명 · 개인 · 민감/고유식별")}
+          {sel("reidentification", "재식별 위험도", "단독 또는 결합으로 개인을 알아볼 수 있는지")}
+          {sel("legal", "보안·법적 제한", "정보공개법 제9조, 영업비밀, 국가안전")}
+        </div>
+        <label className="field mt-8">
+          <span className="field-label">관련 법령 · 근거 (선택)</span>
+          <input className="input" value={draft.basis.legal_refs ?? ""} disabled={locked} maxLength={500} placeholder="예: 정보공개법 제9조제1항제6호, 의료법 제19조"
+            onChange={(e) => props.onBasis({ legal_refs: e.target.value })} />
+        </label>
+        <div className="row wrap mt-8" style={{ gap: 8, alignItems: "center" }}>
+          {sug.grade ? (
+            <>
+              <span className="small">제안 등급</span>
+              <Badge tone={sug.grade === "O" ? "ok" : sug.grade === "C" ? "err" : "warn"}>{GRADE_SHORT[sug.grade]}</Badge>
+              <span className="small muted">({sug.reasons.join(" · ")})</span>
+              {chosen !== sug.grade && !locked && (
+                <Button size="sm" onClick={() => props.onPick(`N2SF-${sug.grade}`)}>제안 등급 적용</Button>
+              )}
+            </>
+          ) : (
+            <span className="small muted">항목을 고르면 제안 등급이 나옵니다. 등급은 담당자가 결정합니다.</span>
+          )}
+        </div>
+        {below && (
+          <div className="mt-8">
+            <Banner tone="warn">
+              판단 근거로는 <b>{GRADE_SHORT[sug.grade!]}</b> 이상인데 <b>{GRADE_SHORT[chosen!]}</b> 로 정했습니다. 낮추는 사유를 {g.options.min_reason}자 이상 적어야 저장됩니다 (검수 큐에 "판단 근거보다 낮은 등급" 신호로 올라갑니다).
+            </Banner>
+            <textarea className={cx("textarea mt-8", reasonShort && "invalid")} rows={2} disabled={locked} value={draft.basis.reason ?? ""} maxLength={1000}
+              placeholder="예: 집계 단위가 읍면동 월별이라 개별 기록이 없고, 개인정보 컬럼은 원천에서 이미 삭제됨" onChange={(e) => props.onBasis({ reason: e.target.value })} />
+          </div>
+        )}
+      </div>
+
+      <div className="card tight flat" data-focus="SHARE_PROHIBITED">
+        <div className="row between wrap">
+          <b>표 41 공유 불가 유형 점검</b>
+          <span className="small muted">{g.prohibited.mode === "block" ? "해당하면 외부 카탈로그 발행에서 제외됩니다" : "해당하면 검수 큐 고위험 신호로 올라갑니다"}</span>
+        </div>
+        <div className="col gap-8 mt-8">
+          {autoTypes.map(([t, why]) => {
+            const cleared = (draft.prohibited.overrides[t] ?? "").trim().length >= g.options.min_reason;
+            return (
+              <div key={t} className={cx("card tight", cleared ? "" : "selected")}>
+                <div className="row between wrap">
+                  <span>
+                    <Badge tone={cleared ? "muted" : "err"}>{cleared ? "자동 신호 해제" : "자동 신호"}</Badge> <b>{g.options.prohibited_types[t]}</b>
+                  </span>
+                  <span className="small muted">{why}</span>
+                </div>
+                <input className="input mt-8" disabled={locked} value={draft.prohibited.overrides[t] ?? ""} maxLength={500}
+                  placeholder={`해당하지 않는 이유를 ${g.options.min_reason}자 이상 적으면 신호를 해제합니다 (예: 컬럼명은 '여권발급건수'로 집계값임)`}
+                  onChange={(e) => props.onOverride(t, e.target.value)} />
+              </div>
+            );
+          })}
+          {autoTypes.length === 0 && <div className="small muted">자동 신호 없음 (컬럼 이름 · 판단 항목 기준)</div>}
+          <div className="row wrap" style={{ gap: 12 }}>
+            {manualTypes.map((t) => (
+              <label key={t} className="check">
+                <input type="checkbox" disabled={locked} checked={draft.prohibited.manual.includes(t)} onChange={() => props.onToggleProhibited(t)} />
+                {g.options.prohibited_types[t]}
+              </label>
+            ))}
+          </div>
+          {activeTypes.length > 0 && (
+            <Banner tone={g.prohibited.mode === "block" ? "err" : "warn"}>
+              공유 불가 유형 {activeTypes.length}건 해당 — {g.prohibited.mode === "block" ? "이 데이터셋은 발행 승인이 나도 외부 카탈로그에서 빠집니다. 내부 목록과 산출물은 그대로 쓸 수 있습니다." : "검수 큐에서 고위험 신호로 확인합니다."}
+            </Banner>
+          )}
+        </div>
+      </div>
+
+      <div className="card tight flat" data-focus="META_VISIBILITY">
+        <div className="row between wrap">
+          <b>메타데이터 공개 수준</b>
+          <span className="small muted">데이터 등급과 별개로, 이 데이터셋이 "있다"는 사실과 상세 메타데이터를 어디까지 내보일지</span>
+        </div>
+        <div className="row wrap mt-8" style={{ gap: 12 }}>
+          {(Object.entries(g.options.visibilities) as [MetaVisibility, string][]).map(([k, v]) => (
+            <label key={k} className="check">
+              <input type="radio" name={`vis-${props.ds.id}`} disabled={locked} checked={(draft.visibility ?? defaultVis) === k} onChange={() => props.onVisibility(k)} />
+              <span><b>{k}</b> · {v}{!draft.visibility && k === defaultVis ? " (기본값)" : ""}</span>
+            </label>
+          ))}
+        </div>
+        <div className="small muted mt-4">MCP 에이전트 · AI 시뮬레이션 · 외부 노출은 이 수준을 먼저 봅니다. C 등급은 기본이 내부 한정이고, "목록만 공개"는 등급과 무관하게 제목 · 기관 · 등급만 보여 줍니다.</div>
+      </div>
     </div>
   );
 }

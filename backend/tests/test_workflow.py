@@ -253,9 +253,9 @@ def test_06_classification(client):
         S["d_road"]: {"F1": ["F1-02"], "F2": ["F2-01", "F2-05"], "F3": ["F3-01"], "F4": ["F4-01"], "F6": ["F6-03"],
                       "K": [{"code": "K5", "column": "LINK_ID"}, {"code": "K3", "column": "경도"}], "N2SF": "N2SF-O"},
         S["d_acc"]: {"F1": ["F1-01"], "F2": ["F2-01"], "F4": ["F4-06"], "F6": ["F6-02"],
-                     "K": [{"code": "K5", "column": "도로링크ID"}, {"code": "K7", "column": "발생일시"}], "N2SF": "N2SF-S"},
+                     "K": [{"code": "K5", "column": "도로링크ID"}, {"code": "K7", "column": "발생일시"}], "N2SF": "N2SF-S2"},
         S["d_stream"]: {"F1": ["F1-01"], "F2": ["F2-06"], "F4": ["F4-05"], "F6": ["F6-01"],
-                        "K": [{"code": "K5", "column": "link_id"}], "N2SF": "N2SF-S"},
+                        "K": [{"code": "K5", "column": "link_id"}], "N2SF": "N2SF-S2"},
     }
     for did, body in payloads.items():
         assert client.put(f"/api/datasets/{did}/classification", json=body).status_code == 200
@@ -642,7 +642,7 @@ def test_13_mcp_agent_access(client):
 
     # 등급을 정해 둔다: DST-000001 공개(O), DST-000002 민감(S), SVC-000001 통제(C)
     with SessionLocal() as db:
-        for rid, g in (("DST-000001", "O"), ("DST-000002", "S"), ("SVC-000001", "C")):
+        for rid, g in (("DST-000001", "O"), ("DST-000002", "S2"), ("SVC-000001", "C")):
             e = db.query(CatalogEntry).filter_by(resource_id=rid).one()
             e.facets = {**(e.facets or {}), "n2sf": g}
         db.commit()
@@ -657,7 +657,7 @@ def test_13_mcp_agent_access(client):
     kid = r.json()["id"]
     assert k_open.startswith("fde_") and r.json()["prefix"] == k_open[:10]
     assert all("key" not in k for k in client.get("/api/agent-keys").json()), "키 원문은 발급할 때 한 번만 준다"
-    k_both = client.post("/api/agent-keys", json={"name": "내부 분석", "grades": ["O", "S"], "tools": ["search_datasets"],
+    k_both = client.post("/api/agent-keys", json={"name": "내부 분석", "grades": ["O", "S1", "S2"], "tools": ["search_datasets"],
                                                   "daily_limit": 3}).json()["key"]
 
     # 키 없이 · 틀린 키 · 일반 로그인 토큰은 401
@@ -827,7 +827,7 @@ def test_14_ai_drafts(client, monkeypatch):
     assert client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_missing_data"]}).status_code == 200
     with SessionLocal() as db:
         p = db.get(ProcessDataset, did)
-        p.classification = {**(p.classification or {}), "N2SF": "N2SF-S"}
+        p.classification = {**(p.classification or {}), "N2SF": "N2SF-S2"}
         db.commit()
     assert client.get("/api/ai-status", params={"dataset_id": did}).json()["blocked_reason"] is None
     # 등급과 무관하게 담당자가 외부 AI 전송 제외로 표시할 수 있다
@@ -887,7 +887,7 @@ def test_15_ai_simulation(client, monkeypatch):
 
     with SessionLocal() as db:
         e2 = db.query(CatalogEntry).filter_by(resource_id="DST-000002").one()
-        assert not agent_svc.visible(e2, AgentKey(grades=["O", "S"], tools=[]))
+        assert not agent_svc.visible(e2, AgentKey(grades=["O", "S1", "S2"], tools=[]))
     # 외부 제공 카드에서는 값 표본 행이 빠진다
     from app.services import documents as docs_svc
     card = client.get("/api/catalog/DST-000001").json()["documents"]["card"]
@@ -1117,7 +1117,7 @@ def test_18_quality_followups(client, monkeypatch):
     monkeypatch.setattr(get_settings(), "review_self_approve", "deny")
     with SessionLocal() as db:
         for d in db.query(ProcessDataset).filter_by(process_id=pid).all():
-            d.classification = {**(d.classification or {}), "N2SF": "N2SF-S"}
+            d.classification = {**(d.classification or {}), "N2SF": "N2SF-S2"}
         db.commit()
     rr = client.post(f"/api/processes/{pid}/rerun").json()
     if rr["state"]["gates"][6]["done"]:
@@ -1152,8 +1152,123 @@ def test_18_quality_followups(client, monkeypatch):
     with SessionLocal() as db:
         e = db.query(CatalogEntry).filter(CatalogEntry.resource_id.like("DST-%")).order_by(CatalogEntry.id.desc()).first()
         if e is not None:
-            key = AgentKey(name="t", key_hash="x", grades=["O", "S", "C"], tools=list(mcp_server.IMPLS), daily_limit=100, created_by=None)
+            key = AgentKey(name="t", key_hash="x", grades=["O", "S1", "S2", "C"], tools=list(mcp_server.IMPLS), daily_limit=100, created_by=None)
             from app.services.agent import CallRecord
             out = mcp_server.impl_get_usage_terms(db, key, CallRecord(), e.resource_id)
             assert isinstance(out, dict) and out["training_data_overview"]["coverage"].endswith("/8")
             assert isinstance(out["ai_assisted_fields"], list)
+
+
+# ------------------------------------------------------------------ v0.12 N²SF: S1/S2 · 등급 판단 근거 · 표 41 · 메타데이터 공개 수준
+def test_19_n2sf_grading(client, monkeypatch):
+    from app.config import get_settings
+    from app.db import SessionLocal
+    from app.models import AgentKey, CatalogEntry, ProcessDataset
+    from app.services import agent as agent_svc
+    from app.services import grading
+
+    pid, did = S["pid"], S["d_road"]
+    assert client.post(f"/api/processes/{pid}/reopen").status_code in (200, 409)
+    assert client.post(f"/api/datasets/{did}/classification/unconfirm").status_code in (200, 409)
+    base = client.get(f"/api/datasets/{did}").json()["classification"]
+    body = {k: base[k] for k in ("F1", "F2", "F3", "F4", "F5", "F6", "K") if k in base}
+
+    # 분류체계에 S1 · S2 가 있고 세분화 전 S 는 비활성
+    n2 = next(a for a in client.get("/api/taxonomy").json() if a["code"] == "N2SF")
+    active = {c["code"] for c in n2["codes"] if c["active"]}
+    assert {"N2SF-O", "N2SF-S1", "N2SF-S2", "N2SF-C"} <= active and "N2SF-S" not in active
+
+    # ① 판단 근거 → 제안 등급. 개인정보(personal) 이면 S2 이상
+    assert grading.suggest({"personal_data": "personal"})[0] == "S2"
+    assert grading.suggest({"personal_data": "anonymized", "reidentification": "medium"})[0] == "S1"
+    assert grading.suggest({"legal": "national-security"})[0] == "C"
+    # 제안보다 낮게 정하면 사유 필요 (422 GRADE_BELOW_BASIS)
+    r = client.put(f"/api/datasets/{did}/classification", json={**body, "N2SF": "N2SF-O", "N2SF_BASIS": {"personal_data": "personal", "reidentification": "low", "legal": "none"}})
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "GRADE_BELOW_BASIS"
+    r = client.put(f"/api/datasets/{did}/classification", json={**body, "N2SF": "N2SF-O", "N2SF_BASIS": {"personal_data": "personal", "reidentification": "low", "legal": "none",
+                                                                                                         "reason": "집계 단위가 읍면동 월별이라 개별 기록이 없고 개인정보 컬럼은 삭제됨"}})
+    assert r.status_code == 200, r.text
+    gst = r.json()["grading"]
+    assert gst["suggested"] == "S2" and gst["below_suggested"] and gst["basis"]["by"] == "관리자" and gst["visibility"] == "detail"
+    ttl = client.get(f"/api/datasets/{did}/preview").json()["turtle"]
+    assert "gradeBasis" in ttl and "suggestedGrade" in ttl and 'metadataVisibility "detail"' in ttl
+    # 제안을 따르면 사유 없이 저장
+    r = client.put(f"/api/datasets/{did}/classification", json={**body, "N2SF": "N2SF-S2", "N2SF_BASIS": {"personal_data": "personal", "reidentification": "low", "legal": "none"}})
+    assert r.status_code == 200 and r.json()["grading"]["below_suggested"] is False
+
+    # ② 표 41: 자동 신호(국가안전) 는 사유 20자 이상으로만 해제, 수동 유형 지정 가능
+    r = client.put(f"/api/datasets/{did}/classification", json={**body, "N2SF": "N2SF-C", "N2SF_BASIS": {"personal_data": "none", "reidentification": "low", "legal": "national-security"},
+                                                               "SHARE_PROHIBITED": {"manual": ["third-party-ban"], "overrides": {"national-security": "짧음"}}})
+    assert r.status_code == 422 and "20자" in r.json()["detail"]
+    r = client.put(f"/api/datasets/{did}/classification", json={**body, "N2SF": "N2SF-C", "N2SF_BASIS": {"personal_data": "none", "reidentification": "low", "legal": "national-security"},
+                                                               "SHARE_PROHIBITED": {"manual": ["third-party-ban"]}})
+    assert r.status_code == 200
+    pro = r.json()["grading"]["prohibited"]
+    assert set(pro["types"]) == {"national-security", "third-party-ban"} and pro["blocked"] is True and "national-security" in pro["auto"]
+    assert r.json()["grading"]["visibility"] == "internal"  # C 기본값
+    ttl = client.get(f"/api/datasets/{did}/preview").json()["turtle"]
+    assert 'shareProhibited "national-security"' in ttl and 'metadataVisibility "internal"' in ttl
+    # 자동 신호를 사유로 해제하면 수동 지정만 남는다
+    r = client.put(f"/api/datasets/{did}/classification", json={**body, "N2SF": "N2SF-C", "N2SF_BASIS": {"personal_data": "none", "reidentification": "low", "legal": "national-security"},
+                                                               "SHARE_PROHIBITED": {"manual": ["third-party-ban"], "overrides": {"national-security": "국가안전 관련은 시설 좌표 컬럼 때문이며 해당 컬럼은 원천에서 제거됨"}}})
+    assert r.status_code == 200 and r.json()["grading"]["prohibited"]["types"] == ["third-party-ban"]
+    # 발행 차단: S2 + 수동 유형 → 검수 평가에 share_prohibited 신호, 승인해도 이 데이터셋은 빠진다
+    r = client.put(f"/api/datasets/{did}/classification", json={**body, "N2SF": "N2SF-S2", "N2SF_BASIS": {"personal_data": "personal", "reidentification": "low", "legal": "none"},
+                                                               "SHARE_PROHIBITED": {"manual": ["third-party-ban"]}})
+    assert r.status_code == 200 and r.json()["grading"]["prohibited"]["blocked"] is True
+    with SessionLocal() as db:
+        for d in db.query(ProcessDataset).filter_by(process_id=pid).all():
+            if d.id != did:
+                d.classification = {**(d.classification or {}), "N2SF": "N2SF-O"}
+        db.commit()
+    rr = client.post(f"/api/processes/{pid}/rerun").json()
+    pv = client.get(f"/api/processes/{pid}/publish-review").json()
+    assert pv["assessment"], pv
+    codes = {s["code"] for s in pv["assessment"]["signals"]}
+    assert {"share_prohibited", "grade_s2"} <= codes, codes
+    assert any("DST-000001" in d for sg in pv["assessment"]["signals"] if sg["code"] == "share_prohibited" for d in sg["datasets"])
+    # review 모드면 차단하지 않는다
+    monkeypatch.setattr(get_settings(), "share_prohibited", "review")
+    with SessionLocal() as db:
+        assert grading.state(db.get(ProcessDataset, did))["prohibited"]["blocked"] is False
+    monkeypatch.setattr(get_settings(), "share_prohibited", "block")
+    # 실제 발행에서 빠진다 (관리자 직접 발행은 고위험이라 검수 큐 → 승인)
+    r = client.post(f"/api/processes/{pid}/review-requests", json={"message": "표 41 차단 확인"})
+    assert r.status_code == 200, r.text
+    rid = r.json()["id"]
+    det = client.get(f"/api/review-requests/{rid}").json()
+    ack = [sg["code"] for sg in det["signals"] if sg["severity"] == "high"]
+    r = client.post(f"/api/review-requests/{rid}/approve", json={"note": "본인 승인 사유 열 글자 이상 적습니다", "acknowledged": ack})
+    assert r.status_code == 200, r.text
+    published = {e["resource_id"] for e in r.json()["published"]}
+    assert "DST-000001" not in published and published, published
+    acts = client.get("/api/activities").json()
+    pub = next(a for a in acts if a["type"] == "publish")
+    assert "표 41 공유 불가로 제외 1건" in pub["text"]
+
+    # ③ 메타데이터 공개 수준: listing 이면 등급 밖 키에도 제목만, internal 이면 존재도 안 보임
+    r = client.put(f"/api/datasets/{did}/classification", json={**body, "N2SF": "N2SF-S2", "N2SF_BASIS": {"personal_data": "personal", "reidentification": "low", "legal": "none"},
+                                                               "META_VISIBILITY": "listing"})
+    assert r.status_code == 200 and r.json()["grading"]["visibility"] == "listing"
+    with SessionLocal() as db:
+        e = db.query(CatalogEntry).filter_by(resource_id="DST-000001").first()
+        if e is not None:
+            k_o = AgentKey(name="o", key_hash="h1", grades=["O"], tools=[], daily_limit=10)
+            k_s = AgentKey(name="s", key_hash="h2", grades=["O", "S1", "S2"], tools=[], daily_limit=10)
+            e.facets = {**(e.facets or {}), "n2sf": "S2", "meta_visibility": "listing"}
+            assert agent_svc.listable(e, k_o) and not agent_svc.visible(e, k_o)
+            assert agent_svc.listable(e, k_s) and not agent_svc.visible(e, k_s), "listing 은 누구에게도 상세를 열지 않는다"
+            e.facets = {**e.facets, "meta_visibility": "detail"}
+            assert not agent_svc.listable(e, k_o) and agent_svc.visible(e, k_s)
+            e.facets = {**e.facets, "meta_visibility": "internal"}
+            assert not agent_svc.listable(e, k_s)
+            # 세분화 전 키(S) 는 S1 · S2 를 모두 본다
+            e.facets = {**e.facets, "meta_visibility": "detail", "n2sf": "S"}
+            assert agent_svc.visible(e, AgentKey(name="l", key_hash="h3", grades=["O", "S"], tools=[], daily_limit=10))
+            db.rollback()
+    # 키 발급에 S 는 더 이상 쓸 수 없고 S1 · S2 를 쓴다
+    assert client.post("/api/agent-keys", json={"name": "구키", "grades": ["O", "S"], "tools": ["search_datasets"], "daily_limit": 5, "expires_days": None}).status_code in (400, 422)
+    assert client.get("/api/mcp-info").json()["grades"] == ["O", "S1", "S2"]
+    # 원복
+    r = client.put(f"/api/datasets/{did}/classification", json={**body, "N2SF": base.get("N2SF", "N2SF-O")})
+    assert r.status_code == 200

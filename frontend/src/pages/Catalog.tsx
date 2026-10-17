@@ -29,7 +29,7 @@ function ReadinessBadge({ level }: { level: string | undefined }) {
 
 function N2sfBadge({ grade }: { grade: string | null | undefined }) {
   if (!grade) return <span className="muted">—</span>;
-  const tone = grade === "O" ? "ok" : grade === "C" ? "err" : grade === "S" ? "warn" : "muted";
+  const tone = grade === "O" ? "ok" : grade === "C" ? "err" : grade === "S" || grade === "S1" || grade === "S2" ? "warn" : "muted";
   return (
     <Badge tone={tone} title="N²SF 보안등급">
       N²SF {grade}
@@ -414,6 +414,16 @@ function EntryView({ e }: { e: CatalogEntry }) {
             <dt>N²SF</dt>
             <dd>
               <N2sfBadge grade={f.n2sf} />
+              {f.meta_visibility && f.meta_visibility !== "detail" && (
+                <Badge tone={f.meta_visibility === "internal" ? "err" : "warn"} title="메타데이터 공개 수준">{f.meta_visibility === "internal" ? "내부 한정" : "목록만 공개"}</Badge>
+              )}
+              {f.grade_basis && (
+                <div className="small muted mt-4" title="등급 판단 근거 (가이드라인 3.6.1)">
+                  근거: {[f.grade_basis.personal_data, f.grade_basis.reidentification, f.grade_basis.legal].filter(Boolean).join(" · ")}
+                  {f.grade_basis.suggested && ` (제안 ${f.grade_basis.suggested})`}
+                </div>
+              )}
+              {f.share_prohibited && f.share_prohibited.length > 0 && <div className="small t-err mt-4">표 41 공유 불가 유형 {f.share_prohibited.length}건</div>}
             </dd>
             {(f.ai_assisted?.length || f.ai_act_overview) && (
               <>

@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..models import AgentKey, Process, ProcessDataset, SimulationRun, User, utcnow
-from . import activity, agent, assist, documents, serialize
+from . import grading, activity, agent, assist, documents, serialize
 
 SCENARIOS = {
     "chat": {"label": "데이터 안내 챗봇", "desc": "산출물(JSON-LD · 데이터 카드 · 데이터 사전)을 읽고 이용자 질문에 답합니다. 근거로 쓴 속성을 함께 보입니다",
@@ -191,7 +191,7 @@ def run(db: Session, p: Process, user: User, scenario: str, question: str, datas
     if not question.strip():
         raise SimError(422, "질문을 적으세요")
     combo = {d.id: d for d in p.combo}
-    blocked = {d.id: assist.blocked_reason(d) for d in combo.values()}
+    blocked = {d.id: assist.blocked_reason(d) or (None if grading.visibility(d) == "detail" else "메타데이터 공개 수준이 상세 공개가 아니라(목록만 · 내부 한정) 외부 모델에 보내지 않습니다") for d in combo.values()}
     exclude_assets = {d.asset_id for d in combo.values() if blocked[d.id]}
     pds: list[ProcessDataset] = []
     if scenario == "chat":
@@ -246,7 +246,7 @@ def status(db: Session, p: Process) -> dict[str, Any]:
     have = {a.dataset_id for a in (sr.artifacts if sr else [])}
     return {"enabled": assist.enabled(), "model": get_settings().ai_model if assist.enabled() else None,
             "scenarios": [{"key": k, **v} for k, v in SCENARIOS.items()],
-            "datasets": [{"id": d.id, "title": (d.meta or {}).get("title") or d.asset.name, "has_artifacts": d.id in have, "blocked_reason": assist.blocked_reason(d)} for d in combo],
+            "datasets": [{"id": d.id, "title": (d.meta or {}).get("title") or d.asset.name, "has_artifacts": d.id in have, "blocked_reason": assist.blocked_reason(d) or (None if grading.visibility(d) == "detail" else "공개 수준 " + grading.visibility(d))} for d in combo],
             "published_count": len(published),
             "note": "메타데이터·산출물만 모델에 보냅니다. 원본 데이터 파일은 보내지 않습니다. 실행은 활동 로그에 남습니다."}
 

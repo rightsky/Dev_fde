@@ -16,7 +16,7 @@ from ..models import (Artifact, Asset, Attestation, DiagnosisRun, Organization, 
 from ..security import current_user, require_admin, require_writer
 from ..serializers import (activity_out, dataset_out, diagnosis_out, mint_out, process_out, serialization_out,
                            validation_out)
-from ..services import (activity, canonical, catalog, diagnosis, gates, lineage, minting, ratelimit, serialize, suggest,
+from ..services import (activity, canonical, catalog, diagnosis, gates, grading, lineage, minting, ratelimit, serialize, suggest,
                         validation)
 from ..services.reference import guideline_rules, vocab
 
@@ -716,6 +716,21 @@ class KeyIn(BaseModel):
     column: str | None = None
 
 
+class BasisIn(BaseModel):
+    """등급 판단 근거 (가이드라인 3.6.1 판단 항목)."""
+    personal_data: str | None = None
+    reidentification: str | None = None
+    legal: str | None = None
+    legal_refs: str | None = Field(default=None, max_length=500)
+    reason: str | None = Field(default=None, max_length=1000)  # 제안보다 낮게 정할 때의 사유
+
+
+class ProhibitedIn(BaseModel):
+    """표 41 공유 불가 유형: 수동 지정과, 자동 신호를 해제하는 사유."""
+    manual: list[str] = []
+    overrides: dict[str, str] = {}
+
+
 class ClassificationIn(BaseModel):
     F1: list[str] = []
     F2: list[str] = []
@@ -725,10 +740,13 @@ class ClassificationIn(BaseModel):
     F6: list[str] = []
     K: list[KeyIn] = []
     N2SF: str | None = None
+    N2SF_BASIS: BasisIn | None = None
+    SHARE_PROHIBITED: ProhibitedIn | None = None
+    META_VISIBILITY: str | None = None
 
 
 @router.put("/datasets/{did}/classification")
-def put_classification(did: int, body: ClassificationIn, db: Session = Depends(get_db), _: User = Depends(require_writer)) -> dict[str, Any]:
+def put_classification(did: int, body: ClassificationIn, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
     pd = _dataset(db, did)
     axes = {a.code: a for a in db.scalars(select(TaxonomyAxis))}
     valid = {c.code: c for c in db.scalars(select(TaxonomyCode).where(TaxonomyCode.active.is_(True)))}
@@ -763,6 +781,39 @@ def put_classification(did: int, body: ClassificationIn, db: Session = Depends(g
         if body.N2SF not in valid or valid[body.N2SF].axis_code != "N2SF":
             raise HTTPException(422, f"보안등급 코드가 아닙니다: {body.N2SF}")
         out["N2SF"] = body.N2SF
+    # 등급 판단 근거 · 표 41 · 메타데이터 공개 수준 (N²SF 기획안 2.2 ~ 2.4)
+    if body.N2SF_BASIS is not None:
+        b = {k: v for k, v in body.N2SF_BASIS.model_dump().items() if v not in (None, "")}
+        for key, label, table in grading.BASIS_FIELDS:
+            if key in b and b[key] not in table:
+                raise HTTPException(422, f"{label} 값이 올바르지 않습니다: {b[key]}")
+        if b:
+            prev = (pd.classification or {}).get(grading.BASIS_KEY) or {}
+            sug, _ = grading.suggest(b)
+            b["suggested"] = sug
+            if any(b.get(k) != prev.get(k) for k, _, _ in grading.BASIS_FIELDS) or prev.get("by") is None:
+                b["by"], b["at"] = user.name, utcnow().replace(microsecond=0).isoformat()
+            else:
+                b["by"], b["at"] = prev.get("by"), prev.get("at")
+            problem = grading.validate(out.get("N2SF"), b)
+            if problem:
+                raise HTTPException(422, {"code": "GRADE_BELOW_BASIS", "message": problem})
+            out[grading.BASIS_KEY] = b
+    if body.SHARE_PROHIBITED is not None:
+        bad = [t for t in body.SHARE_PROHIBITED.manual if t not in grading.PROHIBITED_TYPES]
+        if bad:
+            raise HTTPException(422, f"표 41 유형이 아닙니다: {bad}")
+        ov = {k: v.strip() for k, v in body.SHARE_PROHIBITED.overrides.items() if k in grading.AUTO_TYPES and v and v.strip()}
+        short = [k for k, v in ov.items() if len(v) < grading.MIN_REASON]
+        if short:
+            raise HTTPException(422, f"자동 신호를 해제하려면 사유를 {grading.MIN_REASON}자 이상 적으세요: {', '.join(grading.PROHIBITED_TYPES[k] for k in short)}")
+        if body.SHARE_PROHIBITED.manual or ov:
+            out[grading.PROHIBITED_KEY] = {"manual": sorted(set(body.SHARE_PROHIBITED.manual)), "overrides": ov,
+                                           "by": user.name, "at": utcnow().replace(microsecond=0).isoformat()}
+    if body.META_VISIBILITY:
+        if body.META_VISIBILITY not in grading.VISIBILITIES:
+            raise HTTPException(422, f"메타데이터 공개 수준 값이 올바르지 않습니다: {body.META_VISIBILITY}")
+        out[grading.VISIBILITY_KEY] = body.META_VISIBILITY
     pd.classification = out
     pd.process.updated_at = utcnow()
     if pd.class_confirmed_at and not (out.get("F1") and out.get("F2")):

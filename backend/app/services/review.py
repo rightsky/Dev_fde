@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..models import Attestation, CatalogEntry, Process, ReviewRequest, SerializationRun, User, utcnow
-from . import activity, canonical, catalog, diagnosis, gates, serialize, validation
+from . import grading, activity, canonical, catalog, diagnosis, gates, serialize, validation
 
 SEVERITY_ORDER = {"high": 3, "medium": 2, "low": 1}
 LEVEL_LABEL = {"high": "높음", "medium": "보통", "low": "낮음"}
@@ -52,6 +52,7 @@ def assess(db: Session, p: Process, sr: SerializationRun | None) -> dict[str, An
     datasets: list[dict[str, Any]] = []
     signals: list[dict[str, Any]] = []
     grade_s, grade_c, grade_unset, pii_ds, pii_ai, unset_terms, republish = [], [], [], [], [], [], []
+    grade_s1, basis_missing, below_basis, prohibited_block, prohibited_review = [], [], [], [], []
     for s in targets:
         pd = by_id[s["dataset_id"]]
         canon = canonical.build(db, pd, "publish")
@@ -65,12 +66,22 @@ def assess(db: Session, p: Process, sr: SerializationRun | None) -> dict[str, An
                          "kind": pd.asset.kind, "n2sf": grade or None, "pii": pii, "ai_terms": terms,
                          "current_version": entry.version if entry else None,
                          "change": "new" if entry is None else ("same" if entry.checksum == s["checksum"] and entry.status == "published" else "update")})
+        gst = grading.state(pd)
+        grade = gst["grade"] or ""
         if grade == "C":
             grade_c.append(rid)
-        elif grade == "S":
+        elif grade == "S2":
             grade_s.append(rid)
+        elif grade == "S1":
+            grade_s1.append(rid)
         elif not grade:
             grade_unset.append(rid)
+        if grade in ("S1", "S2", "C") and not gst["basis_complete"]:
+            basis_missing.append(rid)
+        if gst["below_suggested"]:
+            below_basis.append(f"{rid} ({gst['suggested_label']} 제안 → {gst['grade_label']})")
+        if gst["prohibited"]["types"]:
+            (prohibited_block if gst["prohibited"]["blocked"] else prohibited_review).append(f"{rid} ({', '.join(gst['prohibited']['labels'])})")
         if pii:
             pii_ds.append(f"{rid}({', '.join(pii[:3])}{' 외' if len(pii) > 3 else ''})")
             if terms.get("ai_training") in ("permitted", "conditional") or terms.get("ai_redistribution") in ("permitted", "conditional"):
@@ -83,10 +94,25 @@ def assess(db: Session, p: Process, sr: SerializationRun | None) -> dict[str, An
     if grade_c:
         signals.append(_signal("grade_c", "high", "N²SF C(기밀) 등급", "통제 등급 데이터를 카탈로그에 올립니다. 공개 범위를 다시 확인하세요", grade_c))
     if grade_s:
-        signals.append(_signal("grade_s", "high", "N²SF S(민감) 등급 · 제한공유 데이터",
-                               "제한공유 데이터의 카탈로그 등재와 AI 에이전트 노출 범위를 확인하세요 (표 40 데이터 유출·정보노출)", grade_s))
+        signals.append(_signal("grade_s2", "high", "N²SF S2(제한 공유) 등급",
+                               "개별 기록·민감 정보가 포함된 제한 공유 데이터입니다. 기관 간 협약 · 사전 승인 · 에이전트 노출 범위를 확인하세요 (3.6.1 · 표 40)", grade_s))
+    if grade_s1:
+        signals.append(_signal("grade_s1", "medium", "N²SF S1(조건부 공유) 등급",
+                               "비식별·집계 자료로 이용약정과 목적 확인을 전제로 제공하는 데이터입니다. 이용조건(표 39)이 그에 맞는지 확인하세요", grade_s1))
     if grade_unset:
-        signals.append(_signal("grade_unset", "medium", "보안등급 미지정", "STEP 4 에서 N²SF 등급을 정하지 않았습니다. 미지정은 S 로 취급합니다", grade_unset))
+        signals.append(_signal("grade_unset", "medium", "보안등급 미지정", "STEP 4 에서 N²SF 등급을 정하지 않았습니다. 미지정은 S2 로 취급합니다", grade_unset))
+    if basis_missing:
+        signals.append(_signal("grade_basis_missing", "medium", "등급 판단 근거 미작성",
+                               "S1 이상 등급인데 개인정보 유형 · 재식별 위험도 · 보안·법적 제한을 적지 않았습니다 (3.6.1 판단 항목)", basis_missing))
+    if below_basis:
+        signals.append(_signal("grade_below_basis", "high", "판단 근거보다 낮은 등급",
+                               "담당자가 제안 등급보다 낮게 정했습니다. STEP 4 에 적힌 사유가 타당한지 확인하세요", below_basis))
+    if prohibited_block:
+        signals.append(_signal("share_prohibited", "high", "표 41 공유 불가 유형 해당 — 발행에서 제외됨",
+                               "고유식별정보 · 국가보안 · 제3자 제공 금지 · 재식별 위험 잔존 데이터는 외부 카탈로그에 올리지 않습니다. 승인해도 이 데이터셋은 빠집니다", prohibited_block))
+    if prohibited_review:
+        signals.append(_signal("share_prohibited", "high", "표 41 공유 불가 유형 해당",
+                               "원칙적으로 공유가 제한되는 유형입니다 (FDE_SHARE_PROHIBITED=review 로 발행은 허용). 제한 사유가 해소되었는지 확인하세요", prohibited_review))
     if pii_ds:
         signals.append(_signal("pii", "medium" if pii_checked else "high", "개인정보 의심 컬럼",
                                ("담당자가 STEP 8 C-12(개인정보 보호)에서 확인했습니다" if pii_checked
