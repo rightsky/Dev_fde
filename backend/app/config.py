@@ -55,6 +55,7 @@ class Settings(BaseSettings):
     cors_origins: str = ""
     # /api/docs · /api/openapi.json 노출 여부. 운영(docker-compose.prod.yml)에서는 false 가 기본
     expose_api_docs: bool = True
+    artifact_keep_runs: int = 5  # ARD 관리 보존 정책: 프로세스당 보관하는 STEP 7 변환 회차 수 (발행본이 참조하는 회차는 예외)
     seed_demo_orgs: bool = True
 
     @property

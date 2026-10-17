@@ -517,7 +517,7 @@ function PublishCard({ run, blocked }: { run: SerializationRun | null; blocked: 
     return () => clearTimeout(t);
   }, [justPublished]);
   // 이 프로세스에서 발행되어 카탈로그에 게시 중인 항목
-  const cat = useQuery({ queryKey: ["catalog", "process", pid], queryFn: () => api.catalog(), select: (d) => d.items.filter((e) => e.process_id === pid) });
+  const cat = useQuery({ queryKey: ["catalog", "process", pid], queryFn: () => api.catalog({ process_id: pid }), select: (d) => d.items });
 
   const v = detail.state.validation;
   const trashed = detail.process.status === "trashed";
@@ -669,7 +669,7 @@ function PublishCard({ run, blocked }: { run: SerializationRun | null; blocked: 
                   return (
                     <tr key={e.resource_id}>
                       <td className="mono nowrap">
-                        <Link to={`/catalog/${encodeURIComponent(e.resource_id)}`}>{e.resource_id}</Link>
+                        <Link to={`/ard/published/${encodeURIComponent(e.resource_id)}`}>{e.resource_id}</Link>
                       </td>
                       <td className="bold">{e.title}</td>
                       <td className="nowrap">v{e.version}</td>

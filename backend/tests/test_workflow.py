@@ -475,7 +475,7 @@ def test_10_publish_requires_mint(client):
     assert client.post(f"/api/processes/{pid}/review-requests", json={}, headers=wh).status_code == 409
 
     cat = client.get("/api/catalog", params={"q": "사고"}).json()
-    assert cat["total"] >= 1 and ("교통물류", 2) in [tuple(x) for x in cat["facets"]["theme"]] or cat["total"] >= 1
+    assert cat["total"] >= 1 and "facets" not in cat, "패싯 집계는 v0.18 에서 제거 (ARD 관리)"
     entry = client.get("/api/catalog/DST-000001").json()
     g = Graph().parse(data=entry["turtle"], format="turtle")
     assert not any("draft" in str(t) for triple in g for t in triple), "발행물에 초안 ID 가 남으면 안 된다"
@@ -1541,7 +1541,99 @@ def test_23_db_connectors_and_integrations(client):
     assert client.get(f"/api/connectors/{cid}/test").status_code in (404, 405)
 
 
-def test_24_column_samples_and_force_delete(client):
+def test_24_ard_management(client):
+    """ARD 관리: 산출물 보관함(페이지 · 필터 · 작업자/조직 정렬) · 다운로드 로그 · viewer O 등급 제한 · 제출 패키지 · 발행본 · 배포 이력 CSV · 보존 정책 · 요약."""
+    pid = S["pid"]
+    s = client.get("/api/ard/summary").json()
+    assert s["artifacts"] > 0 and s["published"] >= 1 and s["page_sizes"] == [10, 20, 50, 100] and "stale" in s and "retention" in s
+    f = client.get("/api/ard/filters").json()
+    assert any(a["name"] == "관리자" for a in f["actors"]) and [k["kind"] for k in f["kinds"]] == ["file", "zip", "validation", "diagnosis"]
+
+    # 목록 · 페이지 · 크기 (허용되지 않는 크기는 20 으로)
+    r = client.get("/api/ard/artifacts", params={"page": 1, "size": 10}).json()
+    assert r["size"] == 10 and len(r["items"]) <= 10 and r["pages"] >= 1 and r["total"] >= len(r["items"])
+    assert client.get("/api/ard/artifacts", params={"size": 7}).json()["size"] == 20
+    assert client.get("/api/ard/artifacts", params={"page": 999, "size": 10}).json()["page"] == r["pages"], "넘치는 페이지는 마지막 페이지로"
+    kinds = {i["kind"] for i in client.get("/api/ard/artifacts", params={"size": 100, "latest_only": "false"}).json()["items"]}
+    assert {"file", "zip", "diagnosis"} <= kinds
+    assert all(i["kind"] == "zip" for i in client.get("/api/ard/artifacts", params={"kind": "zip"}).json()["items"])
+    assert all(i["latest"] for i in client.get("/api/ard/artifacts", params={"latest_only": "true", "size": 100}).json()["items"])
+    admin_id = next(a["id"] for a in f["actors"] if a["name"] == "관리자")
+    by_actor = client.get("/api/ard/artifacts", params={"actor_id": admin_id, "size": 100}).json()
+    assert by_actor["total"] > 0 and all(i["actor"]["id"] == admin_id for i in by_actor["items"])
+    assert client.get("/api/ard/artifacts", params={"actor_id": 999999}).json()["total"] == 0
+    names = [i["actor"]["name"] if i["actor"] else "" for i in client.get("/api/ard/artifacts", params={"sort": "actor", "size": 100}).json()["items"]]
+    assert names == sorted(names, key=lambda n: n or "힣"), "작업자별 구분은 작업자 이름 순으로 정렬"
+    q = client.get("/api/ard/artifacts", params={"q": "도로목록", "size": 100}).json()
+    assert q["total"] > 0 and all("도로목록" in (i["dataset"] or {}).get("title", "") or "도로목록" in i["filename"] for i in q["items"])
+
+    # 다운로드: 파일 · ZIP · 진단 보고서, 로그에 남는다
+    files = [i for i in client.get("/api/ard/artifacts", params={"kind": "file", "size": 100}).json()["items"]]
+    jl = next(i for i in files if i["format"] == "jsonld" and i["latest"])
+    r = client.get("/api/ard/download", params={"kind": "file", "id": jl["id"]})
+    assert r.status_code == 200 and r.headers["content-disposition"].startswith("attachment") and len(r.content) == jl["size"]
+    z = next(i for i in client.get("/api/ard/artifacts", params={"kind": "zip"}).json()["items"])
+    assert client.get("/api/ard/download", params={"kind": "zip", "id": z["id"]}).headers["content-type"].startswith("application/zip")
+    d = next(i for i in client.get("/api/ard/artifacts", params={"kind": "diagnosis"}).json()["items"])
+    assert client.get("/api/ard/download", params={"kind": "diagnosis", "id": d["id"]}).status_code == 200
+    assert client.get("/api/ard/download", params={"kind": "file", "id": 999999}).status_code == 404
+    hist = client.get("/api/ard/history", params={"type": "artifact_download", "size": 50}).json()
+    assert hist["total"] >= 3 and hist["items"][0]["type"] == "artifact_download" and hist["items"][0]["payload"]["sha256"]
+    assert s["downloads_7d"] + 3 <= client.get("/api/ard/summary").json()["downloads_7d"]
+
+    # viewer: O 등급만. 앞 테스트들이 등급을 바꾸므로 O 인 것과 아닌 것을 목록에서 고른다 (스트림은 O, 교통사고는 S2)
+    vtok = client.post("/api/auth/login", json={"username": "viewer1", "password": "viewer-pass-1"}).json()["access_token"]
+    vh = {"Authorization": f"Bearer {vtok}"}
+    items = client.get("/api/ard/artifacts", params={"kind": "file", "size": 100, "latest_only": "true"}, headers=vh).json()["items"]
+    road = next(i for i in items if i["grade"] == "O" and i["format"] == "jsonld")
+    acc = next(i for i in items if (i["dataset"] or {}).get("id") == S["d_acc"] and i["format"] == "jsonld")
+    assert road["can_download"] is True
+    assert acc["grade"] != "O" and acc["can_download"] is False
+    assert client.get("/api/ard/download", params={"kind": "file", "id": road["id"]}, headers=vh).status_code == 200
+    assert client.get("/api/ard/download", params={"kind": "file", "id": acc["id"]}, headers=vh).status_code == 403
+    assert client.get("/api/ard/download", params={"kind": "zip", "id": z["id"]}, headers=vh).status_code == 403, "조합에 S2 가 있으면 ZIP 도 막는다"
+
+    # 제출 패키지: JSON-LD · 카드 · 사전 + manifest
+    import io
+    import json
+    import zipfile
+
+    m = client.get(f"/api/ard/datasets/{S['d_road']}/package/manifest").json()
+    assert m["resource_id"] and m["n2sf"]["grade"] in ("O", "S1", "S2") and {x["format"] for x in m["files"]} >= {"jsonld", "card", "dict"}
+    r = client.get(f"/api/ard/datasets/{S['d_road']}/package")
+    assert r.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+        names = zf.namelist()
+        assert "manifest.json" in names and any(n.endswith(".jsonld") for n in names)
+        man = json.loads(zf.read("manifest.json"))
+        assert man["files"][0]["sha256"] and man["resource_id"] == m["resource_id"]
+    assert client.get(f"/api/ard/datasets/{S['d_acc']}/package", headers=vh).status_code == 403
+    assert client.get("/api/ard/history", params={"type": "package_download"}).json()["total"] >= 1
+
+    # 발행본: 검색 · 상태 · 작업자, MCP 노출 플래그
+    pub = client.get("/api/ard/published", params={"size": 10}).json()
+    assert pub["total"] >= 1 and all(e["status"] == "published" for e in pub["items"]) and "mcp_exposed" in pub["items"][0]
+    assert client.get("/api/ard/published", params={"q": "없는검색어zzz"}).json()["total"] == 0
+    assert client.get("/api/ard/published", params={"actor_id": admin_id}).json()["total"] == pub["total"]
+    assert client.get("/api/ard/published", params={"status": "all"}).json()["total"] >= pub["total"]
+    detail = client.get(f"/api/catalog/{pub['items'][0]['resource_id']}").json()
+    assert detail["dataset_id"] is not None
+    assert "facets" not in client.get("/api/catalog").json()
+
+    # 배포 이력 CSV
+    r = client.get("/api/ard/history", params={"format": "csv"})
+    assert r.status_code == 200 and r.text.startswith("﻿시각,구분") and "다운로드" in r.text
+
+    # 보존 정책: 후보는 발행본이 참조하는 회차를 빼고 센다. 적용은 관리자만
+    ret = client.get("/api/ard/retention").json()
+    assert ret["keep"] == 5 and isinstance(ret["candidates"], list)
+    assert client.post("/api/ard/retention/apply", headers=vh).status_code == 403
+    r = client.post("/api/ard/retention/apply")
+    assert r.status_code == 200 and r.json()["deleted"] == len(ret["candidates"])
+    assert client.get("/api/ard/retention").json()["candidates"] == []
+
+
+def test_25_column_samples_and_force_delete(client):
     """프로파일 예시값 직접 입력(작성자) · 강제 삭제(관리자만, 보호 무시 · 조합에서 떼어냄 · 민팅 대장은 유지)."""
     # 예시값 입력: 스키마만 있는 원천(스트림)에 담당자가 예시를 적는다
     r = client.post("/api/assets/streams", json={"name": "edit.samples.v1", "fields": [{"name": "event_time", "type": "datetime"}, {"name": "phone", "type": "string"}]})

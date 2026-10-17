@@ -1,4 +1,4 @@
-"""데이터 카탈로그(발행분) · 대시보드."""
+"""발행본(CatalogEntry) 조회 · 철회 · 복원과 HOME 대시보드. 화면은 ARD 관리(routers/ard.py)가 맡는다."""
 from __future__ import annotations
 
 from typing import Any
@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Activity, Asset, CatalogEntry, MintRecord, Process, User, utcnow
+from ..models import Activity, Asset, CatalogEntry, MintRecord, Process, ProcessDataset, User, utcnow
 from ..security import current_user, require_admin
 from ..serializers import activity_out, catalog_out, process_out
 from ..services import activity, gates
@@ -18,31 +18,20 @@ router = APIRouter()
 
 
 @router.get("/catalog")
-def list_catalog(q: str | None = None, kind: str | None = None, theme: str | None = None, data_type: str | None = None,
-                 status: str = "published", db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
+def list_catalog(q: str | None = None, kind: str | None = None, status: str = "published", process_id: int | None = None,
+                 db: Session = Depends(get_db), _: User = Depends(current_user)) -> dict[str, Any]:
+    """발행본 목록 (간단 검색). 패싯 화면은 v0.18 에서 ARD 관리로 대체되었고, 이 목록은 STEP 7 · 검수 큐가 발행 ID 를 찾을 때 쓴다."""
     stmt = select(CatalogEntry).order_by(CatalogEntry.published_at.desc())
     if status in ("published", "withdrawn"):
         stmt = stmt.where(CatalogEntry.status == status)
     if kind in ("dataset", "stream"):
         stmt = stmt.where(CatalogEntry.kind == kind)
+    if process_id is not None:
+        stmt = stmt.where(CatalogEntry.process_id == process_id)
     for term in (q or "").lower().split():
         stmt = stmt.where(CatalogEntry.search_text.contains(term, autoescape=True))
     rows = db.scalars(stmt).all()
-    # 패싯 집계는 필터 적용 전 결과 기준으로 한다 (선택지를 좁히지 않기 위함)
-    themes: dict[str, int] = {}
-    types: dict[str, int] = {}
-    for e in rows:
-        cls = (e.facets or {}).get("classification", {})
-        for t in cls.get("theme", []):
-            themes[t] = themes.get(t, 0) + 1
-        for t in cls.get("dataType", []):
-            types[t] = types.get(t, 0) + 1
-    if theme:
-        rows = [e for e in rows if theme in (e.facets or {}).get("classification", {}).get("theme", [])]
-    if data_type:
-        rows = [e for e in rows if data_type in (e.facets or {}).get("classification", {}).get("dataType", [])]
-    return {"total": len(rows), "items": [catalog_out(e) for e in rows],
-            "facets": {"theme": sorted(themes.items(), key=lambda x: -x[1]), "data_type": sorted(types.items(), key=lambda x: -x[1])}}
+    return {"total": len(rows), "items": [catalog_out(e) for e in rows]}
 
 
 def _entry(db: Session, resource_id: str) -> CatalogEntry:
@@ -57,7 +46,8 @@ def get_entry(resource_id: str, db: Session = Depends(get_db), _: User = Depends
     from ..services import catalog as catalog_svc
 
     e = _entry(db, resource_id)
-    return {**catalog_out(e, detail=True), "documents": catalog_svc.documents_for(db, e)}
+    pd_id = db.scalar(select(ProcessDataset.id).where(ProcessDataset.process_id == e.process_id, ProcessDataset.asset_id == e.asset_id)) if e.process_id else None
+    return {**catalog_out(e, detail=True), "documents": catalog_svc.documents_for(db, e), "dataset_id": pd_id}
 
 
 @router.get("/catalog/{resource_id}/raw")

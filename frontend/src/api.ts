@@ -317,7 +317,15 @@ export const api = {
   deleteAttestation: (pid: number, itemId: string) => del<{ ok: boolean }>(`/processes/${pid}/attestations/${itemId}`),
 
   // 카탈로그
-  catalog: (params?: { q?: string; kind?: string; theme?: string; data_type?: string; status?: string }) => get<T.CatalogList>("/catalog", params),
+  catalog: (params?: { q?: string; kind?: string; status?: string; process_id?: number }) => get<T.CatalogList>("/catalog", params),
+  // ARD 관리
+  ardSummary: () => get<T.ArdSummary>("/ard/summary"),
+  ardFilters: () => get<T.ArdFilters>("/ard/filters"),
+  ardArtifacts: (params: Record<string, string | number | boolean | undefined>) => get<T.Paged<T.ArdArtifact>>("/ard/artifacts", params),
+  ardPublished: (params: Record<string, string | number | boolean | undefined>) => get<T.Paged<T.ArdPublished>>("/ard/published", params),
+  ardHistory: (params: Record<string, string | number | boolean | undefined>) => get<T.Paged<T.ArdHistory>>("/ard/history", params),
+  ardRetention: () => get<{ candidates: { run_id: number; process: { id: number; name: string }; started_at: string; files: number; size: number }[]; keep: number; size: number }>("/ard/retention"),
+  ardRetentionApply: () => post<{ deleted: number; runs: number[]; keep: number }>("/ard/retention/apply", {}),
   catalogEntry: (rid: string) => get<T.CatalogEntry>(`/catalog/${encodeURIComponent(rid)}`),
   withdraw: (rid: string) => post<T.CatalogEntry>(`/catalog/${encodeURIComponent(rid)}/withdraw`),
   republish: (rid: string) => post<T.CatalogEntry>(`/catalog/${encodeURIComponent(rid)}/restore`),
@@ -325,6 +333,9 @@ export const api = {
 
 /** 내려받기 경로 모음 (downloadFile 과 함께 쓴다) */
 export const downloads = {
+  ard: (kind: string, id: number, datasetId?: number | null) => `/ard/download?kind=${kind}&id=${id}${datasetId != null ? `&dataset_id=${datasetId}` : ""}`,
+  ardPackage: (did: number) => `/ard/datasets/${did}/package`,
+  ardHistoryCsv: (params: string) => `/ard/history?format=csv${params ? "&" + params : ""}`,
   artifact: (aid: number) => `/artifacts/${aid}?download=true`,
   runZip: (runId: number) => `/serialization-runs/${runId}/download`,
   validationReport: (runId: number, datasetId: number) => `/validation-runs/${runId}/report?dataset_id=${datasetId}`,

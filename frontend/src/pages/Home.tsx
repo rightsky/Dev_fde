@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import { useAuth, useReference } from "../auth";
 import type { Activity, Dashboard } from "../types";
-import { Badge, Button, Card, Empty, QueryState, fmtDateTime, fmtNum, useToast } from "../ui";
+import { Badge, Banner, Button, Card, Empty, QueryState, fmtDateTime, fmtNum, useToast } from "../ui";
 
 type RecentProcess = Dashboard["recent_processes"][number];
 
@@ -17,7 +17,7 @@ export function HomePage() {
         <div>
           <h1 className="page-title">대시보드 홈</h1>
           <p className="page-sub">
-            현재 등록된 원천·프로세스·카탈로그 상태입니다.
+            현재 등록된 원천·프로세스·발행본 상태입니다.
             {q.data ? ` 집계 시각 ${fmtDateTime(q.data.now)}` : ""}
           </p>
         </div>
@@ -32,12 +32,26 @@ export function HomePage() {
 
 function DashboardBody({ data }: { data: Dashboard }) {
   const c = data.counts;
+  const ard = useQuery({ queryKey: ["ard", "summary"], queryFn: api.ardSummary, staleTime: 60_000 });
+  const stale = ard.data?.stale ?? [];
   return (
     <div className="col" style={{ gap: 14 }}>
+      {stale.length > 0 && (
+        <Banner tone="warn" right={<Link className="btn sm" to="/ard">ARD 관리</Link>}>
+          <b>재변환 필요 {stale.length}건</b> — 정본이 바뀌어 산출물이 최신이 아닙니다:{" "}
+          {stale.slice(0, 4).map((x, i) => (
+            <span key={x.process.id}>
+              {i > 0 && " · "}
+              <Link to={`/studio/${x.process.id}/step/${x.step}`}>{x.process.name}</Link>
+            </span>
+          ))}
+          {stale.length > 4 && ` 외 ${stale.length - 4}건`}
+        </Banner>
+      )}
       <div className="grid c4">
         <Kpi to="/assets" label="등록 원천" value={c.assets} sub={`이 중 스트림 ${fmtNum(c.streams)}건`} />
         <Kpi to="/studio" label="진행 중 프로세스" value={c.processes_active} sub={`종료 ${fmtNum(c.processes_completed)}건`} />
-        <Kpi to="/catalog" label="카탈로그 발행" value={c.catalog_published} sub="현재 발행 상태 (철회분 제외)" />
+        <Kpi to="/ard?tab=published" label="발행본" value={c.catalog_published} sub="현재 발행 상태 (철회분 제외) · ARD 관리" />
         <Kpi to="/admin" label="발행 ID" value={c.minted} sub="민팅 대장에 등록된 ID" />
       </div>
       <WorkflowCard processes={data.recent_processes} />
@@ -50,8 +64,8 @@ function DashboardBody({ data }: { data: Dashboard }) {
         <Link className="btn" to="/studio">
           스튜디오
         </Link>
-        <Link className="btn" to="/catalog">
-          카탈로그
+        <Link className="btn" to="/ard">
+          ARD 관리
         </Link>
       </div>
     </div>

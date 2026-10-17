@@ -299,3 +299,58 @@ export function ConfirmButton(props: { children: ReactNode; confirmLabel?: strin
     </Button>
   );
 }
+
+export function fmtBytes(n: number | null | undefined): string {
+  if (n == null) return "—";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(n < 10240 ? 1 : 0)} KB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`;
+  return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
+
+/** 목록 페이지 이동 + 페이지 크기(10 · 20 · 50 · 100) 선택. 총 건수와 현재 범위를 함께 보인다 */
+export function Pager(props: { page: number; pages: number; size: number; total: number; sizes?: number[]; onPage: (p: number) => void; onSize: (s: number) => void }) {
+  const { page, pages, size, total } = props;
+  const sizes = props.sizes || [10, 20, 50, 100];
+  const from = total === 0 ? 0 : (page - 1) * size + 1;
+  const to = Math.min(total, page * size);
+  // 현재 페이지 주변 2칸 + 처음 · 끝
+  const nums: (number | "…")[] = [];
+  for (let i = 1; i <= pages; i++) {
+    if (i === 1 || i === pages || Math.abs(i - page) <= 2) nums.push(i);
+    else if (nums[nums.length - 1] !== "…") nums.push("…");
+  }
+  return (
+    <nav className="row between wrap mt-8" aria-label="페이지" style={{ alignItems: "center", gap: 8 }}>
+      <div className="small muted">
+        {total === 0 ? "0건" : `${fmtNum(from)}–${fmtNum(to)} / ${fmtNum(total)}건`}
+      </div>
+      <div className="row gap-4" style={{ alignItems: "center" }}>
+        <Button size="sm" disabled={page <= 1} onClick={() => props.onPage(page - 1)} aria-label="이전 페이지">
+          ‹
+        </Button>
+        {nums.map((n, i) =>
+          n === "…" ? (
+            <span key={`e${i}`} className="muted small" aria-hidden="true">
+              …
+            </span>
+          ) : (
+            <button key={n} type="button" className={cx("chip", n === page && "on")} aria-current={n === page ? "page" : undefined} onClick={() => props.onPage(n)}>
+              {n}
+            </button>
+          ),
+        )}
+        <Button size="sm" disabled={page >= pages} onClick={() => props.onPage(page + 1)} aria-label="다음 페이지">
+          ›
+        </Button>
+        <select className="select" style={{ width: 110 }} value={size} onChange={(e) => props.onSize(Number(e.target.value))} aria-label="페이지 크기">
+          {sizes.map((s) => (
+            <option key={s} value={s}>
+              {s}개씩
+            </option>
+          ))}
+        </select>
+      </div>
+    </nav>
+  );
+}
