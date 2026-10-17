@@ -584,6 +584,36 @@ def build(db: Session, pd: ProcessDataset, mode: str = "draft") -> Canonical:
     if n2sf and n2sf in codes:
         g.add((ds, FDE.n2sfGrade, _add_concept(g, codes[n2sf])))
         record["n2sfGrade"] = n2sf.replace("N2SF-", "")
+    # 등급 판단 근거 · 표 41 · 메타데이터 공개 수준 (가이드라인 3.6.1 · 표 41, N²SF 기획안 2.2 ~ 2.4)
+    from . import grading
+
+    gb = grading.basis(pd)
+    if gb:
+        bn = URIRef(f"{ds}#grade-basis")
+        g.add((ds, FDE.gradeBasis, bn))
+        g.add((bn, RDF.type, FDE.GradeBasis))
+        for key, _label, table in grading.BASIS_FIELDS:
+            if gb.get(key) in table:
+                g.add((bn, FDE[{"personal_data": "personalDataType", "reidentification": "reidentificationRisk", "legal": "legalRestriction"}[key]], Literal(gb[key])))
+        if gb.get("legal_refs"):
+            g.add((bn, FDE.legalReference, _lit(gb["legal_refs"])))
+        if gb.get("suggested") and f"N2SF-{gb['suggested']}" in codes:
+            g.add((bn, FDE.suggestedGrade, _add_concept(g, codes[f"N2SF-{gb['suggested']}"])))
+        if gb.get("reason"):
+            g.add((bn, RDFS.comment, _lit(gb["reason"])))
+        if gb.get("by"):
+            g.add((bn, FDE.decidedBy, _lit(gb["by"])))
+        if gb.get("at"):
+            g.add((bn, PROV.endedAtTime, Literal(str(gb["at"])[:19], datatype=XSD.dateTime)))
+        record["gradeBasis"] = {k: gb.get(k) for k in ("personal_data", "reidentification", "legal", "legal_refs", "suggested", "reason", "by", "at") if gb.get(k)}
+    pro = grading.prohibited(pd)
+    for t in pro["types"]:
+        g.add((ds, FDE.shareProhibited, Literal(t)))
+    if pro["types"]:
+        record["shareProhibited"] = pro["types"]
+    vis = grading.visibility(pd)
+    g.add((ds, FDE.metadataVisibility, Literal(vis)))
+    record["metadataVisibility"] = vis
     keys_rec = []
     for k in cls.get("K") or []:
         tc = codes.get(k.get("code", ""))

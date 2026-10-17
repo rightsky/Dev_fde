@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from .models import (Activity, Artifact, Asset, CatalogEntry, DiagnosisRun, MintRecord, Organization, Process,
                      ProcessDataset, SerializationRun, TaxonomyAxis, User, ValidationRun)
-from .services import canonical, minting
+from .services import grading, canonical, minting
 from .services.profiling import human_size, profile_summary
 
 
@@ -64,6 +64,7 @@ def dataset_out(db: Session, pd: ProcessDataset, mode: str, light: bool = False)
         "resource_id": rid, "minted": minted, "minted_id": rec.minted_id if rec else None,
         "draft_id": minting.draft_id(pd),
         "authoring_activity": pd.authoring_activity.code if pd.authoring_activity else None,
+        "grading": grading.state(pd),  # N²SF 등급 제안 · 표 41 · 공개 수준
     }
     if not light and pd.in_combo:
         c = canonical.build(db, pd, mode)

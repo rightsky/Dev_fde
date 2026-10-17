@@ -6,7 +6,8 @@ import { api } from "../api";
 import type { AgentCall, AgentKey } from "../types";
 import { Badge, Banner, Button, Card, CodeBlock, ConfirmButton, Empty, Field, Modal, QueryState, fmtDateTime, fmtNum, useToast } from "../ui";
 
-const GRADE_LABEL: Record<string, string> = { O: "O · 공개", S: "S · 민감" };
+const GRADE_LABEL: Record<string, string> = { O: "O · 공개", S1: "S1 · 조건부 공유", S2: "S2 · 제한 공유", S: "S · (세분화 전)" };
+const GRADES = ["O", "S1", "S2"];
 const STATE: Record<AgentKey["state"], { label: string; tone: "ok" | "warn" | "muted" }> = {
   active: { label: "사용 중", tone: "ok" },
   expired: { label: "만료", tone: "warn" },
@@ -203,9 +204,9 @@ function IssueForm({ tools, onClose, onIssued }: { tools: string[]; onClose: () 
           <input className="input" value={purpose} onChange={(e) => setPurpose(e.target.value)} maxLength={1000} />
         </Field>
       </div>
-      <Field label="접근할 수 있는 보안등급 (N²SF)" hint="최소권한 원칙 — 필요한 등급만 고르세요. 등급을 정하지 않은 데이터셋은 S 로 봅니다. C(통제)는 고를 수 없습니다">
+      <Field label="접근할 수 있는 보안등급 (N²SF)" hint="최소권한 원칙 — 필요한 등급만 고르세요. 등급을 정하지 않은 데이터셋은 S2 로 봅니다. C(비공개)는 고를 수 없습니다">
         <div className="row wrap">
-          {["O", "S"].map((g) => (
+          {GRADES.map((g) => (
             <label key={g} className="check">
               <input type="checkbox" checked={grades.includes(g)} onChange={() => setGrades(toggle(grades, g))} />
               {GRADE_LABEL[g]}

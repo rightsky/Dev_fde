@@ -267,6 +267,46 @@ export interface Classification {
   F6?: string[];
   K?: KeyBinding[];
   N2SF?: string;
+  /** 등급 판단 근거 (가이드라인 3.6.1 판단 항목) */
+  N2SF_BASIS?: GradeBasis;
+  /** 표 41 공유 불가 유형: 수동 지정과 자동 신호 해제 사유 */
+  SHARE_PROHIBITED?: { manual?: string[]; overrides?: Record<string, string>; by?: string; at?: string };
+  /** 메타데이터 공개 수준: detail · listing · internal */
+  META_VISIBILITY?: MetaVisibility;
+}
+export type MetaVisibility = "detail" | "listing" | "internal";
+export interface GradeBasis {
+  personal_data?: string;
+  reidentification?: string;
+  legal?: string;
+  legal_refs?: string;
+  reason?: string;
+  suggested?: string | null;
+  by?: string;
+  at?: string;
+}
+/** 서버가 계산한 등급 상태 (dataset.grading) */
+export interface GradingState {
+  grade: string | null;
+  grade_label: string | null;
+  suggested: string | null;
+  suggested_label: string | null;
+  reasons: string[];
+  basis: GradeBasis;
+  basis_complete: boolean;
+  below_suggested: boolean;
+  below_reason: string | null;
+  prohibited: { types: string[]; labels: string[]; auto: Record<string, string>; overrides: Record<string, string>; manual: string[]; blocked: boolean; mode: "block" | "review" };
+  visibility: MetaVisibility;
+  visibility_explicit: boolean;
+  options: {
+    personal_data: Record<string, string>;
+    reidentification: Record<string, string>;
+    legal: Record<string, string>;
+    prohibited_types: Record<string, string>;
+    visibilities: Record<string, string>;
+    min_reason: number;
+  };
 }
 
 export interface Dataset {
@@ -284,6 +324,7 @@ export interface Dataset {
   extra_classes: string[];
   meta_confirmed_at: string | null;
   classification: Classification;
+  grading?: GradingState;
   class_confirmed_at: string | null;
   resource_id: string;
   minted: boolean;
@@ -742,6 +783,9 @@ export interface CatalogEntry {
     classification?: { theme?: string[]; dataType?: string[]; granularity?: string[]; aiPurpose?: string[]; governance?: string[] };
     license?: string | null;
     n2sf?: string | null;
+    meta_visibility?: MetaVisibility;
+    grade_basis?: { personal_data?: string; reidentification?: string; legal?: string; suggested?: string | null } | null;
+    share_prohibited?: string[];
     /** AI 활용 이용조건 (3.4.5 표 39): 항목 이름 → permitted | conditional | prohibited. 없는 항목은 미정 */
     ai_terms?: Record<string, string>;
     ai_conditions?: string | null;

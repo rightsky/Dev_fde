@@ -285,8 +285,8 @@ def classification_suggestions(pd: ProcessDataset) -> list[dict[str, Any]]:
     # N2SF — 개인정보 의심 컬럼 유무 (판단은 사람이 한다)
     pii = [c["name"] for c in cols if c.get("pii")]
     if pii:
-        out.append({"axis": "N2SF", "code": "N2SF-S", "score": 80,
-                    "reason": f"개인정보 의심 컬럼 {len(pii)}개 ({', '.join(pii[:4])}) — 필터링 투영 조건부 검토"})
+        out.append({"axis": "N2SF", "code": "N2SF-S2", "score": 80,
+                    "reason": f"개인정보 의심 컬럼 {len(pii)}개 ({', '.join(pii[:4])}) — 개별 기록 포함 가능성, 제한 공유(S2) 이상 검토"})
     elif tables:
         out.append({"axis": "N2SF", "code": "N2SF-O", "score": 60, "reason": "개인정보 의심 컬럼 미검출 — 개방 가능 여부는 담당자 확인 필요"})
     return sorted(out, key=lambda s: (s["axis"], -s["score"]))

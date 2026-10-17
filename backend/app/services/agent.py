@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from ..models import AgentCall, AgentKey, CatalogEntry, utcnow
 from . import ratelimit
 
-GRADES = ["O", "S"]  # 키에 줄 수 있는 등급. C(통제)는 에이전트 접근 대상이 아니다
+GRADES = ["O", "S1", "S2"]  # 키에 줄 수 있는 등급 (S 는 S1 조건부 공유 · S2 제한 공유로 세분화). C(비공개)는 에이전트 접근 대상이 아니다
 TOOLS = ["search_datasets", "get_dataset", "get_metadata", "get_schema", "get_data_card", "get_usage_terms"]
 KEY_PREFIX = "fde_"
 
@@ -58,16 +58,40 @@ def find_key(db: Session, raw: str | None) -> AgentKey | None:
 
 
 def entry_grade(e: CatalogEntry) -> str:
-    """등급 미지정은 보수적으로 S 로 본다 (STEP 4 N²SF 규칙과 같다)."""
-    return str((e.facets or {}).get("n2sf") or "S").replace("N2SF-", "")
+    """등급 미지정은 보수적으로 S2 로 본다 (STEP 4 N²SF 규칙과 같다). 세분화 전 'S' 도 S2."""
+    g = str((e.facets or {}).get("n2sf") or "S2").replace("N2SF-", "")
+    return "S2" if g == "S" else g
+
+
+def key_grades(key: AgentKey) -> set[str]:
+    g = set(key.grades or [])
+    if "S" in g:  # 세분화 전 키
+        g |= {"S1", "S2"}
+    return g
+
+
+def entry_visibility(e: CatalogEntry) -> str:
+    """메타데이터 공개 수준: detail(상세) · listing(목록만) · internal(비노출). 발행 시점 facet, 없으면 C 는 internal."""
+    v = (e.facets or {}).get("meta_visibility")
+    if v in ("listing", "detail", "internal"):
+        return str(v)
+    return "internal" if entry_grade(e) == "C" else "detail"
 
 
 def visible(e: CatalogEntry, key: AgentKey) -> bool:
-    """에이전트에게 보여도 되는 발행 항목인지: 발행 중 · C 등급 아님 · 키의 등급 범위 안 · 담당자가 외부 AI 전송 제외로 표시하지 않음."""
+    """에이전트에게 상세를 보여도 되는 발행 항목인지: 발행 중 · C 등급 아님 · 키의 등급 범위 안 · 공개 수준 detail · 전송 제외 아님."""
     g = entry_grade(e)
-    if (e.facets or {}).get("ai_excluded"):
+    if (e.facets or {}).get("ai_excluded") or e.status != "published" or entry_visibility(e) != "detail":
         return False
-    return e.status == "published" and g != "C" and g in (key.grades or [])
+    return g != "C" and g in key_grades(key)
+
+
+def listable(e: CatalogEntry, key: AgentKey) -> bool:
+    """검색 결과에 넣어도 되는지: 상세가 보이는 항목, 또는 담당자가 '목록만 공개'로 정한 항목(등급과 무관하게 제목 · 기관 · 등급만).
+    공개 수준 detail 인데 키 등급 밖이면 존재를 드러내지 않는다 (기존 원칙 유지)."""
+    if (e.facets or {}).get("ai_excluded") or e.status != "published":
+        return False
+    return visible(e, key) or entry_visibility(e) == "listing"
 
 
 def calls_today(db: Session, key: AgentKey) -> int:

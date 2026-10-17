@@ -40,7 +40,7 @@ INSTRUCTIONS = (
 )
 RAI = Namespace("http://mlcommons.org/croissant/RAI/")
 
-server = MCPServer(name="fde-data-studio", title="FDE Data Studio 카탈로그", instructions=INSTRUCTIONS, version="0.12.0")
+server = MCPServer(name="fde-data-studio", title="FDE Data Studio 카탈로그", instructions=INSTRUCTIONS, version="0.13.0")
 
 
 def _entry(db, key, resource_id: str, rec: agent.CallRecord) -> CatalogEntry:
@@ -89,11 +89,19 @@ def _run(ctx: Context, tool: str, args: dict[str, Any], fn) -> dict[str, Any]:  
 def impl_search_datasets(db, key, rec, query: str = "", limit: int = 10, exclude_assets: set[int] | None = None):  # noqa: ANN001
     words = [w.lower() for w in query.split() if w.strip()]
     rows = db.scalars(select(CatalogEntry).where(CatalogEntry.status == "published").order_by(CatalogEntry.published_at.desc()))
-    hits = [e for e in rows if agent.visible(e, key) and e.asset_id not in (exclude_assets or set())
+    hits = [e for e in rows if agent.listable(e, key) and e.asset_id not in (exclude_assets or set())
             and all(w in (e.search_text or "") for w in words)]
     hits = hits[: max(1, min(limit, 50))]
     rec.resource_ids += [e.resource_id for e in hits]
-    return {"count": len(hits), "results": [_summary(e) for e in hits]}
+    results = []
+    for e in hits:
+        if agent.visible(e, key):
+            results.append({**_summary(e), "access": "detail"})
+        else:
+            # 공개 수준 listing 또는 키 등급 밖: 가이드라인 "목록은 공개" 원칙대로 존재와 등급만 알리고 상세 도구는 열지 않는다
+            results.append({"resource_id": e.resource_id, "title": e.title, "publisher": e.publisher_label, "n2sf_grade": agent.entry_grade(e),
+                            "access": "listing", "note": "목록만 제공되는 데이터셋입니다 — 상세 조회는 제공기관에 문의하세요"})
+    return {"count": len(hits), "results": results}
 
 
 def impl_get_dataset(db, key, rec, resource_id: str):  # noqa: ANN001

@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     # note: 요청자 본인이 승인할 수 있되 사유 10자 이상 + '자기 승인' 기록 (기본). deny: 본인 승인 금지.
     review_self_approve: str = "note"
 
+    # 표 41 공유 불가 유형에 해당하는 데이터셋: block = 외부 카탈로그 발행 차단(기본), review = 발행은 되나 고위험 검수 신호
+    share_prohibited: str = "block"
+
     # --- 시간대 --- 하루 호출 상한 · 일일 집계의 '하루' 기준
     timezone: str = "Asia/Seoul"
 

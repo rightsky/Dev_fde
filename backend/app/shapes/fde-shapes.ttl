@@ -23,6 +23,7 @@ fdesh: a owl:Ontology ;
              [ sh:prefix "dcterms" ; sh:namespace "http://purl.org/dc/terms/"^^xsd:anyURI ] ,
              [ sh:prefix "prov" ;    sh:namespace "http://www.w3.org/ns/prov#"^^xsd:anyURI ] ,
              [ sh:prefix "skos" ;    sh:namespace "http://www.w3.org/2004/02/skos/core#"^^xsd:anyURI ] ,
+             [ sh:prefix "rdfs" ;    sh:namespace "http://www.w3.org/2000/01/rdf-schema#"^^xsd:anyURI ] ,
              [ sh:prefix "fde" ;     sh:namespace "__DEF_NS__"^^xsd:anyURI ] .
 
 # ───────────────────────── 정체성 (게이트 0 ⑤ 의 존재 부분)
@@ -201,7 +202,7 @@ fdesh:ClassificationShape-n2sf a sh:PropertyShape ;
   rdfs:label "N2SFZoneShape" ;
   sh:path fde:n2sfGrade ; sh:minCount 1 ;
   sh:severity sh:Warning ; fde:fixRoute "class4" ; fde:fixFocus "N2SF" ;
-  sh:message "N2SF 등급 미지정 — S 로 간주"@ko .
+  sh:message "N2SF 등급 미지정 — S2 로 간주"@ko .
 
 fdesh:ClassificationShape-n2sfMax a sh:PropertyShape ;
   rdfs:label "N2SFZoneShape" ;
@@ -247,6 +248,50 @@ fdesh:CoordinateSystemShape a sh:NodeShape ;
         ?b fde:keyConcept ?c .
         ?c skos:notation "K3" .
         FILTER NOT EXISTS { $this dcterms:conformsTo ?std }
+      }""" ] .
+
+# ───────────────────────── N²SF 등급 판단 근거 · 표 41 (가이드라인 3.6.1)
+fdesh:GradeBasisShape a sh:NodeShape ;
+  rdfs:label "N2SFZoneShape" ;
+  sh:targetClass dcat:Dataset ;
+  sh:severity sh:Warning ; fde:fixRoute "class4" ; fde:fixFocus "N2SF_BASIS" ;
+  sh:sparql [
+    sh:message "S1 이상 등급인데 등급 판단 근거(개인정보 유형 · 재식별 위험도 · 보안·법적 제한)가 없다 — 3.6.1 판단 항목"@ko ;
+    sh:prefixes fdesh: ;
+    sh:select """
+      SELECT $this WHERE {
+        $this fde:n2sfGrade ?gc . ?gc skos:notation ?n .
+        FILTER(?n IN ("N2SF-S1", "N2SF-S2", "N2SF-C", "N2SF-S"))
+        FILTER NOT EXISTS { $this fde:gradeBasis ?b . ?b fde:personalDataType ?p ; fde:reidentificationRisk ?r ; fde:legalRestriction ?l }
+      }""" ] .
+
+fdesh:GradeBelowBasisShape a sh:NodeShape ;
+  rdfs:label "N2SFZoneShape" ;
+  sh:targetClass dcat:Dataset ;
+  sh:severity sh:Violation ; fde:fixRoute "class4" ; fde:fixFocus "N2SF_BASIS" ;
+  sh:sparql [
+    sh:message "판단 근거가 제안한 등급보다 낮은 등급을 사유 없이 정했다"@ko ;
+    sh:prefixes fdesh: ;
+    sh:select """
+      SELECT $this WHERE {
+        $this fde:n2sfGrade ?gc ; fde:gradeBasis ?b . ?gc skos:notation ?g . ?b fde:suggestedGrade ?sc . ?sc skos:notation ?s .
+        BIND(IF(?g = "N2SF-O", 0, IF(?g = "N2SF-S1", 1, IF(?g IN ("N2SF-S2", "N2SF-S"), 2, 3))) AS ?gr)
+        BIND(IF(?s = "N2SF-O", 0, IF(?s = "N2SF-S1", 1, IF(?s IN ("N2SF-S2", "N2SF-S"), 2, 3))) AS ?sr)
+        FILTER(?gr < ?sr)
+        FILTER NOT EXISTS { ?b rdfs:comment ?why }
+      }""" ] .
+
+fdesh:ShareProhibitedShape a sh:NodeShape ;
+  rdfs:label "N2SFZoneShape" ;
+  sh:targetClass dcat:Dataset ;
+  sh:severity sh:Warning ; fde:fixRoute "class4" ; fde:fixFocus "SHARE_PROHIBITED" ;
+  sh:sparql [
+    sh:message "표 41 공유 불가 유형에 해당하는데 이용조건(F4)이 기관 내부 한정 · 비공개가 아니다"@ko ;
+    sh:prefixes fdesh: ;
+    sh:select """
+      SELECT $this WHERE {
+        $this fde:shareProhibited ?t .
+        FILTER NOT EXISTS { $this dcterms:accessRights ?ar . ?ar skos:notation ?code . FILTER(?code IN ("F4-05", "F4-08")) }
       }""" ] .
 
 # ───────────────────────── 관계 (STEP 5)

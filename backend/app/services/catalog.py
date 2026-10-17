@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import CatalogEntry, Process, SerializationRun, User, ValidationRun, utcnow
-from . import activity, canonical, minting
+from . import grading, activity, canonical, minting
 
 
 class PublishBlocked(Exception):
@@ -52,9 +52,15 @@ def publish(db: Session, process: Process, user: User, vr: ValidationRun, sr: Se
     out: list[CatalogEntry] = []
     act = activity.log(db, "publish", f"카탈로그 발행 — {process.name} {len(ok_ids)}건", user=user, process_id=process.id,
                        payload={"validation_run_id": vr.id, "serialization_run_id": sr.id})
+    skipped: list[str] = []
     for res in vr.results:
         pd = by_pd.get(res.dataset_id)
         if pd is None or not res.passed or pd.id not in ok_ids:
+            continue
+        pro = grading.prohibited(pd)
+        if pro["blocked"]:
+            # 표 41 공유 불가 유형: 외부 카탈로그 발행에서 뺀다 (FDE_SHARE_PROHIBITED=block). 내부 목록은 STEP 7 에서 그대로 보인다
+            skipped.append(f"{(pd.meta or {}).get('title') or pd.asset.name} ({', '.join(pro['labels'])})")
             continue
         canon = canonical.build(db, pd, "publish")
         if not canon.minted or canon.checksum != res.checksum:
@@ -65,6 +71,9 @@ def publish(db: Session, process: Process, user: User, vr: ValidationRun, sr: Se
             "classification": {k: rec[k] for k in ("theme", "dataType", "granularity", "aiPurpose", "governance") if k in rec},
             "license": rec.get("license") or rec.get("accessRights"),
             "n2sf": rec.get("n2sfGrade"),
+            "meta_visibility": grading.visibility(pd),  # 목록만 · 상세 · 내부 한정 (MCP · 외부 노출 범위)
+            "grade_basis": {k: rec["gradeBasis"].get(k) for k in ("personal_data", "reidentification", "legal", "suggested")} if rec.get("gradeBasis") else None,
+            "share_prohibited": rec.get("shareProhibited", []),
             "ai_terms": rec.get("aiUsageTerms", {}),
             "ai_excluded": bool((pd.meta or {}).get("_ai_excluded")),  # 담당자의 외부 AI 전송 제외 표시 (MCP·시뮬레이션에서 숨김)
             "ai_conditions": rec.get("aiUsageConditions"),
@@ -102,6 +111,9 @@ def publish(db: Session, process: Process, user: User, vr: ValidationRun, sr: Se
         out.append(entry)
     db.flush()
     act.text = f"카탈로그 발행 — {process.name} {len(out)}건 ({', '.join(e.resource_id for e in out[:5])})"
+    if skipped:
+        act.text += f" · 표 41 공유 불가로 제외 {len(skipped)}건"
+        act.payload = {**(act.payload or {}), "share_prohibited_skipped": skipped}
     return out
 
 
