@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..models import AgentKey, Process, ProcessDataset, SimulationRun, User, utcnow
-from . import activity, agent, assist, serialize
+from . import activity, agent, assist, documents, serialize
 
 SCENARIOS = {
     "chat": {"label": "데이터 안내 챗봇", "desc": "산출물(JSON-LD · 데이터 카드 · 데이터 사전)을 읽고 이용자 질문에 답합니다. 근거로 쓴 속성을 함께 보입니다",
@@ -58,7 +58,7 @@ def _chat_context(db: Session, pd: ProcessDataset, with_metadata: bool) -> dict[
     if "jsonld" in arts:
         out["dcat_jsonld"] = arts["jsonld"].content
     if "card" in arts:
-        out["data_card_markdown"] = arts["card"].content
+        out["data_card_markdown"] = documents.strip_samples(arts["card"].content)
     if "dict" in arts:
         out["data_dictionary_csv"] = arts["dict"].content
     return out

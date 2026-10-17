@@ -66,6 +66,7 @@ def publish(db: Session, process: Process, user: User, vr: ValidationRun, sr: Se
             "license": rec.get("license") or rec.get("accessRights"),
             "n2sf": rec.get("n2sfGrade"),
             "ai_terms": rec.get("aiUsageTerms", {}),
+            "ai_excluded": bool((pd.meta or {}).get("_ai_excluded")),  # 담당자의 외부 AI 전송 제외 표시 (MCP·시뮬레이션에서 숨김)
             "ai_conditions": rec.get("aiUsageConditions"),
             "keys": rec.get("joinKeys", []),
             "keywords": rec.get("keywords", []),

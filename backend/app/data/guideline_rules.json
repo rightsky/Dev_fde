@@ -189,7 +189,7 @@
    "focus": "accrual_periodicity",
    "focus_stream": "temporal_resolution",
    "difficulty": 1,
-   "criteria": "dcterms:accrualPeriodicity 가 표준 표기(ISO 8601 duration 또는 irregular)이면 충족, 비표준 표기면 부분. 스트림은 승인된 dcat:temporalResolution 으로 판정",
+   "criteria": "dcterms:accrualPeriodicity 가 dcterms:Frequency 개념(목록의 값)으로 지정되어 있으면 충족, 목록 밖 표기면 부분. 스트림은 승인된 dcat:temporalResolution 으로 판정",
    "remedy": "STEP 3 에서 갱신주기를 선택한다 (스트림은 시간 해상도를 승인한다)"
   },
   {
@@ -588,12 +588,12 @@
    "method": "AUTO-GRAPH",
    "resolver": {
     "type": "ask",
-    "query": "ASK { ?this rai:knownLimitations ?v }"
+    "query": "ASK { ?this rai:dataLimitations ?v }"
    },
    "route": "meta3",
    "focus": "rai_known_limitations",
    "difficulty": 1,
-   "criteria": "정본 그래프에 rai:knownLimitations 가 있으면 충족",
+   "criteria": "정본 그래프에 rai:dataLimitations(가이드라인 표기 rai:knownLimitations 와 같은 뜻, Croissant RAI 1.0 의 이름)가 있으면 충족",
    "remedy": "STEP 3 의 데이터 한계에 제한사항과 해석할 때 유의할 점을 적는다"
   },
   {

@@ -39,13 +39,21 @@ def join_stats(rel: Relation) -> dict[str, Any]:
                 "reason": "스트림 또는 값을 읽을 수 없는 컬럼 — 결합 통계를 계산하지 않았습니다"}
     sa, sb = set(a), set(b)
     matched = len(sa & sb)
+    pii = _is_pii(rel.source.asset, rel.source_table, rel.source_column) or _is_pii(rel.target.asset, rel.target_table, rel.target_column)
     return {
         "computed": True,
         "source_distinct": len(sa), "target_distinct": len(sb), "matched": matched,
         "source_match_rate": round(matched / len(sa), 4) if sa else 0.0,
         "target_match_rate": round(matched / len(sb), 4) if sb else 0.0,
-        "unmatched_samples": sorted(sa - sb)[:5],
+        "unmatched_samples": [] if pii else sorted(sa - sb)[:5],  # 개인정보 의심 컬럼의 값은 남기지 않는다
     }
+
+
+def _is_pii(asset, table: str | None, column: str | None) -> bool:  # noqa: ANN001
+    for t in (asset.profile or {}).get("tables", []):
+        if t.get("name") == table:
+            return any(c.get("name") == column and c.get("pii") for c in t.get("columns", []))
+    return False
 
 
 def candidates(process: Process) -> list[dict[str, Any]]:

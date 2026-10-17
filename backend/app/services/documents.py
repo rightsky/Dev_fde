@@ -265,6 +265,17 @@ def ai_terms_lines(record: dict[str, Any]) -> list[str]:
     return lines + [""]
 
 
+def strip_samples(markdown: str) -> str:
+    """외부(AI 에이전트 · 외부 모델)로 보낼 때 데이터 카드의 값 표본 행을 뺀다. 자동 PII 탐지가 놓친 값이 나가지 않게 한다."""
+    out = []
+    for line in markdown.splitlines():
+        if line.startswith("|") and "데이터 인스턴스" in line.split("|")[1]:
+            out.append("| 데이터 인스턴스(샘플) | (외부 제공본에서는 값 표본을 제외합니다) | 자동 |")
+            continue
+        out.append(line)
+    return "\n".join(out)
+
+
 def render_card(canon: canonical.Canonical, pd: ProcessDataset, vr: ValidationRun | None, files: list[str]) -> str:
     sections = card_items(canon, pd, vr, files)
     filled, total = card_coverage(sections)

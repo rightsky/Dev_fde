@@ -37,7 +37,7 @@ INSTRUCTIONS = (
 )
 RAI = Namespace("http://mlcommons.org/croissant/RAI/")
 
-server = MCPServer(name="fde-data-studio", title="FDE Data Studio 카탈로그", instructions=INSTRUCTIONS, version="0.10.0")
+server = MCPServer(name="fde-data-studio", title="FDE Data Studio 카탈로그", instructions=INSTRUCTIONS, version="0.11.0")
 
 
 def _entry(db, key, resource_id: str, rec: agent.CallRecord) -> CatalogEntry:
@@ -124,6 +124,7 @@ def impl_get_schema(db, key, rec, resource_id: str):  # noqa: ANN001
 def impl_get_data_card(db, key, rec, resource_id: str):  # noqa: ANN001
     e = _entry(db, key, resource_id, rec)
     card = catalog_svc.documents_for(db, e).get("card")
+    card = documents.strip_samples(card) if card else card
     return {"resource_id": e.resource_id, "markdown": card or "", **({} if card else {"message": "이 발행본에는 데이터 카드가 없습니다"})}
 
 
@@ -152,7 +153,7 @@ def impl_get_usage_terms(db, key, rec, resource_id: str):  # noqa: ANN001
         "n2sf_grade": agent.entry_grade(e),
         "recommended_uses": _label(g, g.value(ds, RAI.dataUseCases)),
         "prohibited_uses": _label(g, g.value(ds, fde.prohibitedUses)),
-        "known_limitations": _label(g, g.value(ds, RAI.dataLimitations) or g.value(ds, RAI.knownLimitations)),
+        "known_limitations": _label(g, g.value(ds, RAI.dataLimitations)),
         "biases": _label(g, g.value(ds, RAI.dataBiases)),
         "contact": {"name": _label(g, g.value(contact, vcard.fn)), "email": str(g.value(contact, vcard.hasEmail) or "") or None}
         if contact is not None else None,

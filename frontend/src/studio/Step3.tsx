@@ -139,6 +139,7 @@ export function Step3() {
   const mid = useMedia("(max-width: 1479px)");
 
   const [selectedId, setSelectedId] = useState<number | null>(() => initialDatasetId(combo, params.dataset));
+  const [dictDirty, setDictDirty] = useState(0); // ③ 데이터 사전 탭의 미저장 변경 수 (탭을 바꿔도 유지된다)
   const [tab, setTab] = useState<TabKey>("form");
   const [draftState, setDraftState] = useState<{ did: number | null; values: Draft }>({ did: null, values: EMPTY_DRAFT });
   /** 진행 중인 변경 요청의 이름 (save · confirm · unconfirm · approve:필드 · class:IRI). 한 번에 하나만 보낸다. */
@@ -161,11 +162,11 @@ export function Step3() {
   const dirtyCount = dirty.length;
   // 저장하지 않은 변경이 있으면 단계 이동 전에 확인을 받는다
   useEffect(() => {
-    guard.current = () => dirtyCount > 0;
+    guard.current = () => dirtyCount > 0 || dictDirty > 0;
     return () => {
       guard.current = null;
     };
-  }, [dirtyCount, guard]);
+  }, [dirtyCount, dictDirty, guard]);
 
   // ── 강조 이동: 탭을 바꾸고, 그려진 뒤에 대상 입력을 화면 가운데로 옮겨 flash 를 붙인다
   const requestFocus = useCallback(
@@ -391,12 +392,14 @@ export function Step3() {
             <span className="mono small muted">{dataset.resource_id}</span>
             {!dataset.minted && <Badge title="관리자가 STEP 6 에서 ID 를 발급하면 정식 식별자로 바뀝니다">임시 ID</Badge>}
           </div>
-          <Tabs tabs={TABS} value={tab} onChange={setTab} />
+          <Tabs tabs={TABS.map((t) => (t.key === "dict" && dictDirty > 0 ? { ...t, label: <>{t.label} <Badge tone="warn">미저장 {dictDirty}</Badge></> } : t))} value={tab} onChange={setTab} />
           {(tab === "form" || tab === "card") && <AiExclusionBox did={dataset.id} editable={editable} />}
 
           {tab === "class" && <ClassTab key={dataset.id} pid={pid} dataset={dataset} reference={reference} editable={editable} busy={busy} onToggle={toggleClass} />}
           {tab === "form" && <FormTab key={dataset.id} m={model} fields={fields.filter((f) => !f.group)} />}
-          {tab === "dict" && <DictTab key={dataset.id} pid={pid} did={dataset.id} editable={editable} onSaved={refresh} />}
+          <div hidden={tab !== "dict"}>
+            <DictTab key={dataset.id} pid={pid} did={dataset.id} editable={editable} onSaved={refresh} onDirty={setDictDirty} />
+          </div>
           {tab === "card" && <CardTab key={dataset.id} pid={pid} m={model} fields={fields.filter((f) => f.group === "card")} aiFields={fields.filter((f) => f.group === "ai")} dirtyCount={dirtyCount} />}
           {tab === "prov" && <ProvTab key={dataset.id} pid={pid} dataset={dataset} publisher={publisher} />}
           {tab === "profile" && <ProfileTab key={dataset.id} pid={pid} did={dataset.id} />}
@@ -1047,7 +1050,7 @@ function SaveBar(props: {
 type DictDraft = Record<string, { description: string; unit: string; codes: string }>;
 const dictKey = (r: { table: string; column: string }) => `${r.table}\u0000${r.column}`;
 
-function DictTab({ pid, did, editable, onSaved }: { pid: number; did: number; editable: boolean; onSaved: () => Promise<void> }) {
+function DictTab({ pid, did, editable, onSaved, onDirty }: { pid: number; did: number; editable: boolean; onSaved: () => Promise<void>; onDirty?: (n: number) => void }) {
   const q = useQuery({ queryKey: ["process", pid, "dataset", did, "dictionary"], queryFn: () => api.dictionary(did) });
   const toast = useToast();
   const [draft, setDraft] = useState<DictDraft>({});
@@ -1059,6 +1062,11 @@ function DictTab({ pid, did, editable, onSaved }: { pid: number; did: number; ed
     return d && (d.description.trim() !== r.description || d.unit.trim() !== r.unit || d.codes.trim() !== r.codes);
   });
   const set = (r: DictRow, k: "description" | "unit" | "codes", v: string) => setDraft((s) => ({ ...s, [dictKey(r)]: { ...value(r), [k]: v } }));
+  useEffect(() => {
+    onDirty?.(changed.length);
+    return () => onDirty?.(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [changed.length]);
   const save = async () => {
     setBusy(true);
     try {

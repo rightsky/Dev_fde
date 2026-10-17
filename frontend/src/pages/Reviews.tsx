@@ -6,7 +6,7 @@ import { api } from "../api";
 import { useAuth } from "../auth";
 import type { ReviewRequest } from "../types";
 import { DatasetTable, RiskBadge, SignalList, STATUS_TONE } from "../review/ReviewParts";
-import { Badge, Banner, Button, Card, Empty, Field, QueryState, Tabs, fmtDateTime, fmtNum, useToast } from "../ui";
+import { Badge, Banner, Button, Card, ConfirmButton, Empty, Field, QueryState, Tabs, fmtDateTime, fmtNum, useToast } from "../ui";
 
 type ListKey = "pending" | "done";
 
@@ -209,10 +209,12 @@ function Detail({ id }: { id: number }) {
                 )}
                 {(self || isAdmin) && (
                   <div className="row mt-12">
-                    <Button
+                    <ConfirmButton
                       size="sm"
                       busy={busy === "withdraw"}
-                      onClick={() =>
+                      confirmLabel="정말 취소"
+                      title="요청을 취소하면 담당자가 다시 요청해야 합니다"
+                      onConfirm={() =>
                         void act("withdraw", async () => {
                           await api.withdrawReview(id);
                           nav("/reviews");
@@ -221,7 +223,7 @@ function Detail({ id }: { id: number }) {
                       }
                     >
                       요청 취소
-                    </Button>
+                    </ConfirmButton>
                   </div>
                 )}
               </Card>

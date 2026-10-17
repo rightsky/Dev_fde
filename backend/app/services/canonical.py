@@ -35,6 +35,12 @@ DQV = Namespace("http://www.w3.org/ns/dqv#")
 OA = Namespace("http://www.w3.org/ns/oa#")
 SDO = Namespace("https://schema.org/")
 ODRL = Namespace("http://www.w3.org/ns/odrl/2/")
+FREQ = Namespace("http://purl.org/cld/freq/")  # Dublin Core Collection Description Frequency (DCAT 3 권장)
+# 갱신주기 입력값(ISO 8601 duration) → dcterms:Frequency 개념. DCAT 3 은 dcterms:accrualPeriodicity 의 range 를 dcterms:Frequency 로 둔다.
+FREQUENCY_IRI = {"PT5M": FREQ.continuous, "PT1H": FREQ.continuous, "P1D": FREQ.daily, "P1W": FREQ.weekly, "P1M": FREQ.monthly,
+                 "P3M": FREQ.quarterly, "P1Y": FREQ.annual, "irregular": FREQ.irregular}
+FREQUENCY_LABEL = {"PT5M": "연속(5분 간격)", "PT1H": "연속(1시간 간격)", "P1D": "매일", "P1W": "매주", "P1M": "매월", "P3M": "분기",
+                   "P1Y": "매년", "irregular": "비정기"}
 LANG_NS = "http://id.loc.gov/vocabulary/iso639-1/"
 IANA_MT = "https://www.iana.org/assignments/media-types/"
 
@@ -77,7 +83,7 @@ META_FIELDS: list[dict[str, Any]] = [
     {"name": "timezone", "property": "fde:timezone", "label": "타임존", "level": "권장", "type": "text", "scope": "stream"},
     {"name": "watermark", "property": "fde:watermarkDelay", "label": "워터마크 지연 허용", "level": "권장", "type": "duration", "scope": "stream"},
     {"name": "quality_annotation", "property": "dqv:hasQualityAnnotation", "label": "품질 검증 정보 (수행한 품질 검토·평가 내용)", "level": "선택", "type": "textarea", "scope": "all", "guide": "표 12 품질 검증 정보"},
-    {"name": "rai_known_limitations", "property": "rai:knownLimitations", "label": "데이터 한계 (제한사항·해석 시 유의 사항)", "level": "선택", "type": "textarea", "scope": "all", "guide": "표 12 데이터 한계"},
+    {"name": "rai_known_limitations", "property": "rai:dataLimitations", "label": "데이터 한계 (제한사항·해석 시 유의 사항)", "level": "선택", "type": "textarea", "scope": "all", "guide": "표 12 데이터 한계"},
     {"name": "rai_missing_data", "property": "rai:dataCollectionMissingData", "label": "결측치 정보 (비율·발생 사유·처리 방식)", "level": "선택", "type": "textarea", "scope": "all", "guide": "표 12 결측치 정보"},
     {"name": "conforms_to", "property": "dcterms:conformsTo", "label": "준수 표준 (날짜 형식·코드 체계·좌표계 등)", "level": "선택", "type": "tags", "scope": "all", "guide": "부록 3 의미 및 표준"},
     {"name": "late_policy", "property": "fde:lateDataPolicy", "label": "지각(late) 데이터 정책", "level": "선택", "type": "late_policy", "scope": "stream"},
@@ -232,12 +238,12 @@ def _add_ai_terms(g: Graph, ds: URIRef, meta: dict[str, Any], record: dict[str, 
     조건부 허용은 허용 규칙에 fde:conditional true 를 달고, 조건 문장은 정책의 rdfs:comment 로 적는다."""
     terms = ai_terms(meta)
     note = str(meta.get("ai_terms_conditions") or "").strip()
-    if not terms and not note:
-        return
+    if not terms:
+        return  # ODRL: 정책은 permission/prohibition/obligation 을 하나 이상 가져야 한다. 조건 문장만 있으면 정책을 만들지 않는다
     pol = URIRef(f"{ds}#ai-terms")
     g.add((ds, ODRL.hasPolicy, pol))
     g.add((pol, RDF.type, ODRL.Set))
-    g.add((pol, ODRL.uid, pol))
+    g.add((pol, ODRL.profile, URIRef(str(FDE) + "odrl-profile")))  # fde: 확장 동작·의무를 정의하는 프로파일
     g.add((pol, RDFS.label, Literal("AI 활용 이용조건 (가이드라인 3.4.5 표 39)", lang="ko")))
     if note:
         g.add((pol, RDFS.comment, _lit(note)))
@@ -259,7 +265,16 @@ def _add_ai_terms(g: Graph, ds: URIRef, meta: dict[str, Any], record: dict[str, 
         g.add((rule, ODRL.target, ds))
         g.add((rule, FDE.aiTermStatus, Literal(status)))
         if status == "conditional":
-            g.add((rule, FDE.conditional, Literal(True)))
+            # ODRL 2.2: 조건은 duty(의무)로 적어야 평가기가 '조건이 충족되기 전까지 허용 아님'으로 읽는다
+            duty = URIRef(f"{ds}#ai-terms-{local}-duty")
+            g.add((rule, ODRL.duty, duty))
+            g.add((duty, RDF.type, ODRL.Duty))
+            g.add((duty, ODRL.action, FDE.satisfyStatedConditions))
+            g.add((duty, ODRL.target, ds))
+            g.add((duty, RDFS.comment, _lit(note or "제공기관이 정한 조건을 따라야 합니다 (조건 문장은 담당자가 적습니다)")))
+            g.add((FDE.satisfyStatedConditions, RDF.type, ODRL.Action))
+            g.add((FDE.satisfyStatedConditions, RDFS.label, Literal("명시된 조건 이행", lang="ko")))
+            g.add((FDE.satisfyStatedConditions, ODRL.includedIn, ODRL.use))
         rec[name] = status
     record["aiUsageTerms"] = rec
     if note:
@@ -364,7 +379,7 @@ def build(db: Session, pd: ProcessDataset, mode: str = "draft") -> Canonical:
         g.add((ds, RAI.dataBiases, _lit(meta["rai_data_biases"])))
         record["dataBiases"] = meta["rai_data_biases"]
     if meta.get("rai_known_limitations"):
-        g.add((ds, RAI.knownLimitations, _lit(meta["rai_known_limitations"])))  # 가이드라인 표 12 의 표기
+        g.add((ds, FDE.knownLimitations, _lit(meta["rai_known_limitations"])))  # 가이드라인 표 12 의 표기 (RAI 1.0 에는 없는 이름이라 fde: 로)
         g.add((ds, RAI.dataLimitations, _lit(meta["rai_known_limitations"])))  # Croissant RAI 1.0 의 표기
         record["knownLimitations"] = meta["rai_known_limitations"]
     if meta.get("provenance"):
@@ -464,8 +479,18 @@ def build(db: Session, pd: ProcessDataset, mode: str = "draft") -> Canonical:
         record["distribution"] = d_rec
     if not is_stream and meta.get("accrual_periodicity"):
         v = str(meta["accrual_periodicity"]).strip()
-        g.add((ds, DCTERMS.accrualPeriodicity, Literal(v, datatype=XSD.duration) if is_duration(v) else Literal(v)))
+        freq = FREQUENCY_IRI.get(v)
+        if freq is not None:
+            # DCAT 3: dcterms:accrualPeriodicity → dcterms:Frequency 개념 IRI. 원래 간격은 fde:updateInterval(xsd:duration)에 남긴다
+            g.add((ds, DCTERMS.accrualPeriodicity, freq))
+            g.add((freq, RDF.type, DCTERMS.Frequency))
+            g.add((freq, SKOS.prefLabel, Literal(FREQUENCY_LABEL.get(v, v), lang="ko")))
+            if is_duration(v):
+                g.add((ds, FDE.updateInterval, Literal(v, datatype=XSD.duration)))
+        else:
+            g.add((ds, DCTERMS.accrualPeriodicity, Literal(v, datatype=XSD.duration) if is_duration(v) else Literal(v)))
         record["accrualPeriodicity"] = v
+        record["accrualPeriodicityIRI"] = str(freq) if freq is not None else None
 
     # ---- 스트림 속성
     if is_stream:

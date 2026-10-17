@@ -213,3 +213,7 @@ export function RerunButton({ size = "sm", variant = "primary", label, afterGo }
     </Button>
   );
 }
+
+
+/** 준수 점수 색 기준 (STEP 8 · 즉시 진단 공통): 75% 이상 녹색 · 40~74% 주황 · 40% 미만 빨강 */
+export const pctLevel = (pct: number): "ok" | "warn" | "err" => (pct >= 75 ? "ok" : pct >= 40 ? "warn" : "err");

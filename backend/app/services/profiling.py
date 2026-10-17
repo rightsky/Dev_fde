@@ -59,7 +59,8 @@ _DATE_NAME = re.compile(r"일시|일자|날짜|시각|시간|연도|년도|년�
 _YM = re.compile(r"^(19|20)\d{2}(0[1-9]|1[0-2])$")
 _Y = re.compile(r"^(19|20)\d{2}$")
 
-_PII_NAME = re.compile(r"주민|성명|이름|전화|휴대|핸드폰|연락처|생년|이메일|email|e-mail|계좌|여권|운전면허|차량번호|차대번호|VIN", re.I)
+_PII_NAME = re.compile(r"주민|성명|이름|전화|휴대|핸드폰|연락처|생년|생일|birth|이메일|email|e-mail|계좌|account|여권|passport|운전면허|차량번호|차대번호|VIN"
+                       r"|주소|addr|성별|gender|(?<![a-z])name(?![a-z])|_nm(?![a-z])|^nm$|owner|고객|환자|학생|신청인|민원인", re.I)
 _PII_VALUE: list[tuple[str, re.Pattern[str]]] = [
     ("주민등록번호", re.compile(r"^\d{6}-?[1-4]\d{6}$")),
     ("휴대전화", re.compile(r"^01[016789]-?\d{3,4}-?\d{4}$")),
@@ -330,6 +331,7 @@ def _profile_column(name: str, values: list[Any]) -> dict[str, Any]:
     pii = _detect_pii(name, texts)
     if pii:
         out["pii"] = pii
+        out["samples"] = []  # 개인정보 의심 컬럼의 값은 프로파일에 남기지 않는다 (화면·산출물·외부 전송 모두)
     return out
 
 

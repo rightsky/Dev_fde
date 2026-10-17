@@ -5,10 +5,11 @@ import { api } from "../api";
 import type { DiagPreviewItem, DiagStatus } from "../types";
 import { Badge, Card, QueryState, cx } from "../ui";
 import { useStudio } from "./context";
+import { pctLevel } from "./shared";
 
 const ST: Record<DiagStatus, { label: string; tone: "ok" | "warn" | "err" | "info" | "muted" }> = {
   met: { label: "충족", tone: "ok" },
-  partial: { label: "부분", tone: "warn" },
+  partial: { label: "부분 충족", tone: "warn" },
   unmet: { label: "미흡", tone: "err" },
   pending: { label: "확인 대기", tone: "info" },
   na: { label: "해당 없음", tone: "muted" },
@@ -20,33 +21,24 @@ export function InstantDiag({ did, step, onFocus }: { did: number; step: number;
   const [showAll, setShowAll] = useState(false);
   const p = q.data;
   const st = (i: DiagPreviewItem) => i.dataset_status ?? i.status;
-  const todo = (p?.items || []).filter((i) => ["unmet", "partial", "pending"].includes(st(i)) && i.method !== "AUTO-DERIVED");
+  const todo = (p?.items || []).filter((i) => ["unmet", "partial", "pending"].includes(st(i)) && i.method !== "AUTO-DERIVED" && i.route);
   const here = todo.filter((i) => i.route?.step === step);
   const elsewhere = todo.filter((i) => i.route?.step !== step);
   const pct = p && p.max_score > 0 ? Math.round((p.score / p.max_score) * 100) : null;
   const lastPct = p?.last_run && p.last_run.max_score > 0 ? Math.round((p.last_run.score / p.last_run.max_score) * 100) : null;
   const jump = (i: DiagPreviewItem) => {
     if (i.route?.step === step && i.focus && onFocus) onFocus(i.focus);
-    else if (i.route) go(i.route.step, { dataset: did, focus: i.focus, fix: i.id });
+    else if (i.route) go(i.route.step, { dataset: did, focus: i.focus, fix: p?.last_run ? i.id : undefined }); // 저장된 진단이 없으면 안내 띠를 그릴 수 없다
   };
-  const Row = ({ i }: { i: DiagPreviewItem }) => (
-    <button type="button" className={cx("idiag-row", i.changed && "changed")} onClick={() => jump(i)} title={i.detail || undefined}>
-      <span className="mono">{i.id}</span>
-      <span className="grow ellipsis">{i.name}</span>
-      {i.changed && i.previous && <span className="idiag-prev">{ST[i.previous].label} →</span>}
-      <Badge tone={ST[st(i)].tone}>{ST[st(i)].label}</Badge>
-      {i.provisional && <span className="idiag-prov" title="STEP 7 변환 뒤 확정">잠정</span>}
-      {i.route && i.route.step !== step && <span className="tiny muted">S{i.route.step}</span>}
-    </button>
-  );
+  const Row = ({ i }: { i: DiagPreviewItem }) => <ItemRow i={i} step={step} status={st(i)} onJump={jump} />;
   return (
     <Card
       title={
         <>
           즉시 진단{" "}
           {p && (
-            <Badge tone={pct !== null && pct >= 70 ? "ok" : pct !== null && pct >= 40 ? "warn" : "err"}>
-              {pct}%{lastPct !== null && lastPct !== pct ? ` (저장된 진단 ${lastPct}%)` : ""}
+            <Badge tone={pct === null ? "muted" : pctLevel(pct)}>
+              {pct === null ? "판정 항목 없음" : `${pct}%${lastPct !== null && lastPct !== pct ? ` (저장된 진단 ${lastPct}%)` : ""}`}
             </Badge>
           )}
         </>
@@ -86,5 +78,18 @@ export function InstantDiag({ did, step, onFocus }: { did: number; step: number;
         )}
       </QueryState>
     </Card>
+  );
+}
+
+function ItemRow({ i, step, status, onJump }: { i: DiagPreviewItem; step: number; status: DiagStatus; onJump: (i: DiagPreviewItem) => void }) {
+  return (
+    <button type="button" className={cx("idiag-row", i.changed && "changed")} onClick={() => onJump(i)} title={i.detail || undefined}>
+      <span className="mono">{i.id}</span>
+      <span className="grow ellipsis">{i.name}</span>
+      {i.changed && i.previous && <span className="idiag-prev">{ST[i.previous].label} →</span>}
+      <Badge tone={ST[status].tone}>{ST[status].label}</Badge>
+      {i.provisional && <span className="idiag-prov" title="STEP 7 변환 뒤 확정">잠정</span>}
+      {i.route && i.route.step !== step && <span className="tiny muted">S{i.route.step}</span>}
+    </button>
   );
 }

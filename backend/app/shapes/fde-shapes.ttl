@@ -161,9 +161,9 @@ fdesh:DescriptionShape-keyword a sh:PropertyShape ;
 fdesh:DescriptionShape-periodicity a sh:PropertyShape ;
   rdfs:label "DatasetShape" ;
   sh:path dcterms:accrualPeriodicity ; sh:maxCount 1 ;
-  sh:or ( [ sh:datatype xsd:duration ] [ sh:in ( "irregular" ) ] ) ;
+  sh:nodeKind sh:IRI ; sh:class dcterms:Frequency ;
   sh:severity sh:Warning ; fde:fixRoute "meta3" ; fde:fixFocus "accrual_periodicity" ;
-  sh:message "갱신 주기 비표준 표기 — ISO 8601 duration(예: PT5M) 권장"@ko .
+  sh:message "갱신 주기는 dcterms:Frequency 개념(IRI)이어야 합니다 — 목록에서 선택하세요"@ko .
 
 # ───────────────────────── 분류 (STEP 4)
 fdesh:ClassificationShape a sh:NodeShape ;
@@ -324,9 +324,9 @@ fdesh:ResponsibleAIShape-biases a sh:PropertyShape ;
 
 fdesh:ResponsibleAIShape-limitations a sh:PropertyShape ;
   rdfs:label "ResponsibleAIShape" ;
-  sh:path rai:knownLimitations ; sh:minCount 1 ;
+  sh:path rai:dataLimitations ; sh:minCount 1 ;
   sh:severity sh:Info ; fde:fixRoute "meta3" ; fde:fixFocus "rai_known_limitations" ;
-  sh:message "rai:knownLimitations 미작성"@ko .
+  sh:message "rai:dataLimitations(데이터 한계) 미작성"@ko .
 
 # ───────────────────────── 구조 불변식 (SHACL-SPARQL)
 fdesh:NoEmptyLiteralShape a sh:NodeShape ;

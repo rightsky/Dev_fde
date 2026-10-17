@@ -4,12 +4,12 @@ import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, api, downloadFile, downloads } from "../api";
 import type { Artifact, CatalogEntry, FormatDef, PublishReview, SelfVerify, SerializationRun } from "../types";
-import { Badge, Banner, Button, Card, CodeBlock, Empty, Modal, QueryState, cx, fmtDateTime, fmtNum, shortHash, useToast } from "../ui";
+import { Badge, Banner, Button, Card, CodeBlock, Empty, Modal, QueryState, cx, errText, fmtDateTime, fmtNum, shortHash, useToast } from "../ui";
 import { DatasetTable, RiskBadge, SignalList, STATUS_TONE } from "../review/ReviewParts";
 import { useAuth } from "../auth";
 import { SimulationPanel } from "./Simulation";
 import { useStudio } from "./context";
-import { ReadOnlyNote, StepHeader } from "./shared";
+import { ReadOnlyNote, RerunButton, StepHeader } from "./shared";
 
 type Mode = "draft" | "publish";
 
@@ -134,13 +134,16 @@ export function Step7() {
                       STEP 6 재검증으로
                     </Button>
                   ) : (
-                    <Button size="sm" variant="dark" busy={running} disabled={!editable} onClick={runSerialization}>
-                      다시 변환
-                    </Button>
+                    <div className="row">
+                      <Button size="sm" busy={running} disabled={!editable} onClick={runSerialization}>
+                        다시 변환만
+                      </Button>
+                      <RerunButton variant="dark" afterGo={8} />
+                    </div>
                   )
                 }
               >
-                <b>↺ 이전 변환 결과는 무효입니다</b> — {latest.stale}
+                <b>↺ 지난 결과입니다</b> — {latest.stale}. 열람은 되지만 발행·완료에는 쓸 수 없습니다.
               </Banner>
             )}
 
@@ -593,6 +596,14 @@ function PublishCard({ run, blocked }: { run: SerializationRun | null; blocked: 
         </li>
       </ol>
 
+      {reasons.length === 0 && prQ.isLoading && <div className="small muted mt-12"><span className="spinner" /> 발행 위험과 검수 상태를 확인하는 중</div>}
+      {reasons.length === 0 && prQ.error != null && (
+        <div className="mt-12">
+          <Banner tone="err" right={<Button size="sm" onClick={() => void prQ.refetch()}>다시 시도</Button>}>
+            발행 위험 평가를 불러오지 못했습니다 — {errText(prQ.error)}. 평가 없이는 발행·검수 요청을 할 수 없습니다.
+          </Banner>
+        </div>
+      )}
       {reasons.length === 0 && pr?.assessment && <ReviewStatus pr={pr} />}
       {asking && pr?.assessment && (
         <RequestModal
@@ -624,7 +635,7 @@ function PublishCard({ run, blocked }: { run: SerializationRun | null; blocked: 
         disabledReason && (
           <div className="small t-warn mt-12">
             ⚠ {disabledReason}
-            {!isAdmin && " — 카탈로그 발행은 관리자 승인으로 이루어집니다. [검수 요청] 으로 올리세요."}
+            {!isAdmin && (canRequest ? " — 카탈로그 발행은 관리자 승인으로 이루어집니다. [검수 요청] 으로 올리세요." : pr?.pending ? " — 검수 요청이 대기 중입니다. 관리자 승인을 기다리세요." : " — 지금 내용은 이미 같은 내용으로 발행되어 있어 요청할 것이 없습니다.")}
           </div>
         )
       )}

@@ -7,7 +7,6 @@ import type { Process, ProcessDetail } from "../types";
 import { Badge, Banner, Button, ConfirmButton, Empty, Loading, Modal, QueryState, cx, errText, fmtDateTime, useToast } from "../ui";
 import { StudioCtx } from "./context";
 import { FixGuide } from "./FixGuide";
-import { RerunButton } from "./shared";
 import type { GoOptions, StudioValue } from "./context";
 
 /** /studio — 가장 최근에 작업한 진행 중 프로세스로 보낸다. 없으면 시작 화면. */
@@ -252,13 +251,6 @@ export function StudioLayout() {
                 >
                   <b>⚠ STEP {value.params.from} 위반 수정 중</b>
                   {value.params.shape ? ` — ${value.params.shape}` : ""} · 보강 후 검증으로 복귀하세요 (수정하면 검증 결과가 자동으로 무효화됩니다)
-                </Banner>
-              </div>
-            )}
-            {!value.params.fix && step >= 6 && staleOf[step] && (
-              <div style={{ marginBottom: 14 }}>
-                <Banner tone="warn" right={value.editable ? <RerunButton variant="dark" /> : undefined}>
-                  <b>지난 결과입니다</b> — {staleOf[step]}. 아래 내용은 열람용이며 새로 실행하기 전까지 발행·완료에는 쓸 수 없습니다.
                 </Banner>
               </div>
             )}
