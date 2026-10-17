@@ -51,6 +51,7 @@ export function AssetsPage() {
   const [profileId, setProfileId] = useState<number | null>(null);
   const [streamOpen, setStreamOpen] = useState(false);
   const [streamSample, setStreamSample] = useState<Asset | null>(null); // 「스트림으로 등록」을 누른 표본 파일
+  const [pendingSamples, setPendingSamples] = useState<Asset[]>([]); // 방금 올린 스트림 표본(.jsonl) 가운데 아직 스트림으로 선언하지 않은 것
   const [fresh, setFresh] = useState<number[]>([]);
   const [tab, setTab] = useState<FabricTab>(() => (location.hash === "#integrations" ? "integrations" : "assets"));
   const q = useDebounced(text.trim(), 300);
@@ -73,7 +74,12 @@ export function AssetsPage() {
     setText("");
     if (kind && created.some((a) => !isKind(a, kind))) setKind("");
     setTab("assets");
+    // 작업 순서 안내: 표본 파일(.jsonl · .ndjson)을 올렸으면 다음 단계(스트림 등록)를 바로 권한다
+    setPendingSamples(created.filter((a) => a.kind === "dataset" && (a.ext === "jsonl" || a.ext === "ndjson")));
   };
+  /** 표본 → 스트림 연결 (스트림의 sample_asset_id 로 역참조) */
+  const streamOfSample = new Map<number, Asset>();
+  for (const a of pool.data || []) if (a.kind === "stream" && a.stream.sample_asset_id) streamOfSample.set(a.stream.sample_asset_id, a);
 
   return (
     <div>
@@ -83,8 +89,8 @@ export function AssetsPage() {
           <p className="page-sub">원천 자산 · 외부 연계. 파일 업로드 · 스트림 등록 · 기관 DB 스키마 가져오기가 모두 여기서 이루어지고, 스튜디오의 모든 프로세스가 이 원천을 후보로 씁니다.</p>
         </div>
         {tab === "assets" && (
-          <Button variant="outline" disabled={!canWrite} onClick={() => setStreamOpen(true)} title={canWrite ? "실시간 스트림의 스키마와 시간 규격을 등록합니다" : "열람 전용 계정은 등록할 수 없습니다"}>
-            ＋ 스트림 등록
+          <Button variant="outline" disabled={!canWrite} onClick={() => setStreamOpen(true)} title={canWrite ? "표본 파일 없이 스키마와 시간 규격만으로 스트림을 선언합니다 (표본이 있으면 그 행의 「스트림으로 등록」이 더 쉽습니다)" : "열람 전용 계정은 등록할 수 없습니다"}>
+            ＋ 스트림 직접 등록
           </Button>
         )}
       </div>
@@ -122,7 +128,37 @@ export function AssetsPage() {
           <Banner tone="info">열람 전용 계정입니다 — 업로드 · 스트림 등록 · 삭제는 담당자 이상 권한에서 할 수 있습니다.</Banner>
         </div>
       )}
+      <div className="row wrap small mb-8" style={{ gap: 6, alignItems: "center" }} aria-label="작업 순서">
+        <span className="bold dim">작업 순서</span>
+        <span className="chip on">① 파일 선택</span>
+        <span className="muted">표 파일이나 스트림 표본(.jsonl) 을 올린다</span>
+        <span className="muted">→</span>
+        <span className="chip on">② 목록에서 확인</span>
+        <span className="muted">이름 · 유형 · 프로파일 · 연계키</span>
+        <span className="muted">→</span>
+        <span className="chip on">③ 스트림이면 「스트림으로 등록」</span>
+        <span className="muted">표본 행의 버튼 → 필드가 채워진 채 서비스(dcat:DataService) 선언. 표 파일은 ②에서 끝</span>
+      </div>
       <UploadZone onUploaded={reveal} disabled={!canWrite} />
+      {pendingSamples.filter((p) => !streamOfSample.has(p.id)).length > 0 && (
+        <div className="mt-8">
+          <Banner
+            tone="info"
+            right={
+              <div className="row gap-4 wrap">
+                {pendingSamples.filter((p) => !streamOfSample.has(p.id)).map((p) => (
+                  <Button key={p.id} size="sm" variant="primary" onClick={() => { setStreamSample(p); setStreamOpen(true); }}>
+                    「{p.name}」 스트림으로 등록
+                  </Button>
+                ))}
+                <Button size="sm" onClick={() => setPendingSamples([])}>나중에</Button>
+              </div>
+            }
+          >
+            <b>③ 다음 단계</b> — 방금 올린 JSON Lines 파일은 스트림 표본으로 보입니다. 스트림으로 등록하면 컬럼이 필드로 들어가고 표본과 연결됩니다. 표본만 쓸 거면 「나중에」.
+          </Banner>
+        </div>
+      )}
 
       <div className="row between wrap mt-16 mb-8">
         <div className="row wrap">
@@ -172,7 +208,7 @@ export function AssetsPage() {
             )}
           </Empty>
         ) : (
-          <AssetTable assets={list.data || []} fresh={fresh} canWrite={canWrite} onProfile={setProfileId} onStreamFrom={(a) => { setStreamSample(a); setStreamOpen(true); }} />
+          <AssetTable assets={list.data || []} fresh={fresh} canWrite={canWrite} onProfile={setProfileId} onStreamFrom={(a) => { setStreamSample(a); setStreamOpen(true); }} streamOfSample={streamOfSample} />
         )}
       </QueryState>
       {canWrite && list.data && list.data.length > 0 && (
@@ -187,7 +223,7 @@ export function AssetsPage() {
   );
 }
 
-function AssetTable(props: { assets: Asset[]; fresh: number[]; canWrite: boolean; onProfile: (id: number) => void; onStreamFrom: (a: Asset) => void }) {
+function AssetTable(props: { assets: Asset[]; fresh: number[]; canWrite: boolean; onProfile: (id: number) => void; onStreamFrom: (a: Asset) => void; streamOfSample: Map<number, Asset> }) {
   const qc = useQueryClient();
   const toast = useToast();
   const { isAdmin } = useAuth();
@@ -240,6 +276,7 @@ function AssetTable(props: { assets: Asset[]; fresh: number[]; canWrite: boolean
               onDelete={() => remove(a)}
               onForceDelete={() => remove(a, true)}
               onStreamFrom={() => props.onStreamFrom(a)}
+              linkedStream={props.streamOfSample.get(a.id) || null}
             />
           ))}
         </tbody>
@@ -248,7 +285,7 @@ function AssetTable(props: { assets: Asset[]; fresh: number[]; canWrite: boolean
   );
 }
 
-function AssetRow(props: { asset: Asset; fresh: boolean; canWrite: boolean; busy: boolean; forceOffer: boolean; onProfile: () => void; onDelete: () => void; onForceDelete: () => void; onStreamFrom: () => void }) {
+function AssetRow(props: { asset: Asset; fresh: boolean; canWrite: boolean; busy: boolean; forceOffer: boolean; onProfile: () => void; onDelete: () => void; onForceDelete: () => void; onStreamFrom: () => void; linkedStream: Asset | null }) {
   const { key_labels } = useReference();
   const a = props.asset;
   const isStream = a.kind === "stream";
@@ -263,6 +300,11 @@ function AssetRow(props: { asset: Asset; fresh: boolean; canWrite: boolean; busy
           {props.fresh && <Badge tone="solid">방금 등록</Badge>}
         </div>
         {origin && <div className="tiny muted mono">{origin}</div>}
+        {props.linkedStream && (
+          <div className="tiny muted">
+            → 스트림 <span className="mono">{props.linkedStream.name}</span> 의 표본
+          </div>
+        )}
         {isStream && a.stream.sample_filename && (
           <div className="tiny muted">
             표본: <span className="mono">{a.stream.sample_filename}</span>
@@ -274,6 +316,9 @@ function AssetRow(props: { asset: Asset; fresh: boolean; canWrite: boolean; busy
       </td>
       <td>
         <AssetKindBadge asset={a} />
+        {!isStream && (a.ext === "jsonl" || a.ext === "ndjson") && (
+          <div className="tiny muted mt-4" title="JSON Lines 는 스트림에서 떠낸 표본으로 봅니다">{props.linkedStream ? "스트림 표본" : "스트림 표본 (미등록)"}</div>
+        )}
       </td>
       <td>
         {a.ext ? (
@@ -326,8 +371,8 @@ function AssetRow(props: { asset: Asset; fresh: boolean; canWrite: boolean; busy
           <Button size="sm" onClick={props.onProfile}>
             프로파일
           </Button>
-          {props.canWrite && !isStream && a.source !== "dbschema" && (a.ext === "jsonl" || a.ext === "ndjson" || a.ext === "json" || a.ext === "csv") && (
-            <Button size="sm" variant="outline" onClick={props.onStreamFrom} title="이 파일을 표본으로 실시간 스트림(dcat:DataService)을 등록합니다. 컬럼이 필드로 들어갑니다">
+          {props.canWrite && !isStream && a.source !== "dbschema" && !props.linkedStream && (a.ext === "jsonl" || a.ext === "ndjson" || a.ext === "json" || a.ext === "csv") && (
+            <Button size="sm" variant={a.ext === "jsonl" || a.ext === "ndjson" ? "primary" : "outline"} onClick={props.onStreamFrom} title="이 파일을 표본으로 실시간 스트림(dcat:DataService)을 등록합니다. 컬럼이 필드로 들어갑니다">
               스트림으로 등록
             </Button>
           )}
