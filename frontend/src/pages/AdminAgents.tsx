@@ -53,7 +53,9 @@ export function AgentsTab() {
       <CallLog keyId={filterKey} keys={keys.data || []} onClear={() => setFilterKey(null)} />
 
       <Card title="연결 방법">
-        <ConnectGuide tools={info.data?.tools || []} />
+        <QueryState q={info}>
+          {info.data && info.data.tools.length === 0 ? <Empty>MCP 서버가 아직 준비되지 않았습니다 — 백엔드 로그를 확인하세요</Empty> : <ConnectGuide tools={info.data?.tools || []} />}
+        </QueryState>
       </Card>
 
       {issuing && (

@@ -8,7 +8,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from ..db import get_db
 from ..models import (Artifact, Asset, Attestation, DiagnosisRun, Organization, Process, ProcessDataset, Relation,
@@ -16,7 +16,7 @@ from ..models import (Artifact, Asset, Attestation, DiagnosisRun, Organization, 
 from ..security import current_user, require_admin, require_writer
 from ..serializers import (activity_out, dataset_out, diagnosis_out, mint_out, process_out, serialization_out,
                            validation_out)
-from ..services import (activity, canonical, catalog, diagnosis, gates, lineage, minting, serialize, suggest,
+from ..services import (activity, canonical, catalog, diagnosis, gates, lineage, minting, ratelimit, serialize, suggest,
                         validation)
 from ..services.reference import guideline_rules, vocab
 
@@ -73,6 +73,7 @@ def list_processes(status: str | None = None, db: Session = Depends(get_db), _: 
         stmt = stmt.where(Process.status == status)
     else:
         stmt = stmt.where(Process.status != "trashed")
+    stmt = stmt.options(selectinload(Process.datasets).selectinload(ProcessDataset.asset), selectinload(Process.relations))
     out = []
     for p in db.scalars(stmt):
         o = process_out(p)
@@ -339,11 +340,19 @@ def get_dataset(did: int, db: Session = Depends(get_db), _: User = Depends(curre
     return out
 
 
+class AiAssistIn(BaseModel):
+    model: str = Field(max_length=80)
+    drafted_at: str | None = None
+    draft_text: str | list[str] = ""
+
+
 class MetaIn(BaseModel):
     values: dict[str, Any] = {}
     approve: list[str] = []
     unapprove: list[str] = []
     extra_classes: list[str] | None = None
+    # AI 초안을 채택해 넣은 칸: {필드: {model, drafted_at, draft_text}}. 이력으로 남아 카드·카탈로그에 "AI 보조 작성"으로 표시된다
+    ai_assisted: dict[str, AiAssistIn] = {}
 
 
 def _clean_meta(pd: ProcessDataset, db: Session, values: dict[str, Any]) -> dict[str, Any]:
@@ -407,6 +416,18 @@ def patch_meta(did: int, body: MetaIn, db: Session = Depends(get_db), user: User
             meta.pop(k, None)
         else:
             meta[k] = v
+    assisted = dict(meta.get(canonical.AI_ASSIST_KEY) or {})
+    for k, info in body.ai_assisted.items():
+        if k in changes and changes[k] is not None:
+            assisted[k] = {"model": info.model, "drafted_at": info.drafted_at, "draft_sha": canonical.value_sha(info.draft_text),
+                           "adopted_by": user.name, "adopted_at": utcnow().replace(microsecond=0).isoformat()}
+    for k, v in changes.items():
+        if v is None:
+            assisted.pop(k, None)  # 칸을 비우면 AI 보조 이력도 뜻이 없다
+    if assisted:
+        meta[canonical.AI_ASSIST_KEY] = assisted
+    else:
+        meta.pop(canonical.AI_ASSIST_KEY, None)
     for k in body.unapprove:
         approved.discard(k)
     newly = []
@@ -554,8 +575,12 @@ def ai_drafts(did: int, body: DraftIn, db: Session = Depends(get_db), user: User
     llm_names = [n for n in body.fields if n in assist.LLM_FIELD_NAMES]
     out: dict[str, Any] = {"drafts": rule, "model": None, "usage": None}
     if llm_names:
+        if pd.process.status == "trashed":
+            raise HTTPException(409, "휴지통에 있는 프로세스입니다")
+        ratelimit.check(db, user.id)
         try:
             r = assist.drafts(db, pd, user, llm_names, body.instructions)
+            ratelimit.record(user.id)
         except assist.AssistError as exc:
             raise HTTPException(exc.status, exc.message)
         except Exception as exc:  # noqa: BLE001 - 외부 API 오류는 사용자에게 그대로 보이되 서버는 살아 있어야 한다
@@ -589,8 +614,10 @@ def run_simulation(pid: int, body: SimulateIn, db: Session = Depends(get_db), us
     p = _process(db, pid)
     if p.status == "trashed":
         raise HTTPException(409, "휴지통에 있는 프로세스입니다")
+    ratelimit.check(db, user.id)
     try:
         runs = simulate.run(db, p, user, body.scenario, body.question, body.dataset_ids, body.compare)
+        ratelimit.record(user.id)
     except simulate.SimError as exc:
         db.rollback()
         raise HTTPException(exc.status, exc.message)
@@ -602,12 +629,16 @@ def run_simulation(pid: int, body: SimulateIn, db: Session = Depends(get_db), us
 
 
 @router.delete("/simulations/{sid}")
-def delete_simulation(sid: int, db: Session = Depends(get_db), _: User = Depends(require_writer)) -> dict[str, Any]:
+def delete_simulation(sid: int, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
     from ..models import SimulationRun
 
     r = db.get(SimulationRun, sid)
     if r is None:
         raise HTTPException(404, "기록이 없습니다")
+    if r.created_by != user.id and user.role != "admin":
+        raise HTTPException(403, "본인이 실행한 기록만 지울 수 있습니다 (관리자 제외)")
+    activity.log(db, "ai_simulate_delete", f"AI 시뮬레이션 기록 삭제 #{sid} — {r.scenario} · {r.question[:60]}", user=user,
+                 process_id=r.process_id, payload={"simulation_id": sid, "created_by": r.created_by})
     db.delete(r)
     db.commit()
     return {"deleted": sid}
@@ -1176,7 +1207,7 @@ class AttestIn(BaseModel):
 
 @router.put("/processes/{pid}/attestations/{item_id}")
 def attest(pid: int, item_id: str, body: AttestIn, db: Session = Depends(get_db), user: User = Depends(require_writer)) -> dict[str, Any]:
-    p = _process(db, pid)
+    p = _editable(db, pid)
     rule = next((r for r in guideline_rules()["rules"] if r["id"] == item_id), None)
     if rule is None:
         raise HTTPException(404, "진단 항목을 찾을 수 없습니다")

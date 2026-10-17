@@ -711,7 +711,10 @@ def test_13_mcp_agent_access(client):
     keys = {k["id"]: k for k in client.get("/api/agent-keys").json()}
     assert keys[kid]["stats_30d"]["ok"] == 6 and keys[kid]["last_used_at"]
     with SessionLocal() as db:
-        assert db.query(AgentCall).filter(AgentCall.key_id.is_(None)).count() == 0, "401 은 MCP 앞에서 막혀 도구 이력이 없다"
+        # 401 은 MCP 서버 앞에서 막히지만 시도 자체는 '인증 실패' 로 남는다 (키 원문은 저장하지 않고 앞 8자만)
+        bad = db.query(AgentCall).filter(AgentCall.key_id.is_(None)).all()
+        assert bad and all(c.status == "denied" and c.tool == "auth" for c in bad)
+        assert all(len(c.arguments.get("key_prefix", "")) <= 8 for c in bad)
 
     # STEP 8 원칙 10: 발행본이 에이전트에게 열려 있으면 실제 호출 이력이 증빙으로 붙는다
     pid = S["pid"]
@@ -1010,3 +1013,147 @@ def test_17_diagnosis_preview(client):
     # 다른 데이터셋에만 해당하는 항목은 빠진다
     acc = client.get(f"/api/datasets/{S['d_acc']}/diagnosis-preview").json()
     assert {i["id"] for i in acc["items"]} <= {i["id"] for i in pv["items"]} | {i["id"] for i in acc["items"]}
+
+
+# ------------------------------------------------------------------ v0.12 품질 검수 후속 (속도 제한 · 자기 승인 정책 · 토큰 무효화 · AI 보조 작성 이력 · 표준 IRI)
+def test_18_quality_followups(client, monkeypatch):
+    from rdflib import DCTERMS, RDF, Graph, Namespace, URIRef
+
+    from app.config import get_settings
+    from app.db import SessionLocal
+    from app.models import ProcessDataset
+    from app.services import assist, ratelimit
+
+    pid, did = S["pid"], S["d_road"]
+    assert client.post(f"/api/processes/{pid}/reopen").status_code in (200, 409)
+    monkeypatch.setattr(get_settings(), "anthropic_api_key", "sk-test")
+    monkeypatch.setattr(assist, "_call", lambda system, user, tool: (
+        {n: {"text": f"[초안] {n}", "basis": "통계"} for n in tool["input_schema"]["required"]},
+        {"input_tokens": 1, "output_tokens": 1, "model": "claude-opus-5-5"}))
+
+    # ① 분당 속도 제한: 2회로 낮추면 3번째가 429 (Retry-After 포함)
+    monkeypatch.setattr(get_settings(), "ai_rate_per_minute", 2)
+    ratelimit.reset()
+    for _ in range(2):
+        assert client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_known_limitations"]}).status_code == 200
+    r = client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_known_limitations"]})
+    assert r.status_code == 429 and "분당 2회" in r.json()["detail"] and r.headers.get("retry-after")
+    ratelimit.reset()
+    # 일일 상한은 활동 로그(한국 시간 자정 기준)로 센다
+    monkeypatch.setattr(get_settings(), "ai_rate_per_day", 1)
+    r = client.post(f"/api/datasets/{did}/drafts", json={"fields": ["rai_known_limitations"]})
+    assert r.status_code == 429 and "오늘 AI 호출 상한" in r.json()["detail"]
+    monkeypatch.setattr(get_settings(), "ai_rate_per_day", 0)
+    monkeypatch.setattr(get_settings(), "ai_rate_per_minute", 0)
+    ratelimit.reset()
+
+    # ② AI 초안 채택 이력: 저장할 때 출처를 보내면 정본에 fde:aiAssisted 로 남고 카드·카탈로그에 표시된다
+    r = client.patch(f"/api/datasets/{did}/meta", json={
+        "values": {"rai_known_limitations": "[초안] rai_known_limitations", "rai_data_biases": "담당자가 고친 편향 설명"},
+        "ai_assisted": {"rai_known_limitations": {"model": "claude-opus-5-5", "drafted_at": "2026-10-17T03:00:00", "draft_text": "[초안] rai_known_limitations"},
+                        "rai_data_biases": {"model": "claude-opus-5-5", "drafted_at": "2026-10-17T03:00:00", "draft_text": "[초안] rai_data_biases"}}})
+    assert r.status_code == 200, r.text
+    pv = client.get(f"/api/datasets/{did}/preview").json()
+    g = Graph().parse(data=pv["turtle"], format="turtle")
+    fde = Namespace(get_settings().def_ns)
+    nodes = list(g.objects(None, fde.aiAssisted))
+    assert len(nodes) == 2
+    modified = {str(g.value(n, fde.assistedProperty)): bool(g.value(n, fde.modifiedAfterDraft).toPython()) for n in nodes}
+    rai = "http://mlcommons.org/croissant/RAI/"
+    assert modified[rai + "dataLimitations"] is False and modified[rai + "dataBiases"] is True  # 그대로 채택 vs 담당자 수정
+    assert any(str(o).endswith("agent/claude-opus-5-5") for o in g.objects(None, URIRef("http://www.w3.org/ns/prov#wasAssociatedWith")))
+    from app.services import canonical, documents
+
+    def card_md() -> str:
+        with SessionLocal() as db:
+            p = db.get(ProcessDataset, did)
+            return documents.render_card(canonical.build(db, p, "draft"), p, None, [])
+
+    card = card_md()
+    assert "AI 보조 작성 · 담당자 확정" in card and "그대로 채택 1칸" in card and "담당자 수정 1칸" in card
+    # 칸을 비우면 이력도 사라진다
+    assert client.patch(f"/api/datasets/{did}/meta", json={"values": {"rai_data_biases": None}}).status_code == 200
+    pv = client.get(f"/api/datasets/{did}/preview").json()
+    assert "ai-assist-rai_known_limitations" in pv["turtle"] and "ai-assist-rai_data_biases" not in pv["turtle"]
+    # 표시 옵션을 끄면 카드 고지만 빠지고 그래프 이력은 남는다
+    monkeypatch.setattr(get_settings(), "ai_assist_notice", False)
+    assert "AI 보조 작성 · 담당자 확정" not in card_md()
+    assert "ai-assist-" in client.get(f"/api/datasets/{did}/preview").json()["turtle"]
+    monkeypatch.setattr(get_settings(), "ai_assist_notice", True)
+
+    # ③ AI 기본법 제34조 학습용데이터 개요 대응 블록
+    assert "제34조 학습용데이터 개요 대응" in card
+    g = Graph().parse(data=client.get(f"/api/datasets/{did}/preview").json()["turtle"], format="turtle")
+    cov = str(next(g.objects(None, fde.trainingDataOverviewCoverage)))
+    assert cov.endswith("/8") and int(cov.split("/")[0]) >= 1
+    prof = next(g.objects(None, fde.complianceProfile), None)
+    assert prof is not None and (prof, RDF.type, DCTERMS.Standard) in g
+
+    # ④ 표준 IRI: spatial → dcterms:Location, conformsTo 이름 → dcterms:Standard, format → MediaTypeOrExtent, 공공누리 URL
+    assert client.patch(f"/api/datasets/{did}/meta", json={"values": {"spatial": "대한민국", "conforms_to": ["EPSG:5186", "https://www.w3.org/TR/vocab-dcat-3/"],
+                                                                        "language": "한국어"}}).status_code == 200
+    g = Graph().parse(data=client.get(f"/api/datasets/{did}/preview").json()["turtle"], format="turtle")
+    loc = next(g.objects(None, DCTERMS.spatial), None)
+    assert isinstance(loc, URIRef) and (loc, RDF.type, DCTERMS.Location) in g
+    stds = list(g.objects(None, DCTERMS.conformsTo))
+    assert len(stds) == 2 and all((s, RDF.type, DCTERMS.Standard) in g for s in stds)
+    assert URIRef("https://www.w3.org/TR/vocab-dcat-3/") in stds
+    lang = next(g.objects(None, DCTERMS.language), None)
+    assert isinstance(lang, URIRef) and (lang, RDF.type, DCTERMS.LinguisticSystem) in g
+    fmt = next(g.objects(None, DCTERMS["format"]), None)
+    assert fmt is None or (isinstance(fmt, URIRef) and (fmt, RDF.type, DCTERMS.MediaTypeOrExtent) in g)
+    ttl = client.get(f"/api/datasets/{did}/preview").json()["turtle"]
+    if "kogl.or.kr" in ttl:
+        assert "licenseType" in ttl
+    # CSVW 컬럼 이름: 공백 등은 퍼센트 인코딩, 원래 머리글은 csvw:titles
+    assert "csvw:titles" in ttl
+    assert client.patch(f"/api/datasets/{did}/meta", json={"values": {"language": "ko"}}).status_code == 200
+
+    # ⑤ 검색어의 % _ 는 글자 그대로 (와일드카드 아님)
+    assert client.get("/api/assets", params={"q": "%"}).status_code == 200
+    assert client.get("/api/assets", params={"q": "%"}).json() == [] or all("%" in a["name"] for a in client.get("/api/assets", params={"q": "%"}).json())
+
+    # ⑥ 자기 승인 정책 deny: 본인이 요청한 발행은 승인 불가 (403)
+    monkeypatch.setattr(get_settings(), "review_self_approve", "deny")
+    with SessionLocal() as db:
+        for d in db.query(ProcessDataset).filter_by(process_id=pid).all():
+            d.classification = {**(d.classification or {}), "N2SF": "N2SF-S"}
+        db.commit()
+    rr = client.post(f"/api/processes/{pid}/rerun").json()
+    if rr["state"]["gates"][6]["done"]:
+        r = client.post(f"/api/processes/{pid}/review-requests", json={"message": "자기 승인 테스트"})
+        if r.status_code == 200:
+            rid = r.json()["id"]
+            det = client.get(f"/api/review-requests/{rid}").json()
+            ack = [s["code"] for s in det["signals"] if s["severity"] == "high"]
+            r = client.post(f"/api/review-requests/{rid}/approve", json={"note": "본인 승인 시도 열 글자 이상", "acknowledged": ack})
+            assert r.status_code == 403 and r.json()["detail"]["code"] == "SELF_APPROVAL_DENIED"
+            assert client.post(f"/api/review-requests/{rid}/withdraw").status_code == 200
+    monkeypatch.setattr(get_settings(), "review_self_approve", "note")
+
+    # ⑦ 비밀번호를 바꾸면 그 전에 발급된 토큰은 401
+    r = client.post("/api/users", json={"username": "pwuser", "name": "비번", "password": "first-pass-1", "role": "worker"})
+    assert r.status_code == 200, r.text
+    tok = client.post("/api/auth/login", json={"username": "pwuser", "password": "first-pass-1"}).json()["access_token"]
+    h = {"Authorization": f"Bearer {tok}"}
+    assert client.get("/api/auth/me", headers=h).status_code == 200
+    import time
+    time.sleep(1.1)  # iat 초 단위 비교
+    r = client.post("/api/auth/password", json={"current_password": "first-pass-1", "new_password": "second-pass-2"}, headers=h)
+    assert r.status_code == 200 and r.json().get("relogin") is True
+    r = client.get("/api/auth/me", headers=h)
+    assert r.status_code == 401 and "다시 로그인" in r.json()["detail"]
+    tok2 = client.post("/api/auth/login", json={"username": "pwuser", "password": "second-pass-2"}).json()["access_token"]
+    assert client.get("/api/auth/me", headers={"Authorization": f"Bearer {tok2}"}).status_code == 200
+
+    # ⑧ MCP get_usage_terms 에 학습용데이터 개요 작성 현황이 붙는다 (발행본이 있으면)
+    from app import mcp_server
+    from app.models import AgentKey, CatalogEntry
+    with SessionLocal() as db:
+        e = db.query(CatalogEntry).filter(CatalogEntry.resource_id.like("DST-%")).order_by(CatalogEntry.id.desc()).first()
+        if e is not None:
+            key = AgentKey(name="t", key_hash="x", grades=["O", "S", "C"], tools=list(mcp_server.IMPLS), daily_limit=100, created_by=None)
+            from app.services.agent import CallRecord
+            out = mcp_server.impl_get_usage_terms(db, key, CallRecord(), e.resource_id)
+            assert isinstance(out, dict) and out["training_data_overview"]["coverage"].endswith("/8")
+            assert isinstance(out["ai_assisted_fields"], list)

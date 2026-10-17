@@ -8,6 +8,7 @@ import { api } from "../api";
 import type { CardItem, Dataset, DictRow, MetaField, Org, Preview, Reference, Severity } from "../types";
 import { Badge, Banner, Button, Card, CodeBlock, ConfirmButton, Empty, QueryState, Tabs, cx, errText, fmtDateTime, fmtNum, shortHash, useToast } from "../ui";
 import { AiDraftButton, AiExclusionBox } from "./AiDraft";
+import type { AiAdoption } from "./AiDraft";
 import { InstantDiag } from "./InstantDiag";
 import { useStudio } from "./context";
 import { DatasetList, Gate0List, ProfileTable, ReadOnlyNote, ReadinessBadge, StepHeader, ValidationRows } from "./shared";
@@ -142,6 +143,8 @@ export function Step3() {
   const [dictDirty, setDictDirty] = useState(0); // ③ 데이터 사전 탭의 미저장 변경 수 (탭을 바꿔도 유지된다)
   const [tab, setTab] = useState<TabKey>("form");
   const [draftState, setDraftState] = useState<{ did: number | null; values: Draft }>({ did: null, values: EMPTY_DRAFT });
+  // AI 초안을 채택해 넣은 칸 (저장할 때 함께 보내 이력으로 남긴다)
+  const [adopted, setAdopted] = useState<{ did: number | null; items: Record<string, AiAdoption> }>({ did: null, items: {} });
   /** 진행 중인 변경 요청의 이름 (save · confirm · unconfirm · approve:필드 · class:IRI). 한 번에 하나만 보낸다. */
   const [busy, setBusy] = useState<string | null>(null);
   const [focusReq, setFocusReq] = useState<{ name: string; n: number } | null>(null);
@@ -241,8 +244,18 @@ export function Step3() {
 
   const valueOf = (f: MetaField): FieldValue => (f.name in draft ? draft[f.name] : serverValue(f, dataset.meta));
   const isDirty = (name: string) => dirty.some((f) => f.name === name);
-  const setField = (name: string, v: FieldValue) =>
+  const setField = (name: string, v: FieldValue, ai?: AiAdoption) => {
     setDraftState((s) => ({ did: dataset.id, values: { ...(s.did === dataset.id ? s.values : EMPTY_DRAFT), [name]: v } }));
+    if (ai) setAdopted((a) => ({ did: dataset.id, items: { ...(a.did === dataset.id ? a.items : {}), [name]: ai } }));
+  };
+  /** 보낼 필드 가운데 AI 초안을 채택한 것의 출처 */
+  const aiFor = (names: string[]) => {
+    if (adopted.did !== dataset.id) return undefined;
+    const picked = Object.fromEntries(names.filter((n) => n in adopted.items).map((n) => [n, adopted.items[n]]));
+    return Object.keys(picked).length ? picked : undefined;
+  };
+  const clearAdopted = (names: string[]) =>
+    setAdopted((a) => (a.did === dataset.id ? { did: a.did, items: Object.fromEntries(Object.entries(a.items).filter(([k]) => !names.includes(k))) } : a));
   /** 서버에 보낸 값과 그대로인 초안만 지운다 (저장 중에 더 고친 값은 남긴다). */
   const clearSaved = (id: number, sent: Draft) =>
     setDraftState((s) => {
@@ -269,9 +282,10 @@ export function Step3() {
         values[f.name] = toPayload(f, draft[f.name]);
       }
       const reapprove = dirty.filter((f) => dataset.approved_fields.includes(f.name)).map((f) => f.label);
-      await api.patchMeta(dataset.id, { values });
+      await api.patchMeta(dataset.id, { values, ai_assisted: aiFor(Object.keys(values)) });
       await refresh();
       clearSaved(dataset.id, sent);
+      clearAdopted(Object.keys(values));
       toast.ok(
         reapprove.length > 0
           ? `변경 ${dirtyCount}건을 저장했습니다 — ${reapprove.join(" · ")} 승인이 해제되어 다시 승인해야 합니다`
@@ -291,9 +305,10 @@ export function Step3() {
     void run(`approve:${f.name}`, async () => {
       if (on) {
         // 지금 입력된 값을 함께 저장하고 승인한다 (값이 바뀌었으면 서버가 기존 승인을 풀고 새 값으로 승인한다)
-        await api.patchMeta(dataset.id, { values: { [f.name]: toPayload(f, value) }, approve: [f.name] });
+        await api.patchMeta(dataset.id, { values: { [f.name]: toPayload(f, value) }, approve: [f.name], ai_assisted: aiFor([f.name]) });
         await refresh();
         if (f.name in draft) clearSaved(dataset.id, { [f.name]: draft[f.name] });
+        clearAdopted([f.name]);
         toast.ok(`${f.label} 승인 — 정본 그래프에 반영했습니다`);
       } else {
         await api.patchMeta(dataset.id, { unapprove: [f.name] });
@@ -550,7 +565,7 @@ interface FormModel {
   auto: string[];
   valueOf: (f: MetaField) => FieldValue;
   isDirty: (name: string) => boolean;
-  setField: (name: string, v: FieldValue) => void;
+  setField: (name: string, v: FieldValue, ai?: AiAdoption) => void;
   approve: (f: MetaField, on: boolean) => void;
 }
 

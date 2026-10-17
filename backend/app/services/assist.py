@@ -102,7 +102,9 @@ def _context(db: Session, pd: ProcessDataset) -> dict[str, Any]:
             "data_type": rec.get("dataType"), "n2sf_grade": rec.get("n2sfGrade"), "join_keys": rec.get("joinKeys"),
             "rows": sum(t.get("rows", 0) for t in prof.get("tables", [])), "columns": cols,
             "filename": pd.asset.filename, "already_written": filled, "process": pd.process.name,
-            "combo": [((d.meta or {}).get("title") or d.asset.name) for d in pd.process.combo if d.id != pd.id]}
+            # 같은 조합의 다른 데이터셋 이름. C 등급 · 전송 제외 데이터셋은 제목조차 외부로 내보내지 않는다
+            "combo": [((d.meta or {}).get("title") or d.asset.name) for d in pd.process.combo
+                      if d.id != pd.id and blocked_reason(d) is None]}
 
 
 # 초안이 따라야 할 표준. 칸마다 property(예: dcterms:provenance, rai:dataBiases)를 함께 주므로 그 속성의 정의에 맞게 쓰게 한다.

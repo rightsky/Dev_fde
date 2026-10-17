@@ -17,12 +17,15 @@ export function draftable(fields: MetaField[], aiFields: string[], ruleFields: s
 
 const asText = (t: string | string[]) => (Array.isArray(t) ? t.join(", ") : t);
 
+/** 채택한 초안의 출처. 저장 시 서버에 함께 보내 "AI 보조 작성 · 담당자 확정" 이력으로 남는다 (AI 기본법 제31조제2항 취지). */
+export type AiAdoption = { model: string; drafted_at: string; draft_text: string | string[] };
+
 export function AiDraftButton(props: {
   did: number;
   fields: MetaField[];
   editable: boolean;
   valueOf: (f: MetaField) => string | string[];
-  onAdopt: (name: string, value: string | string[]) => void;
+  onAdopt: (name: string, value: string | string[], ai?: AiAdoption) => void;
   size?: "sm" | "md";
   label?: string;
 }) {
@@ -49,7 +52,7 @@ function DraftModal(props: {
   targets: MetaField[];
   model: string;
   valueOf: (f: MetaField) => string | string[];
-  onAdopt: (name: string, value: string | string[]) => void;
+  onAdopt: (name: string, value: string | string[], ai?: AiAdoption) => void;
   onClose: () => void;
 }) {
   const toast = useToast();
@@ -87,7 +90,8 @@ function DraftModal(props: {
       if (!adopt.has(name)) continue;
       const f = props.targets.find((x) => x.name === name);
       if (!f) continue;
-      props.onAdopt(name, f.type === "tags" ? (Array.isArray(d.text) ? d.text : d.text.split(",").map((s) => s.trim()).filter(Boolean)) : asText(d.text));
+      const value = f.type === "tags" ? (Array.isArray(d.text) ? d.text : d.text.split(",").map((s) => s.trim()).filter(Boolean)) : asText(d.text);
+      props.onAdopt(name, value, { model: result?.model || props.model, drafted_at: new Date().toISOString(), draft_text: value });
       n += 1;
     }
     toast.ok(`초안 ${n}개를 입력란에 넣었습니다 — 검토한 뒤 [변경 사항 저장] 을 눌러야 정본에 반영됩니다`);

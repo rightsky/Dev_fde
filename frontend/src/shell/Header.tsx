@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { NavLink } from "react-router-dom";
-import { api } from "../api";
+import { api, auth } from "../api";
 import { useAuth, useReference } from "../auth";
 import { Badge, Button, Field, Modal, useToast } from "../ui";
 
@@ -103,8 +103,9 @@ function PasswordModal({ onClose }: { onClose: () => void }) {
     setBusy(true);
     try {
       await api.changePassword(cur, next);
-      toast.ok("비밀번호를 변경했습니다");
+      toast.ok("비밀번호를 변경했습니다 — 보안을 위해 다시 로그인합니다");
       onClose();
+      setTimeout(() => auth.set(null), 800); // 이전 토큰은 서버에서 무효가 되므로 바로 다시 로그인시킨다
     } catch (e) {
       toast.error(e);
     } finally {

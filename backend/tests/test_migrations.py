@@ -32,6 +32,7 @@ def test_legacy_database_is_stamped_then_upgraded(tmp_path):
     # v0.3 시점의 표만 만든다 (0002 이후에 생긴 표는 빼고)
     Base.metadata.create_all(eng, tables=[t for t in Base.metadata.sorted_tables if t.name not in LATER_TABLES])
     with eng.begin() as c:
+        c.execute(text("ALTER TABLE app_user DROP COLUMN password_changed_at"))  # 0005 (v0.12) 에서 생긴 열
         c.execute(text("INSERT INTO organization (code, label, kind, active, created_at) VALUES ('X', '기관', 'gov', 1, '2026-01-01 00:00:00')"))
     upgrade(eng)
     upgrade(eng)  # 두 번 기동해도 그대로

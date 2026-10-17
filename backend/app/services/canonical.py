@@ -42,6 +42,9 @@ FREQUENCY_IRI = {"PT5M": FREQ.continuous, "PT1H": FREQ.continuous, "P1D": FREQ.d
 FREQUENCY_LABEL = {"PT5M": "연속(5분 간격)", "PT1H": "연속(1시간 간격)", "P1D": "매일", "P1W": "매주", "P1M": "매월", "P3M": "분기",
                    "P1Y": "매년", "irregular": "비정기"}
 LANG_NS = "http://id.loc.gov/vocabulary/iso639-1/"
+# 공공누리 유형별 공식 안내 주소 (data.go.kr 이 쓰는 표기)
+KOGL_URL = {"F4-01": "https://www.kogl.or.kr/info/licenseType1.do", "F4-02": "https://www.kogl.or.kr/info/licenseType2.do",
+            "F4-03": "https://www.kogl.or.kr/info/licenseType3.do", "F4-04": "https://www.kogl.or.kr/info/licenseType4.do"}
 IANA_MT = "https://www.iana.org/assignments/media-types/"
 
 # 승인 전에는 정본에 반영하지 않는 필드
@@ -191,6 +194,13 @@ def _iri(v: Any) -> URIRef:
     return URIRef(_IRI_UNSAFE.sub(lambda m: "".join(f"%{b:02X}" for b in m.group(0).encode("utf-8")), str(v).strip()))
 
 
+def _csvw_name(name: str) -> str:
+    """CSVW 권고: 컬럼 name 은 URI 템플릿 변수로 쓰이므로 공백·괄호·슬래시 같은 ASCII 특수문자는 퍼센트 인코딩한다.
+    한글 등 비ASCII 는 _iri() 와 같은 기준으로 그대로 둔다 (가독성, IRI 허용)."""
+    name = str(name).strip()
+    return "".join(ch if (ord(ch) > 127 or ch.isalnum() or ch in "_-.~") else "".join(f"%{b:02X}" for b in ch.encode("utf-8")) for ch in name)
+
+
 def _lit(v: Any, lang: str | None = "ko") -> Literal:
     return Literal(str(v).strip(), lang=lang) if lang else Literal(str(v).strip())
 
@@ -328,7 +338,11 @@ def build(db: Session, pd: ProcessDataset, mode: str = "draft") -> Canonical:
             g.add((ds, DCTERMS.language, lang_iri))
             g.add((lang_iri, RDF.type, DCTERMS.LinguisticSystem))
         else:
-            g.add((ds, DCTERMS.language, Literal(lang)))
+            # 코드가 아닌 이름("한국어" 등)은 문자열 대신 dcterms:LinguisticSystem 개체로 (DCAT 3 range)
+            ln = URIRef(f"{ds}#language")
+            g.add((ds, DCTERMS.language, ln))
+            g.add((ln, RDF.type, DCTERMS.LinguisticSystem))
+            g.add((ln, RDFS.label, _lit(lang)))
         record["language"] = lang
     if meta.get("version"):
         ver = str(meta["version"]).strip()
@@ -361,12 +375,25 @@ def build(db: Session, pd: ProcessDataset, mode: str = "draft") -> Canonical:
             g.add((ds, prop, _date_lit(meta[key])))
             record[key] = meta[key]
     if meta.get("spatial"):
-        g.add((ds, DCTERMS.spatial, _lit(meta["spatial"])))
-        record["spatial"] = meta["spatial"]
-    for std in meta.get("conforms_to", []) or []:
+        sp = str(meta["spatial"]).strip()
+        if re.match(r"^https?://", sp):
+            loc = _iri(sp)  # 행정구역 코드 IRI 등을 직접 적은 경우
+        else:
+            loc = URIRef(f"{ds}#spatial")
+            g.add((loc, SKOS.prefLabel, _lit(sp)))
+        g.add((ds, DCTERMS.spatial, loc))
+        g.add((loc, RDF.type, DCTERMS.Location))
+        record["spatial"] = sp
+    for si, std in enumerate(meta.get("conforms_to", []) or [], start=1):
         std = str(std).strip()
         if std:
-            g.add((ds, DCTERMS.conformsTo, _iri(std) if re.match(r"^https?://", std) else Literal(std)))
+            if re.match(r"^https?://", std):
+                sn = _iri(std)
+            else:
+                sn = URIRef(f"{ds}#standard-{si}")  # "EPSG:5179", "KS X 1001" 처럼 이름만 적은 경우 개체로 감싼다
+                g.add((sn, RDFS.label, _lit(std)))
+            g.add((ds, DCTERMS.conformsTo, sn))
+            g.add((sn, RDF.type, DCTERMS.Standard))
     if meta.get("conforms_to"):
         record["conformsTo"] = list(meta["conforms_to"])
     for ref in meta.get("references", []) or []:
@@ -447,7 +474,10 @@ def build(db: Session, pd: ProcessDataset, mode: str = "draft") -> Canonical:
         d_rec: dict[str, Any] = {"@id": str(dist), "mediaType": media_type}
         form = _form_label(media_type, asset.data_form)
         if form:
-            g.add((dist, DCTERMS["format"], _lit(form)))
+            fm = URIRef(f"{dist}#format")  # dcterms:format 의 range 는 dcterms:MediaTypeOrExtent (문자열이 아님)
+            g.add((dist, DCTERMS["format"], fm))
+            g.add((fm, RDF.type, DCTERMS.MediaTypeOrExtent))
+            g.add((fm, RDFS.label, _lit(form)))
             d_rec["format"] = form
         if asset.filename:
             g.add((dist, DCTERMS.title, _lit(asset.filename)))
@@ -545,6 +575,11 @@ def build(db: Session, pd: ProcessDataset, mode: str = "draft") -> Canonical:
             g.add((ds, prop, c))
             g.add((c, RDF.type, DCTERMS.LicenseDocument if prop == DCTERMS.license else DCTERMS.RightsStatement))
             record["license" if prop == DCTERMS.license else "accessRights"] = tc.label
+            url = (tc.extra or {}).get("url") or KOGL_URL.get(tc.code)
+            if url:  # 공공누리 공식 안내 주소를 함께 둬 외부 도구(Croissant 등)가 URL 로 읽게 한다
+                g.add((c, SKOS.exactMatch, URIRef(url)))
+                g.add((URIRef(url), RDF.type, DCTERMS.LicenseDocument))
+                record["licenseURL"] = url
     n2sf = cls.get("N2SF")
     if n2sf and n2sf in codes:
         g.add((ds, FDE.n2sfGrade, _add_concept(g, codes[n2sf])))
@@ -654,6 +689,42 @@ def build(db: Session, pd: ProcessDataset, mode: str = "draft") -> Canonical:
         g.add((agent, RDFS.label, _lit("FDE Data Studio")))
         record["wasGeneratedBy"] = {"@id": str(a), "label": act.text}
 
+    # ---- AI 보조 작성 이력 (AI 기본법 제31조제2항 대응: 생성형 AI 가 쓴 초안을 사람이 확정했음을 남긴다)
+    assisted = ai_assisted(meta)
+    for a_item in assisted:
+        node = URIRef(f"{ds}#ai-assist-{a_item['field']}")
+        g.add((ds, FDE.aiAssisted, node))
+        g.add((node, RDF.type, FDE.AiAssistance))
+        try:
+            prop_ref: Any = g.namespace_manager.expand_curie(a_item["property"])
+        except Exception:  # noqa: BLE001
+            prop_ref = Literal(a_item["property"])
+        g.add((node, FDE.assistedProperty, prop_ref))
+        model_agent = URIRef(minting.agent_iri(re.sub(r"[^A-Za-z0-9._-]", "-", a_item["model"])))
+        g.add((node, PROV.wasAssociatedWith, model_agent))
+        g.add((model_agent, RDF.type, PROV.SoftwareAgent))
+        g.add((model_agent, RDFS.label, Literal(a_item["model"])))
+        g.add((node, FDE.modifiedAfterDraft, Literal(a_item["modified"])))
+        if a_item.get("adopted_by"):
+            g.add((node, FDE.adoptedBy, _lit(a_item["adopted_by"])))
+        if a_item.get("adopted_at"):
+            g.add((node, PROV.endedAtTime, Literal(str(a_item["adopted_at"])[:19], datatype=XSD.dateTime)))
+    if assisted:
+        record["aiAssisted"] = assisted
+        record["aiAssistedNotice"] = bool(get_settings().ai_assist_notice)
+
+    # ---- AI 기본법 제34조 학습용데이터 개요 대응 (참고 프로파일)
+    ov = ai_act_overview(pd, meta, record)
+    prof = URIRef(minting.def_ns() + AI_ACT_PROFILE)
+    g.add((ds, FDE.complianceProfile, prof))
+    g.add((prof, RDF.type, DCTERMS.Standard))
+    g.add((prof, RDFS.label, _lit("AI 기본법 제34조제1항제2호 학습용데이터 개요 (참고 프로파일)")))
+    g.add((ds, FDE.trainingDataOverviewCoverage, Literal(f"{ov['filled']}/{ov['total']}")))
+    for it in ov["items"]:
+        if not it["filled"]:
+            g.add((ds, FDE.trainingDataOverviewMissing, Literal(it["key"])))
+    record["aiActOverview"] = ov
+
     if "dcat:CatalogRecord" in (pd.extra_classes or []):
         rec_node = URIRef(f"{minting.id_ns()}record/{rid}")
         g.add((rec_node, RDF.type, DCAT.CatalogRecord))
@@ -676,6 +747,56 @@ def build(db: Session, pd: ProcessDataset, mode: str = "draft") -> Canonical:
     record["readiness"] = {"level": readiness["level"], "missing": missing}
     return Canonical(graph=g, resource_id=rid, iri=str(ds), minted=minted, is_stream=is_stream,
                      checksum=graph_checksum(g), readiness=readiness, record=record)
+
+
+AI_ASSIST_KEY = "_ai_assisted"  # pd.meta 안: {field: {"model", "drafted_at", "draft_sha", "adopted_by", "adopted_at"}}
+
+
+def value_sha(v: Any) -> str:
+    """AI 초안 채택 당시 글과 지금 저장된 글이 같은지 비교하는 짧은 해시."""
+    import hashlib
+
+    text = ", ".join(str(x).strip() for x in v) if isinstance(v, (list, tuple)) else str(v or "").strip()
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+
+
+def ai_assisted(meta: dict[str, Any]) -> list[dict[str, Any]]:
+    """AI 초안을 채택한 칸의 이력. 값이 비워진 칸은 뺀다. modified 는 채택 뒤 담당자가 고쳤는지."""
+    raw = meta.get(AI_ASSIST_KEY) or {}
+    by_name = {f["name"]: f for f in META_FIELDS}
+    out = []
+    for name, info in raw.items():
+        f = by_name.get(name)
+        if not f or not meta.get(name) or not isinstance(info, dict):
+            continue
+        out.append({"field": name, "property": f["property"], "label": f["label"].split(" (")[0], "model": info.get("model") or "?",
+                    "adopted_by": info.get("adopted_by"), "adopted_at": info.get("adopted_at"),
+                    "modified": value_sha(meta[name]) != info.get("draft_sha")})
+    return out
+
+
+# AI 기본법 제34조제1항제2호 "학습용데이터 개요" 에 해당하는 설명 요소와, 이 스튜디오에서 그 근거가 되는 속성.
+# 법적 판단이 아니라 수요 기관이 설명 방안을 쓸 때 인용할 수 있게 정리한 참고 프로파일이다.
+AI_ACT_OVERVIEW = (
+    ("source", "출처·수집 방법", "dcterms:provenance · prov:wasGeneratedBy", lambda m, r, d: bool(m.get("provenance"))),
+    ("structure", "구성 (컬럼 정의)", "csvw:tableSchema · 데이터 사전", lambda m, r, d: d),
+    ("bias", "대표성·편향", "rai:dataBiases", lambda m, r, d: bool(m.get("rai_data_biases"))),
+    ("limitations", "한계·유의 사항", "rai:dataLimitations", lambda m, r, d: bool(m.get("rai_known_limitations"))),
+    ("protection", "개인정보·보호 조치", "rai:personalSensitiveInformation", lambda m, r, d: bool(m.get("card_protection"))),
+    ("uses", "권장·금지 용도", "rai:dataUseCases · fde:prohibitedUses", lambda m, r, d: bool(m.get("card_use_cases") or m.get("card_prohibited_uses"))),
+    ("terms", "AI 활용 이용조건 (표 39)", "odrl:hasPolicy", lambda m, r, d: bool(ai_terms(m))),
+    ("currency", "갱신 주기·시간 범위", "dcterms:accrualPeriodicity · dcterms:temporal", lambda m, r, d: bool(m.get("accrual_periodicity") or m.get("temporal_start"))),
+)
+AI_ACT_PROFILE = "profile/ai-basic-act-art34-training-data"
+
+
+def ai_act_overview(pd: ProcessDataset, meta: dict[str, Any], record: dict[str, Any]) -> dict[str, Any]:
+    tables = (pd.asset.profile or {}).get("tables", [])
+    cols = [(t["name"], c["name"]) for t in tables for c in t.get("columns", [])]
+    dic = dictionary(pd)
+    defined = all(dic.get(t, {}).get(c, {}).get("description") for t, c in cols) if cols else False
+    items = [{"key": k, "label": label, "basis": basis, "filled": bool(fn(meta, record, defined))} for k, label, basis, fn in AI_ACT_OVERVIEW]
+    return {"items": items, "filled": sum(1 for i in items if i["filled"]), "total": len(items)}
 
 
 def _as_list(v: Any) -> list[str]:
@@ -721,7 +842,8 @@ def _add_columns(g: Graph, owner: URIRef, schema: URIRef, table: dict[str, Any],
         c = URIRef(f"{schema}-col-{ci}")
         g.add((schema, CSVW.column, c))
         g.add((c, RDF.type, CSVW.Column))
-        g.add((c, CSVW.name, Literal(col["name"])))
+        g.add((c, CSVW.name, Literal(_csvw_name(col["name"]))))  # csvw:name 은 URI 템플릿 변수로 쓰이므로 안전한 문자만
+        g.add((c, CSVW.titles, _lit(col["name"])))  # 원래 머리글은 titles 로
         g.add((c, CSVW.datatype, _TYPE_MAP.get(col["type"], XSD.string)))
         if table.get("rows"):  # 스트림처럼 값을 보지 못한 경우 필수 여부를 단정하지 않는다
             g.add((c, CSVW.required, Literal(col["null_rate"] == 0)))

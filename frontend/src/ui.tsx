@@ -1,4 +1,5 @@
 // 공용 UI 부품. 화면 코드는 여기 있는 것과 styles.css 의 클래스만 조합해서 만든다.
+import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { ApiError } from "./api";
@@ -135,10 +136,26 @@ export function Field(props: { label: ReactNode; hint?: ReactNode; children: Rea
 }
 
 export function Tabs<K extends string | number>(props: { tabs: { key: K; label: ReactNode }[]; value: K; onChange: (k: K) => void }) {
+  // 접근성: 화살표 · Home · End 로 탭 이동, 선택된 탭만 Tab 키 순서에 들어간다 (WAI-ARIA tabs 패턴)
+  const onKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const keys = props.tabs.map((t) => t.key);
+    const i = keys.indexOf(props.value);
+    let next = -1;
+    if (e.key === "ArrowRight") next = (i + 1) % keys.length;
+    else if (e.key === "ArrowLeft") next = (i - 1 + keys.length) % keys.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = keys.length - 1;
+    if (next < 0) return;
+    e.preventDefault();
+    props.onChange(keys[next]);
+    const el = (e.currentTarget.querySelectorAll('[role="tab"]')[next] as HTMLElement | undefined);
+    el?.focus();
+  };
   return (
-    <div className="tabs" role="tablist">
+    <div className="tabs" role="tablist" onKeyDown={onKey}>
       {props.tabs.map((t) => (
-        <button key={String(t.key)} role="tab" aria-selected={t.key === props.value} className={cx("tab", t.key === props.value && "on")} onClick={() => props.onChange(t.key)}>
+        <button key={String(t.key)} type="button" role="tab" aria-selected={t.key === props.value} tabIndex={t.key === props.value ? 0 : -1}
+          className={cx("tab", t.key === props.value && "on")} onClick={() => props.onChange(t.key)}>
           {t.label}
         </button>
       ))}
@@ -185,10 +202,26 @@ export function Modal(props: { title: ReactNode; onClose: () => void; children: 
   onCloseRef.current = props.onClose;
   // 포커스 이동과 Esc 등록은 열릴 때 한 번만 한다 (다시 그릴 때마다 포커스를 뺏으면 모달 안 입력이 끊긴다)
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && dismissible && onCloseRef.current();
+    const opener = document.activeElement as HTMLElement | null;
+    const focusables = () =>
+      Array.from(ref.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])') ?? []);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && dismissible) onCloseRef.current();
+      if (e.key === "Tab" && ref.current) {
+        // 포커스를 모달 안에 가둔다 (뒤의 화면으로 Tab 이 빠져나가지 않게)
+        const f = focusables();
+        if (f.length === 0) return;
+        const first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && (document.activeElement === first || document.activeElement === ref.current)) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
     document.addEventListener("keydown", onKey);
     if (ref.current && !ref.current.contains(document.activeElement)) ref.current.focus();
-    return () => document.removeEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      opener?.focus?.(); // 닫히면 열었던 버튼으로 포커스를 돌려준다
+    };
   }, []);
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && dismissible && props.onClose()}>

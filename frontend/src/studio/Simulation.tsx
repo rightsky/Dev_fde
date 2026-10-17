@@ -47,7 +47,7 @@ export function SimulationPanel({ pid }: { pid: number }) {
       <div className="sim-head">
         <h2>AI 활용 시뮬레이션</h2>
         <div className="row" style={{ gap: 10 }}>
-          {st?.model && <span className="model">{st.model}</span>}
+          {st?.model && <span className="model" title="아래 답변·판단은 생성형 AI(이 모델)가 만든 결과입니다. 내부 검토용이며 외부에 그대로 제공하는 자료가 아닙니다">생성형 AI 결과 · {st.model}</span>}
           <button className="link-btn" onClick={() => setView(view === "run" ? "history" : "run")}>
             {view === "run" ? `기록 ${fmtNum(st?.runs.length || 0)}` : "실행으로 돌아가기"}
           </button>

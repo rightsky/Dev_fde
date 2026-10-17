@@ -66,6 +66,8 @@ class User(Base):
     email: Mapped[str | None] = mapped_column(String(200), default=None)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    # 비밀번호를 바꾼 시각. 이보다 먼저 발급된 토큰은 무효 (비밀번호 변경 뒤 기존 로그인 끊기)
+    password_changed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, default=None)
 
 
 class Asset(Base):

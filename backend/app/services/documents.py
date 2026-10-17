@@ -265,6 +265,35 @@ def ai_terms_lines(record: dict[str, Any]) -> list[str]:
     return lines + [""]
 
 
+def ai_assisted_lines(record: dict[str, Any]) -> list[str]:
+    """카드 머리의 'AI 보조 작성' 고지 (FDE_AI_ASSIST_NOTICE). 생성형 AI 초안을 담당자가 확정했음을 밝힌다 (AI 기본법 제31조제2항 취지)."""
+    items = record.get("aiAssisted") or []
+    if not items or not record.get("aiAssistedNotice"):
+        return []
+    as_is = [a["label"] for a in items if not a["modified"]]
+    edited = [a["label"] for a in items if a["modified"]]
+    parts = []
+    if as_is:
+        parts.append(f"AI 초안 그대로 채택 {len(as_is)}칸({' · '.join(as_is)})")
+    if edited:
+        parts.append(f"AI 초안을 바탕으로 담당자 수정 {len(edited)}칸({' · '.join(edited)})")
+    models = sorted({a["model"] for a in items})
+    return [f"> **AI 보조 작성 · 담당자 확정:** {', '.join(parts)}. 모델 {', '.join(models)}. 모든 칸은 담당자가 검토해 저장한 값이며 정본 그래프에 fde:aiAssisted 이력으로 남습니다.", ""]
+
+
+def ai_act_overview_lines(record: dict[str, Any]) -> list[str]:
+    ov = record.get("aiActOverview")
+    if not ov:
+        return []
+    lines = [f"## 부가. AI 기본법 제34조 학습용데이터 개요 대응 (참고) · {ov['filled']}/{ov['total']} 작성", "",
+             "> 「인공지능 발전과 신뢰 기반 조성 등에 관한 기본법」 제34조제1항제2호는 고영향 인공지능 사업자에게 '학습용데이터의 개요' 를 포함한 설명 방안을 요구합니다. "
+             "이 데이터셋으로 고영향 AI 를 개발·운영하는 기관이 그 개요로 인용할 수 있도록, 이 카드의 어느 칸이 어떤 요소에 해당하는지 정리한 것입니다. 법적 적합성 판단이 아닙니다.", "",
+             "| 설명 요소 | 작성 | 근거 속성 |", "|---|---|---|"]
+    for it in ov["items"]:
+        lines.append(f"| {it['label']} | {'작성됨' if it['filled'] else '미작성'} | {it['basis']} |")
+    return lines + [""]
+
+
 def strip_samples(markdown: str) -> str:
     """외부(AI 에이전트 · 외부 모델)로 보낼 때 데이터 카드의 값 표본 행을 뺀다. 자동 PII 탐지가 놓친 값이 나가지 않게 한다."""
     out = []
@@ -284,6 +313,7 @@ def render_card(canon: canonical.Canonical, pd: ProcessDataset, vr: ValidationRu
              f"> 「공공데이터의 인공지능 친화적 관리 가이드라인 v1.1」 부록 4 양식 · 식별자 {canon.resource_id} · 정본 체크섬 {canon.checksum[:16]}",
              f"> 필수 칸 {filled}/{total}개 작성 ({round(filled / total * 100) if total else 0}%). "
              "'작성 필요'는 FDE Data Studio STEP 3 에서 채울 칸, '해당 시'는 해당할 때만 쓰는 칸입니다.", ""]
+    lines += ai_assisted_lines(canon.record)
     for n, sec in enumerate(sections, start=1):
         lines += [f"## {n}. {sec['section']}", "", "| 항목 | 작성 내용 | 근거 |", "|---|---|---|"]
         for it in sec["items"]:
@@ -293,6 +323,7 @@ def render_card(canon: canonical.Canonical, pd: ProcessDataset, vr: ValidationRu
             lines.append(f"| {_cell(it['item'])} | {_cell(content)} | {it['source']} |")
         lines.append("")
     lines += ai_terms_lines(canon.record)
+    lines += ai_act_overview_lines(canon.record)
     rows = dictionary_rows(pd)
     if rows:
         lines += ["## 부록. 데이터 필드 정의", "", "| 표 | 컬럼 | 자료형 | 정의 | 단위 |", "|---|---|---|---|---|"]
@@ -321,8 +352,10 @@ def render_croissant(canon: canonical.Canonical, pd: ProcessDataset) -> str:
         "url": r.get("landingPage") or canon.iri,
         "identifier": canon.resource_id,
     }
-    if r.get("license") or r.get("accessRights"):
-        doc["license"] = r.get("license") or r.get("accessRights")
+    if r.get("licenseURL"):
+        doc["license"] = r["licenseURL"]  # Croissant: license 는 URL 또는 CreativeWork
+    elif r.get("license") or r.get("accessRights"):
+        doc["license"] = {"@type": "sc:CreativeWork", "name": r.get("license") or r.get("accessRights")}
     who = r.get("creator") or (r.get("publisher") or {}).get("label")
     if who:
         doc["creator"] = {"@type": "sc:Organization", "name": who}
@@ -344,7 +377,8 @@ def render_croissant(canon: canonical.Canonical, pd: ProcessDataset) -> str:
     fid = _cid(pd.asset.filename or canon.resource_id)
     if dist and pd.asset.filename:
         fo: dict[str, Any] = {"@type": "cr:FileObject", "@id": fid, "name": pd.asset.filename,
-                              "contentUrl": dist.get("accessURL") or pd.asset.filename,
+                              # contentUrl 은 URL 이어야 한다. 접속 URL 이 없으면 배포본 IRI (카탈로그가 내려받기 주소로 해석)
+                              "contentUrl": dist.get("accessURL") or dist.get("@id") or pd.asset.filename,
                               "encodingFormat": dist.get("mediaType")}
         if pd.asset.sha256:
             fo["sha256"] = pd.asset.sha256
